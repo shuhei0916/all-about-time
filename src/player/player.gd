@@ -67,8 +67,14 @@ func _look(relative: Vector2) -> void:
 
 
 func _try_interact() -> void:
-	if not _ray.is_colliding():
-		return
-	var target := _ray.get_collider()
-	if target is Interactable:
+	var target := looking_at()
+	if target:
 		target.interact()
+
+
+## 正面の届く範囲にある Interactable を返す。なければ null。
+func looking_at() -> Interactable:
+	if not _ray.is_colliding():
+		return null
+	var target := _ray.get_collider()
+	return target if target is Interactable else null

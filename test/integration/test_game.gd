@@ -43,3 +43,11 @@ func test_次の人生が始まるとプレイヤーがスポーン位置に戻�
 	game.serve_sentence()
 	simulate(game, 1, Life.INITIAL_LIFESPAN)
 	assert_eq(game.player.global_position, Vector3(1, 2, 3))
+
+
+func test_次の人生が始まると暗転する():
+	var game: Game = add_child_autofree(Game.new())
+	game.hud = add_child_autofree(Hud.new())
+	game.serve_sentence()
+	simulate(game, 1, Life.INITIAL_LIFESPAN)
+	assert_eq(game.hud.fade_overlay.color.a, 1.0)

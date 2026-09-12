@@ -23,6 +23,7 @@ func _process(delta: float) -> void:
 	cycle.life.tick(delta)
 	if hud:
 		hud.update_from(cycle.life)
+		hud.show_prompt(_prompt_in_front())
 
 
 ## 刑期を全うする。ベッドから呼ばれる。出所できるようドアを開ける。
@@ -37,3 +38,12 @@ func _on_life_started(_generation: int) -> void:
 		door.close()
 	if player:
 		player.respawn_at(spawn_position)
+	if hud:
+		hud.start_death_fade()
+
+
+func _prompt_in_front() -> String:
+	if not player:
+		return ""
+	var target := player.looking_at()
+	return target.prompt if target else ""
