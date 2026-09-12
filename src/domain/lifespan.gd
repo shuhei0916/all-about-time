@@ -77,3 +77,21 @@ func to_clock_string() -> String:
 	if days > 0:
 		return "%d日 %s" % [days, clock]
 	return clock
+
+
+## 演出用に変化量を "-2年" のような最大の単位だけの短い文字列にする。
+## 増加なら "+" を付ける。
+static func format_delta(amount: float) -> String:
+	var sign_text := "-" if amount < 0.0 else "+"
+	var total := int(absf(amount))
+	for unit: Array in [
+		[SECONDS_PER_YEAR, "年"],
+		[SECONDS_PER_DAY, "日"],
+		[SECONDS_PER_HOUR, "時間"],
+		[60, "分"],
+	]:
+		var seconds_per_unit: int = unit[0]
+		if total >= seconds_per_unit:
+			@warning_ignore("integer_division")
+			return "%s%d%s" % [sign_text, total / seconds_per_unit, unit[1]]
+	return "%s%d秒" % [sign_text, total]

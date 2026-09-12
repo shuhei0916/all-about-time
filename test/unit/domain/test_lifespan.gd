@@ -97,3 +97,23 @@ func test_消費で尽きる時は死亡より先に変化が通知される():
 	lifespan.died.connect(func() -> void: order.append("died"))
 	lifespan.spend(10.0)
 	assert_eq(order, ["changed", "died"] as Array[String])
+
+
+func test_変化量は最大の単位だけの短い文字列になる():
+	assert_eq(Lifespan.format_delta(-2.0 * Lifespan.SECONDS_PER_YEAR), "-2年")
+
+
+func test_増加した変化量には符号が付く():
+	assert_eq(Lifespan.format_delta(3.0 * Lifespan.SECONDS_PER_DAY), "+3日")
+
+
+func test_1時間未満の変化は分で表す():
+	assert_eq(Lifespan.format_delta(-90.0), "-1分")
+
+
+func test_1分未満の変化は秒で表す():
+	assert_eq(Lifespan.format_delta(-30.0), "-30秒")
+
+
+func test_1時間の変化は時間で表す():
+	assert_eq(Lifespan.format_delta(-Lifespan.SECONDS_PER_HOUR), "-1時間")
