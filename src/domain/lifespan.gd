@@ -29,3 +29,14 @@ func spend(amount: float) -> void:
 ## 寿命が尽きているか。
 func is_dead() -> bool:
 	return remaining <= 0.0
+
+
+## HUD 表示用に "HH:MM:SS" 形式の文字列を返す。端数秒は切り捨てる。
+func to_clock_string() -> String:
+	var total := int(floorf(remaining))
+	@warning_ignore("integer_division")
+	var hours := total / 3600
+	@warning_ignore("integer_division")
+	var minutes := (total % 3600) / 60
+	var seconds := total % 60
+	return "%02d:%02d:%02d" % [hours, minutes, seconds]

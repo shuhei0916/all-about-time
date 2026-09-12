@@ -54,3 +54,13 @@ func test_尽きた後にさらに減らしてもdiedは一度しか出ない():
 	lifespan.spend(10.0)
 	lifespan.tick(1.0)
 	assert_signal_emit_count(lifespan, "died", 1)
+
+
+func test_残り時間を時分秒の文字列にできる():
+	var lifespan := Lifespan.new(3725.0)
+	assert_eq(lifespan.to_clock_string(), "01:02:05")
+
+
+func test_端数秒は切り捨てて表示する():
+	var lifespan := Lifespan.new(59.9)
+	assert_eq(lifespan.to_clock_string(), "00:00:59")
