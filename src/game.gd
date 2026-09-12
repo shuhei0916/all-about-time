@@ -11,6 +11,7 @@ extends Node3D
 @export var spawn_position := Vector3.ZERO
 
 var cycle := LifeCycle.new()
+var _prompted: Interactable
 
 
 func _ready() -> void:
@@ -24,7 +25,7 @@ func _process(delta: float) -> void:
 	cycle.life.tick(delta)
 	if hud:
 		hud.update_from(cycle.life)
-		hud.show_prompt(_prompt_in_front())
+	_update_prompt()
 
 
 ## 刑期を全うする。ベッドから呼ばれる。出所できるようドアを開ける。
@@ -54,8 +55,13 @@ func _on_lifespan_changed(amount: float) -> void:
 		hud.show_lifespan_delta(amount)
 
 
-func _prompt_in_front() -> String:
-	if not player:
-		return ""
-	var target := player.looking_at()
-	return target.prompt if target else ""
+## 見ている対象にだけ案内を出す。対象が変わったら前の案内を消す。
+func _update_prompt() -> void:
+	var target := player.looking_at() if player else null
+	if target == _prompted:
+		return
+	if is_instance_valid(_prompted):
+		_prompted.hide_prompt()
+	if target:
+		target.show_prompt()
+	_prompted = target

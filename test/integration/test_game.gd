@@ -74,3 +74,62 @@ func test_次の人生でも減少の演出が出る():
 	simulate(game, 1, Life.INITIAL_LIFESPAN)
 	game.serve_sentence()
 	assert_eq(game.hud.get_delta_labels()[-1].text, "-2年")
+
+
+## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
+func _make_thing(z: float) -> Interactable:
+	var thing := Interactable.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(1, 1, 1)
+	shape.shape = box
+	thing.add_child(shape)
+	thing.position = Vector3(0, Player.EYE_HEIGHT, z)
+	return thing
+
+
+func test_見ている対象に案内が出る():
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.new())
+	var thing: Interactable = add_child_autofree(_make_thing(-1.5))
+	await wait_physics_frames(4)
+	assert_true(thing.is_prompt_visible())
+
+
+func test_見ていない対象には案内が出ない():
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.new())
+	var behind: Interactable = add_child_autofree(_make_thing(1.5))
+	await wait_physics_frames(4)
+	assert_false(behind.is_prompt_visible())
+
+
+func test_見るのをやめると案内が消える():
+	var game: Game = add_child_autofree(Game.new())
+	var player: Player = add_child_autofree(Player.new())
+	game.player = player
+	var thing: Interactable = add_child_autofree(_make_thing(-1.5))
+	await wait_physics_frames(4)
+	player.rotate_y(PI)
+	await wait_physics_frames(4)
+	assert_false(thing.is_prompt_visible())
+
+
+func test_別の対象を見ると前の案内が消える():
+	var game: Game = add_child_autofree(Game.new())
+	var player: Player = add_child_autofree(Player.new())
+	game.player = player
+	var front: Interactable = add_child_autofree(_make_thing(-1.5))
+	add_child_autofree(_make_thing(1.5))
+	await wait_physics_frames(4)
+	player.rotate_y(PI)
+	await wait_physics_frames(4)
+	assert_false(front.is_prompt_visible())
+
+
+func test_遠すぎる対象には案内が出ない():
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.new())
+	var far: Interactable = add_child_autofree(_make_thing(-(Player.INTERACT_DISTANCE + 2.0)))
+	await wait_physics_frames(4)
+	assert_false(far.is_prompt_visible())
