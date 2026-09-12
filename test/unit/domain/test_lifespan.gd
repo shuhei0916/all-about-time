@@ -74,3 +74,26 @@ func test_1日以上あれば日数を前に付けて表示する():
 func test_1年以上あれば年数と日数を前に付けて表示する():
 	var lifespan := Lifespan.new(2 * Lifespan.SECONDS_PER_YEAR + 3 * Lifespan.SECONDS_PER_DAY + 3600)
 	assert_eq(lifespan.to_clock_string(), "2年 3日 01:00:00")
+
+
+func test_消費すると消費量がシグナルで通知される():
+	var lifespan := Lifespan.new(90.0)
+	watch_signals(lifespan)
+	lifespan.spend(60.0)
+	assert_signal_emitted_with_parameters(lifespan, "changed", [-60.0])
+
+
+func test_時間経過では変化が通知されない():
+	var lifespan := Lifespan.new(90.0)
+	watch_signals(lifespan)
+	lifespan.tick(1.0)
+	assert_signal_emit_count(lifespan, "changed", 0)
+
+
+func test_消費で尽きる時は死亡より先に変化が通知される():
+	var lifespan := Lifespan.new(10.0)
+	var order: Array[String] = []
+	lifespan.changed.connect(func(_amount: float) -> void: order.append("changed"))
+	lifespan.died.connect(func() -> void: order.append("died"))
+	lifespan.spend(10.0)
+	assert_eq(order, ["changed", "died"] as Array[String])

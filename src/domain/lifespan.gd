@@ -7,28 +7,50 @@ const SECONDS_PER_DAY := 24 * SECONDS_PER_HOUR
 ## 1年は365日として扱う。
 const SECONDS_PER_YEAR := 365 * SECONDS_PER_DAY
 
+## 寿命が増減した時に、その変化量(減少なら負)を添えて発火する。
+signal changed(amount: float)
+
 ## 寿命が尽きた瞬間に発火する。
 signal died
 
 var remaining: float
+var _died_notified := false
 
 
 func _init(initial: float) -> void:
 	remaining = initial
 
 
-## 経過時間(秒)ぶん寿命を減らす。
+## 経過時間(秒)ぶん寿命を減らす。刻々と減るぶんは changed では通知しない。
 func tick(delta: float) -> void:
-	spend(delta)
+	_reduce(delta)
+	_die_if_exhausted()
 
 
 ## 指定量(秒)の寿命を消費する。刑期や支払いに使う。
+## 減少の通知は死亡より先に出す。死亡を先にすると次の人生が始まってしまい、
+## 減少の表示が新しい人生の側に出てしまうため。
 func spend(amount: float) -> void:
-	if is_dead():
-		return
+	var lost := _reduce(amount)
+	if lost > 0.0:
+		changed.emit(-lost)
+	_die_if_exhausted()
+
+
+## 寿命を減らし、実際に減った量を返す。既に尽きていれば何もしない。
+func _reduce(amount: float) -> float:
+	if _died_notified:
+		return 0.0
+	var before := remaining
 	remaining = maxf(remaining - amount, 0.0)
-	if is_dead():
-		died.emit()
+	return before - remaining
+
+
+func _die_if_exhausted() -> void:
+	if _died_notified or not is_dead():
+		return
+	_died_notified = true
+	died.emit()
 
 
 ## 寿命が尽きているか。
