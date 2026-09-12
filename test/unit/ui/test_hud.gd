@@ -10,7 +10,7 @@ func test_目標ラベルに現在の目標が表示される():
 func test_寿命ラベルに残り時間が表示される():
 	var hud: Hud = add_child_autofree(Hud.new())
 	hud.update_from(Life.new())
-	assert_eq(hud.lifespan_label.text, "00:01:30")
+	assert_eq(hud.lifespan_label.text, "2年 0日 01:00:00")
 
 
 func test_暗転を始めると画面が黒で覆われる():

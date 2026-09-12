@@ -2,8 +2,10 @@ class_name Life
 extends RefCounted
 ## 1回の人生。寿命、目標、刑期をひとまとめにして進行を束ねる。
 
-const INITIAL_LIFESPAN := 90.0
-const SENTENCE_DURATION := 60.0
+## 刑期は2年。
+const SENTENCE_DURATION := 2.0 * Lifespan.SECONDS_PER_YEAR
+## 出所後に1時間残るよう、初期寿命は刑期に1時間を足したもの。
+const INITIAL_LIFESPAN := SENTENCE_DURATION + Lifespan.SECONDS_PER_HOUR
 const FIRST_LIFE_OBJECTIVES: Array[String] = ["刑期を全うする", "死ぬ"]
 
 ## 寿命が尽きて人生が終わった瞬間に発火する。

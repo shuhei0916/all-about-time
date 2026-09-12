@@ -64,3 +64,13 @@ func test_残り時間を時分秒の文字列にできる():
 func test_端数秒は切り捨てて表示する():
 	var lifespan := Lifespan.new(59.9)
 	assert_eq(lifespan.to_clock_string(), "00:00:59")
+
+
+func test_1日以上あれば日数を前に付けて表示する():
+	var lifespan := Lifespan.new(Lifespan.SECONDS_PER_DAY + 5)
+	assert_eq(lifespan.to_clock_string(), "1日 00:00:05")
+
+
+func test_1年以上あれば年数と日数を前に付けて表示する():
+	var lifespan := Lifespan.new(2 * Lifespan.SECONDS_PER_YEAR + 3 * Lifespan.SECONDS_PER_DAY + 3600)
+	assert_eq(lifespan.to_clock_string(), "2年 3日 01:00:00")
