@@ -15,6 +15,7 @@ var cycle := LifeCycle.new()
 
 func _ready() -> void:
 	cycle.life_started.connect(_on_life_started)
+	_watch_lifespan()
 	if bed:
 		bed.interacted.connect(serve_sentence)
 
@@ -34,12 +35,23 @@ func serve_sentence() -> void:
 
 
 func _on_life_started(_generation: int) -> void:
+	_watch_lifespan()
 	if door:
 		door.close()
 	if player:
 		player.respawn_at(spawn_position)
 	if hud:
 		hud.start_death_fade()
+
+
+## 今の人生の寿命の増減を HUD の演出につなぐ。人生が変わるたびに繋ぎ直す。
+func _watch_lifespan() -> void:
+	cycle.life.lifespan.changed.connect(_on_lifespan_changed)
+
+
+func _on_lifespan_changed(amount: float) -> void:
+	if hud:
+		hud.show_lifespan_delta(amount)
 
 
 func _prompt_in_front() -> String:

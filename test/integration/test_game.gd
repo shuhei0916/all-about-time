@@ -51,3 +51,26 @@ func test_次の人生が始まると暗転する():
 	game.serve_sentence()
 	simulate(game, 1, Life.INITIAL_LIFESPAN)
 	assert_eq(game.hud.fade_overlay.color.a, 1.0)
+
+
+func test_刑期を全うすると減少の演出が出る():
+	var game: Game = add_child_autofree(Game.new())
+	game.hud = add_child_autofree(Hud.new())
+	game.serve_sentence()
+	assert_eq(game.hud.get_delta_labels()[0].text, "-2年")
+
+
+func test_毎フレームの寿命の減りでは演出が出ない():
+	var game: Game = add_child_autofree(Game.new())
+	game.hud = add_child_autofree(Hud.new())
+	simulate(game, 3, 1.0)
+	assert_eq(game.hud.get_delta_labels().size(), 0)
+
+
+func test_次の人生でも減少の演出が出る():
+	var game: Game = add_child_autofree(Game.new())
+	game.hud = add_child_autofree(Hud.new())
+	game.serve_sentence()
+	simulate(game, 1, Life.INITIAL_LIFESPAN)
+	game.serve_sentence()
+	assert_eq(game.hud.get_delta_labels()[-1].text, "-2年")

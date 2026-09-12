@@ -48,3 +48,47 @@ func test_操作案内は画面の左右中央に置かれる():
 	var rect := hud.prompt_label.get_global_rect()
 	var screen := hud.prompt_label.get_viewport_rect()
 	assert_almost_eq(rect.get_center().x, screen.get_center().x, 1.0)
+
+
+func test_減少を表示すると変化量のラベルが出る():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_lifespan_delta(-2.0 * Lifespan.SECONDS_PER_YEAR)
+	assert_eq(hud.get_delta_labels()[0].text, "-2年")
+
+
+func test_減少のラベルは赤文字になる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_lifespan_delta(-2.0 * Lifespan.SECONDS_PER_YEAR)
+	assert_eq(hud.get_delta_labels()[0].modulate, Hud.DELTA_LOSS_COLOR)
+
+
+func test_増加のラベルは緑文字になる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_lifespan_delta(Lifespan.SECONDS_PER_HOUR)
+	assert_eq(hud.get_delta_labels()[0].modulate, Hud.DELTA_GAIN_COLOR)
+
+
+func test_変化量のラベルは寿命ラベルの下に出る():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.update_from(Life.new())
+	hud.show_lifespan_delta(-2.0 * Lifespan.SECONDS_PER_YEAR)
+	await wait_process_frames(2)
+	var delta_rect := hud.get_delta_labels()[0].get_global_rect()
+	assert_gt(delta_rect.position.y, hud.lifespan_label.get_global_rect().end.y)
+
+
+func test_変化量のラベルは時間が経つと消える():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_lifespan_delta(-2.0 * Lifespan.SECONDS_PER_YEAR)
+	await wait_seconds(Hud.DELTA_DURATION + 0.2)
+	assert_eq(hud.get_delta_labels().size(), 0)
+
+
+func test_変化量のラベルは画面内に収まる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_lifespan_delta(-2.0 * Lifespan.SECONDS_PER_YEAR)
+	await wait_process_frames(2)
+	var label := hud.get_delta_labels()[0]
+	var rect := label.get_global_rect()
+	var screen := label.get_viewport_rect()
+	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
