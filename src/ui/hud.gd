@@ -28,9 +28,22 @@ func _init() -> void:
 func _make_label(preset: Control.LayoutPreset) -> Label:
 	var label := Label.new()
 	label.set_anchors_and_offsets_preset(preset, Control.PRESET_MODE_MINSIZE, 16)
+	# 文字が入って幅が広がるとき、右寄せなら左へ、中央寄せなら両側へ伸びるようにする。
+	# これがないと既定の右向きに伸びて、右上のラベルが画面外へはみ出す。
+	label.grow_horizontal = _grow_direction_for(preset)
 	label.add_theme_font_size_override("font_size", 28)
 	add_child(label)
 	return label
+
+
+func _grow_direction_for(preset: Control.LayoutPreset) -> Control.GrowDirection:
+	match preset:
+		Control.PRESET_TOP_RIGHT, Control.PRESET_BOTTOM_RIGHT, Control.PRESET_CENTER_RIGHT:
+			return Control.GROW_DIRECTION_BEGIN
+		Control.PRESET_CENTER_TOP, Control.PRESET_CENTER_BOTTOM, Control.PRESET_CENTER:
+			return Control.GROW_DIRECTION_BOTH
+		_:
+			return Control.GROW_DIRECTION_END
 
 
 ## 人生の状態をラベルに反映する。毎フレーム呼ぶ。
