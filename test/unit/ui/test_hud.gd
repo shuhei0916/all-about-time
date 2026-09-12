@@ -45,9 +45,48 @@ func test_操作案内は画面の左右中央に置かれる():
 	var hud: Hud = add_child_autofree(Hud.new())
 	hud.show_prompt("刑期を全うする")
 	await wait_process_frames(2)
-	var rect := hud.prompt_label.get_global_rect()
-	var screen := hud.prompt_label.get_viewport_rect()
-	assert_almost_eq(rect.get_center().x, screen.get_center().x, 1.0)
+	var panel := hud.get_prompt_panel()
+	assert_almost_eq(
+		panel.get_global_rect().get_center().x, panel.get_viewport_rect().get_center().x, 1.0
+	)
+
+
+func test_操作案内は画面の上下中央に置かれる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_prompt("刑期を全うする")
+	await wait_process_frames(2)
+	var panel := hud.get_prompt_panel()
+	assert_almost_eq(
+		panel.get_global_rect().get_center().y, panel.get_viewport_rect().get_center().y, 1.0
+	)
+
+
+func test_操作案内の背景は半透明():
+	var hud: Hud = add_child_autofree(Hud.new())
+	var style: StyleBoxFlat = hud.get_prompt_panel().get_theme_stylebox("panel")
+	assert_between(style.bg_color.a, 0.01, 0.99)
+
+
+func test_操作案内があると背景が見える():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_prompt("刑期を全うする")
+	assert_true(hud.get_prompt_panel().visible)
+
+
+func test_操作案内がない時は背景ごと隠れる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_prompt("刑期を全うする")
+	hud.show_prompt("")
+	assert_false(hud.get_prompt_panel().visible)
+
+
+func test_操作案内の文字は背景の内側に収まる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_prompt("刑期を全うする")
+	await wait_process_frames(2)
+	var panel_rect := hud.get_prompt_panel().get_global_rect()
+	var text_rect := hud.prompt_label.get_global_rect()
+	assert_true(panel_rect.encloses(text_rect), "%s が %s の内側にあること" % [text_rect, panel_rect])
 
 
 func test_減少を表示すると変化量のラベルが出る():
