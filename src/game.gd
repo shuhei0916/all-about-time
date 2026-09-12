@@ -6,6 +6,9 @@ extends Node3D
 @export var bed: Bed
 @export var door: Door
 @export var hud: Hud
+@export var player: Player
+## 各人生の開始時にプレイヤーを置く位置。
+@export var spawn_position := Vector3.ZERO
 
 var cycle := LifeCycle.new()
 
@@ -32,3 +35,5 @@ func serve_sentence() -> void:
 func _on_life_started(_generation: int) -> void:
 	if door:
 		door.close()
+	if player:
+		player.respawn_at(spawn_position)

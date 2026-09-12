@@ -33,3 +33,13 @@ func test_毎フレームHUDが更新される():
 	game.hud = add_child_autofree(Hud.new())
 	simulate(game, 1, 1.0)
 	assert_eq(game.hud.lifespan_label.text, "00:01:29")
+
+
+func test_次の人生が始まるとプレイヤーがスポーン位置に戻る():
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.new())
+	game.spawn_position = Vector3(1, 2, 3)
+	game.player.global_position = Vector3(9, 9, 9)
+	game.serve_sentence()
+	simulate(game, 1, Life.INITIAL_LIFESPAN)
+	assert_eq(game.player.global_position, Vector3(1, 2, 3))
