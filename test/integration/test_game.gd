@@ -76,6 +76,43 @@ func test_次の人生でも減少の演出が出る():
 	assert_eq(game.hud.get_delta_labels()[-1].text, "-2年")
 
 
+
+func _add_pickup(game: Game, item_name: String) -> ItemPickup:
+	var pickup: ItemPickup = add_child_autofree(ItemPickup.new())
+	pickup.item_name = item_name
+	pickup.lifespan_cost = 60.0
+	game.pickups.append(pickup)
+	return pickup
+
+
+func test_道具を拾うと持ち物に入る():
+	var game := Game.new()
+	var pickup := _add_pickup(game, "タバコ")
+	add_child_autofree(game)
+	pickup.interact()
+	assert_eq(game.cycle.life.inventory.items()[0].name, "タバコ")
+
+
+func test_次の人生では拾った道具が元の場所に戻る():
+	var game := Game.new()
+	var pickup := _add_pickup(game, "タバコ")
+	add_child_autofree(game)
+	pickup.interact()
+	game.serve_sentence()
+	simulate(game, 1, Life.INITIAL_LIFESPAN)
+	assert_false(pickup.is_taken())
+
+
+func test_次の人生で拾った道具も持ち物に入る():
+	var game := Game.new()
+	var pickup := _add_pickup(game, "タバコ")
+	add_child_autofree(game)
+	pickup.interact()
+	game.serve_sentence()
+	simulate(game, 1, Life.INITIAL_LIFESPAN)
+	pickup.interact()
+	assert_eq(game.cycle.life.inventory.items().size(), 1)
+
 ## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:
 	var thing := Interactable.new()
