@@ -44,3 +44,26 @@ func test_寿命が尽きるとendedシグナルが出る():
 	life.serve_sentence()
 	life.tick(Lifespan.SECONDS_PER_HOUR)
 	assert_signal_emitted(life, "ended")
+
+
+func test_生成直後の持ち物は空():
+	var life := Life.new()
+	assert_eq(life.inventory.items().size(), 0)
+
+
+func test_持ち物を使うと寿命が縮む():
+	var life := Life.new()
+	var cigarette := Item.new("タバコ", 60.0)
+	life.inventory.add(cigarette)
+	life.use_item(cigarette)
+	assert_eq(life.lifespan.remaining, Life.INITIAL_LIFESPAN - 60.0)
+
+
+func test_出所後に死に至る道具を使うと人生が終わる():
+	var life := Life.new()
+	watch_signals(life)
+	life.serve_sentence()
+	var rope := Item.new("ロープ", Item.LETHAL)
+	life.inventory.add(rope)
+	life.use_item(rope)
+	assert_signal_emitted(life, "ended")

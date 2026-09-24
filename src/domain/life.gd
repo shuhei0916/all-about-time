@@ -1,6 +1,7 @@
 class_name Life
 extends RefCounted
-## 1回の人生。寿命、目標、刑期をひとまとめにして進行を束ねる。
+## 1回の人生。寿命、目標、刑期、持ち物をひとまとめにして進行を束ねる。
+## 持ち物は人生ごとのもので、死ぬと失う。
 
 ## 刑期は2年。
 const SENTENCE_DURATION := 2.0 * Lifespan.SECONDS_PER_YEAR
@@ -14,6 +15,7 @@ signal ended
 var lifespan: Lifespan
 var objectives: Objectives
 var sentence: PrisonSentence
+var inventory := Inventory.new()
 
 
 func _init() -> void:
@@ -27,6 +29,11 @@ func _init() -> void:
 ## 刑期を全うする。寿命が刑期分減り、目標「刑期を全うする」が完了する。
 func serve_sentence() -> void:
 	sentence.serve(lifespan)
+
+
+## 持ち物を使う。その物のぶん寿命が縮み、尽きれば人生が終わる。
+func use_item(item: Item) -> void:
+	inventory.use(item, lifespan)
 
 
 ## 時間を進める。寿命が減り、尽きれば人生が終わる。

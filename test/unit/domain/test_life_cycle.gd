@@ -34,3 +34,10 @@ func test_人生が終わると次の人生の開始がシグナルで通知さ�
 	watch_signals(cycle)
 	_end_current_life(cycle)
 	assert_signal_emitted_with_parameters(cycle, "life_started", [2])
+
+
+func test_次の人生では持ち物を失っている():
+	var cycle := LifeCycle.new()
+	cycle.life.inventory.add(Item.new("タバコ", 60.0))
+	_end_current_life(cycle)
+	assert_eq(cycle.life.inventory.items().size(), 0)
