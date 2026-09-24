@@ -13,3 +13,8 @@ var lifespan_cost: float
 func _init(item_name: String, cost_seconds: float) -> void:
 	name = item_name
 	lifespan_cost = cost_seconds
+
+
+## 死に至る道具か。
+func is_lethal() -> bool:
+	return is_inf(lifespan_cost)

@@ -70,3 +70,30 @@ func test_変化量のラベルは画面内に収まる():
 	var rect := label.get_global_rect()
 	var screen := label.get_viewport_rect()
 	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
+
+
+func test_持ち物がなければ持ち物欄は出ない():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.update_from(Life.new())
+	assert_false(hud.inventory_label.visible)
+
+
+func test_持ち物は番号と寿命の減り量を添えて並ぶ():
+	var hud: Hud = add_child_autofree(Hud.new())
+	var life := Life.new()
+	life.inventory.add(Item.new("タバコ", 11.0 * 60))
+	life.inventory.add(Item.new("ロープ", Item.LETHAL))
+	hud.update_from(life)
+	assert_true(hud.inventory_label.visible)
+	assert_eq(hud.inventory_label.text, "持ち物（数字キーで使う）\n1: タバコ  -11分\n2: ロープ  死")
+
+
+func test_持ち物欄は画面内に収まる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	var life := Life.new()
+	life.inventory.add(Item.new("タバコ", 11.0 * 60))
+	hud.update_from(life)
+	await wait_process_frames(2)
+	var rect := hud.inventory_label.get_global_rect()
+	var screen := hud.inventory_label.get_viewport_rect()
+	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
