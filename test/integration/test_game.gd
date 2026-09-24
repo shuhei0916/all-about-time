@@ -113,6 +113,35 @@ func test_次の人生で拾った道具も持ち物に入る():
 	pickup.interact()
 	assert_eq(game.cycle.life.inventory.items().size(), 1)
 
+
+func test_番号を指定して持ち物を使うと寿命が縮む():
+	var game: Game = add_child_autofree(Game.new())
+	game.cycle.life.inventory.add(Item.new("タバコ", 60.0))
+	game.use_item_at(0)
+	assert_eq(game.cycle.life.lifespan.remaining, Life.INITIAL_LIFESPAN - 60.0)
+
+
+func test_存在しない番号を指定しても何も起きない():
+	var game: Game = add_child_autofree(Game.new())
+	game.use_item_at(0)
+	assert_eq(game.cycle.life.lifespan.remaining, Life.INITIAL_LIFESPAN)
+
+
+func test_数字キーの1で1番目の持ち物を使う():
+	var game: Game = add_child_autofree(Game.new())
+	game.cycle.life.inventory.add(Item.new("タバコ", 60.0))
+	var sender = InputSender.new(game)
+	sender.key_down(KEY_1)
+	assert_eq(game.cycle.life.inventory.items().size(), 0)
+
+
+func test_持ち物を使うと減少の演出が出る():
+	var game: Game = add_child_autofree(Game.new())
+	game.hud = add_child_autofree(Hud.new())
+	game.cycle.life.inventory.add(Item.new("タバコ", 60.0))
+	game.use_item_at(0)
+	assert_eq(game.hud.get_delta_labels()[0].text, "-1分")
+
 ## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:
 	var thing := Interactable.new()

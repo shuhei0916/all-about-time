@@ -29,7 +29,27 @@ func _process(delta: float) -> void:
 	cycle.life.tick(delta)
 	if hud:
 		hud.update_from(cycle.life)
+
+
+## 案内は視線のレイと同じ物理フレームで更新する。
+## _process で更新すると、1回の描画フレームに物理フレームがまとめて走った時に
+## レイの結果より案内が遅れる。
+func _physics_process(_delta: float) -> void:
 	_update_prompt()
+
+
+## 数字キーの 1〜9 で、その番号の持ち物を使う。
+func _unhandled_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key and key.pressed and not key.echo and key.keycode >= KEY_1 and key.keycode <= KEY_9:
+		use_item_at(key.keycode - KEY_1)
+
+
+## 持ち物を番号(0始まり)で指定して使う。その番号の物がなければ何もしない。
+func use_item_at(index: int) -> void:
+	var items := cycle.life.inventory.items()
+	if index < items.size():
+		cycle.life.use_item(items[index])
 
 
 ## 刑期を全うする。ベッドから呼ばれる。出所できるようドアを開ける。
