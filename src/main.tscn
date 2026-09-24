@@ -1,10 +1,11 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=22 format=3]
 
 [ext_resource type="Script" path="res://src/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://src/world/bed.gd" id="2_bed"]
 [ext_resource type="Script" path="res://src/world/door.gd" id="3_door"]
 [ext_resource type="Script" path="res://src/player/player.gd" id="4_player"]
 [ext_resource type="Script" path="res://src/ui/hud.gd" id="5_hud"]
+[ext_resource type="Script" path="res://src/world/item_pickup.gd" id="6_pickup"]
 
 [sub_resource type="Environment" id="env"]
 background_mode = 1
@@ -37,12 +38,34 @@ size = Vector3(1.2, 3, 0.2)
 [sub_resource type="BoxMesh" id="mesh_door"]
 size = Vector3(1.2, 3, 0.2)
 
-[node name="Game" type="Node3D" node_paths=PackedStringArray("bed", "door", "hud", "player")]
+[sub_resource type="StandardMaterial3D" id="mat_table"]
+albedo_color = Color(0.3, 0.2, 0.12, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_cigarette"]
+albedo_color = Color(0.9, 0.88, 0.8, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_rope"]
+albedo_color = Color(0.6, 0.5, 0.3, 1)
+
+[sub_resource type="BoxShape3D" id="shape_cigarette"]
+size = Vector3(0.35, 0.2, 0.3)
+
+[sub_resource type="BoxMesh" id="mesh_cigarette"]
+size = Vector3(0.25, 0.06, 0.12)
+
+[sub_resource type="BoxShape3D" id="shape_rope"]
+size = Vector3(0.45, 0.25, 0.45)
+
+[sub_resource type="BoxMesh" id="mesh_rope"]
+size = Vector3(0.4, 0.12, 0.4)
+
+[node name="Game" type="Node3D" node_paths=PackedStringArray("bed", "door", "hud", "player", "pickups")]
 script = ExtResource("1_game")
 bed = NodePath("Prison/Bed")
 door = NodePath("Prison/Door")
 hud = NodePath("Hud")
 player = NodePath("Player")
+pickups = [NodePath("Yard/Cigarette"), NodePath("Yard/Rope")]
 spawn_position = Vector3(0, 0.1, 1.5)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -117,6 +140,40 @@ shape = SubResource("shape_door")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Prison/Door"]
 mesh = SubResource("mesh_door")
 surface_material_override/0 = SubResource("mat_door")
+
+[node name="Yard" type="Node3D" parent="."]
+
+[node name="Table" type="CSGBox3D" parent="Yard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 5.5)
+use_collision = true
+size = Vector3(1.6, 0.9, 0.7)
+material = SubResource("mat_table")
+
+[node name="Cigarette" type="StaticBody3D" parent="Yard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.93, 5.5)
+script = ExtResource("6_pickup")
+item_name = "タバコ"
+lifespan_cost = 660.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Yard/Cigarette"]
+shape = SubResource("shape_cigarette")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Yard/Cigarette"]
+mesh = SubResource("mesh_cigarette")
+surface_material_override/0 = SubResource("mat_cigarette")
+
+[node name="Rope" type="StaticBody3D" parent="Yard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.96, 5.5)
+script = ExtResource("6_pickup")
+item_name = "ロープ"
+lethal = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Yard/Rope"]
+shape = SubResource("shape_rope")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Yard/Rope"]
+mesh = SubResource("mesh_rope")
+surface_material_override/0 = SubResource("mat_rope")
 
 [node name="Player" type="CharacterBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 1.5)
