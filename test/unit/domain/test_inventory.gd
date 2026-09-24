@@ -35,3 +35,12 @@ func test_持っていない物を使っても寿命は減らない():
 	var lifespan := Lifespan.new(100.0)
 	inventory.use(Item.new("タバコ", 60.0), lifespan)
 	assert_eq(lifespan.remaining, 100.0)
+
+
+func test_死に至る道具を使うと寿命が尽きる():
+	var inventory := Inventory.new()
+	var lifespan := Lifespan.new(100.0)
+	var rope := Item.new("ロープ", Item.LETHAL)
+	inventory.add(rope)
+	inventory.use(rope, lifespan)
+	assert_true(lifespan.is_dead())
