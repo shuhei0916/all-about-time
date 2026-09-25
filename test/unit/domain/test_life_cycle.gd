@@ -31,14 +31,14 @@ func test_次の人生では持ち物を失っている():
 	assert_eq(cycle.life.inventory.items().size(), 0)
 
 
-func test_2世代目は刑務所の外の60分の人生になる():
+func test_2世代目は刑務所の外から始まる人生になる():
 	var cycle := LifeCycle.new()
 	_end_current_life(cycle)
 	assert_eq(cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
 	assert_null(cycle.life.sentence)
 
 
-func test_2世代目が死ぬと3世代目も同じ60分の人生になる():
+func test_2世代目が死ぬと3世代目も同じ人生になる():
 	var cycle := LifeCycle.new()
 	_end_current_life(cycle)
 	cycle.life.tick(Life.LATER_LIFESPAN)
