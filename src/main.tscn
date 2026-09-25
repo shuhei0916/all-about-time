@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://dwv8sopp3yl3g" path="res://src/ui/hud.gd" id="5_hud"]
 [ext_resource type="Script" uid="uid://bmqiisy6xyvd2" path="res://src/world/item_pickup.gd" id="6_pickup"]
 [ext_resource type="PackedScene" path="res://src/world/shop.tscn" id="7_shop"]
+[ext_resource type="Script" path="res://src/ui/pause_menu.gd" id="8_pause_menu"]
 
 [sub_resource type="Environment" id="env"]
 background_mode = 1
@@ -63,11 +64,12 @@ albedo_color = Color(0.6, 0.5, 0.3, 1)
 [sub_resource type="StandardMaterial3D" id="mat_fence"]
 albedo_color = Color(0.22, 0.2, 0.2, 1)
 
-[node name="Game" type="Node3D" unique_id=125477149 node_paths=PackedStringArray("bed", "door", "hud", "player", "pickups")]
+[node name="Game" type="Node3D" unique_id=125477149 node_paths=PackedStringArray("bed", "door", "hud", "pause_menu", "player", "pickups")]
 script = ExtResource("1_game")
 bed = NodePath("Prison/Bed")
 door = NodePath("Prison/Door")
 hud = NodePath("Hud")
+pause_menu = NodePath("PauseMenu")
 player = NodePath("Player")
 pickups = [NodePath("Yard/Cigarette"), NodePath("Yard/Rope")]
 later_spawn_position = Vector3(60, 0.1, 9)
@@ -246,3 +248,6 @@ script = ExtResource("4_player")
 
 [node name="Hud" type="CanvasLayer" parent="." unique_id=630867235]
 script = ExtResource("5_hud")
+
+[node name="PauseMenu" type="CanvasLayer" parent="."]
+script = ExtResource("8_pause_menu")

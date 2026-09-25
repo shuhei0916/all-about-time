@@ -101,3 +101,13 @@ func test_建てた店は時間が経つと地面の上に立つ():
 	var shop: Building = game.buildings[0]
 	simulate(shop, 10, 1.0)
 	assert_true(shop.is_emerged())
+
+
+func test_メインシーンにはEscメニューが配線されている():
+	var game := _load_game()
+	assert_not_null(game.pause_menu)
+
+
+func test_メインシーンではEscメニューの終了の要求でゲームを終える():
+	var game := _load_game()
+	assert_true(game.pause_menu.quit_requested.is_connected(game.quit_game))

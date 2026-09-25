@@ -6,6 +6,8 @@ extends Node3D
 @export var bed: Bed
 @export var door: Door
 @export var hud: Hud
+## Esc で開く一時停止メニュー。
+@export var pause_menu: PauseMenu
 @export var player: Player
 ## 拾える道具。拾うと今の人生の持ち物に入り、次の人生で元の場所に戻る。
 @export var pickups: Array[ItemPickup] = []
@@ -31,6 +33,8 @@ func _ready() -> void:
 		bed.interacted.connect(serve_sentence)
 	for pickup in pickups:
 		pickup.picked_up.connect(_on_item_picked_up)
+	if pause_menu:
+		pause_menu.quit_requested.connect(quit_game)
 
 
 func _process(delta: float) -> void:
@@ -87,6 +91,11 @@ func _overlaps_player(ground: Vector3, footprint: Vector2) -> bool:
 	var reach := maxf(footprint.x, footprint.y) / 2.0 + PLAYER_CLEARANCE
 	var offset := player.global_position - ground
 	return Vector2(offset.x, offset.z).length() < reach
+
+
+## ゲームを終える。Esc メニューの「ゲームを閉じる」から呼ばれる。
+func quit_game() -> void:
+	get_tree().quit()
 
 
 ## 刑期を全うする。ベッドから呼ばれる。出所できるようドアを開ける。

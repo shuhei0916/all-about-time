@@ -1,6 +1,7 @@
 class_name Player
 extends CharacterBody3D
 ## 一人称視点のプレイヤー。WASD で移動、マウスで視点、E で正面の物に働きかける。
+## Esc でのマウスカーソルの解放は PauseMenu が受け持つ。
 
 const SPEED := 4.0
 const MOUSE_SENSITIVITY := 0.002
@@ -47,8 +48,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		_look(event.relative)
 	elif event.is_action_pressed("interact"):
 		_try_interact()
-	elif event.is_action_pressed("ui_cancel"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
