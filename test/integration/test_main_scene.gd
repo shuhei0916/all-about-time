@@ -59,4 +59,4 @@ func test_刑期を全うしロープを拾って使うと次の世代が始ま�
 	game.pickups[1].interact()
 	game.use_item_at(0)
 	assert_eq(game.cycle.generation, 2)
-	assert_eq(game.cycle.life.objectives.current(), "刑期を全うする")
+	assert_eq(game.cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)

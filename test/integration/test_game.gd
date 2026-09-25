@@ -72,8 +72,9 @@ func test_次の人生でも減少の演出が出る():
 	game.hud = add_child_autofree(Hud.new())
 	game.serve_sentence()
 	simulate(game, 1, Life.INITIAL_LIFESPAN)
-	game.serve_sentence()
-	assert_eq(game.hud.get_delta_labels()[-1].text, "-2年")
+	game.cycle.life.inventory.add(Item.new("タバコ", 60.0))
+	game.use_item_at(0)
+	assert_eq(game.hud.get_delta_labels()[-1].text, "-1分")
 
 
 

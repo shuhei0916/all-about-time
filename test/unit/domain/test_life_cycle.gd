@@ -17,18 +17,6 @@ func test_人生が終わると2世代目になる():
 	assert_eq(cycle.generation, 2)
 
 
-func test_新しい人生の寿命は初期値に戻る():
-	var cycle := LifeCycle.new()
-	_end_current_life(cycle)
-	assert_eq(cycle.life.lifespan.remaining, Life.INITIAL_LIFESPAN)
-
-
-func test_新しい人生の目標は最初に戻る():
-	var cycle := LifeCycle.new()
-	_end_current_life(cycle)
-	assert_eq(cycle.life.objectives.current(), "刑期を全うする")
-
-
 func test_人生が終わると次の人生の開始がシグナルで通知される():
 	var cycle := LifeCycle.new()
 	watch_signals(cycle)
@@ -41,3 +29,18 @@ func test_次の人生では持ち物を失っている():
 	cycle.life.inventory.add(Item.new("タバコ", 60.0))
 	_end_current_life(cycle)
 	assert_eq(cycle.life.inventory.items().size(), 0)
+
+
+func test_2世代目は刑務所の外の60分の人生になる():
+	var cycle := LifeCycle.new()
+	_end_current_life(cycle)
+	assert_eq(cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
+	assert_null(cycle.life.sentence)
+
+
+func test_2世代目が死ぬと3世代目も同じ60分の人生になる():
+	var cycle := LifeCycle.new()
+	_end_current_life(cycle)
+	cycle.life.tick(Life.LATER_LIFESPAN)
+	assert_eq(cycle.generation, 3)
+	assert_eq(cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
