@@ -178,44 +178,44 @@ shape = SubResource("shape_rope")
 mesh = SubResource("mesh_rope")
 surface_material_override/0 = SubResource("mat_rope")
 
-[node name="Alley" type="Node3D" parent="."]
+[node name="Alley" type="Node3D" parent="." unique_id=846837009]
 
-[node name="Floor" type="CSGBox3D" parent="Alley"]
+[node name="Floor" type="CSGBox3D" parent="Alley" unique_id=177184541]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, -0.1, 0)
 use_collision = true
 size = Vector3(4, 0.2, 24)
 material = SubResource("mat_floor")
 
-[node name="WallLeft" type="CSGBox3D" parent="Alley"]
+[node name="WallLeft" type="CSGBox3D" parent="Alley" unique_id=1951219351]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.9, 2, 0)
 use_collision = true
 size = Vector3(0.2, 4, 24)
 material = SubResource("mat_alley_wall")
 
-[node name="WallRight" type="CSGBox3D" parent="Alley"]
+[node name="WallRight" type="CSGBox3D" parent="Alley" unique_id=728361373]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 62.1, 2, 0)
 use_collision = true
 size = Vector3(0.2, 4, 24)
 material = SubResource("mat_alley_wall")
 
-[node name="WallNorth" type="CSGBox3D" parent="Alley"]
+[node name="WallNorth" type="CSGBox3D" parent="Alley" unique_id=539878313]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 2, -12.1)
 use_collision = true
 size = Vector3(4.4, 4, 0.2)
 material = SubResource("mat_alley_wall")
 
-[node name="WallSouth" type="CSGBox3D" parent="Alley"]
+[node name="WallSouth" type="CSGBox3D" parent="Alley" unique_id=800361728]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 2, 12.1)
 use_collision = true
 size = Vector3(4.4, 4, 0.2)
 material = SubResource("mat_alley_wall")
 
-[node name="StreetLamp" type="OmniLight3D" parent="Alley"]
+[node name="StreetLamp" type="OmniLight3D" parent="Alley" unique_id=242028198]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 61.5, 3.2, 0)
 light_color = Color(1, 0.75, 0.45, 1)
 light_energy = 2.0
-omni_range = 8.0
 shadow_enabled = true
+omni_range = 8.0
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1646902574]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 1.5)
