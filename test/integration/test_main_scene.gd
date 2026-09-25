@@ -81,3 +81,23 @@ func test_2世代目の開始位置には足場がある():
 	var start := game.player.global_position
 	await wait_physics_frames(30)
 	assert_almost_eq(game.player.global_position.y, start.y, 0.2)
+
+
+func test_2世代目の開始場所で地面を見下ろすと店を建てられる():
+	var game := _load_game()
+	_die_in_tutorial(game)
+	game.player.camera.rotation.x = -deg_to_rad(10.0)
+	await wait_physics_frames(5)
+	game.build()
+	assert_eq(game.buildings.size(), 1)
+
+
+func test_建てた店は時間が経つと地面の上に立つ():
+	var game := _load_game()
+	_die_in_tutorial(game)
+	game.player.camera.rotation.x = -deg_to_rad(10.0)
+	await wait_physics_frames(5)
+	game.build()
+	var shop: Building = game.buildings[0]
+	simulate(shop, 10, 1.0)
+	assert_true(shop.is_emerged())
