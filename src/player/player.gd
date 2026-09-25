@@ -6,10 +6,15 @@ const SPEED := 4.0
 const MOUSE_SENSITIVITY := 0.002
 const EYE_HEIGHT := 1.6
 const INTERACT_DISTANCE := 2.5
+## 建物を建てる地面を狙える距離。建物が自分と重ならないよう、働きかけより遠くまで届く。
+const BUILD_DISTANCE := 15.0
+## これより傾いた面は地面とみなさない(度)。
+const MAX_GROUND_SLOPE := 30.0
 const MAX_PITCH := deg_to_rad(85.0)
 
 var camera: Camera3D
 var _ray: RayCast3D
+var _build_ray: RayCast3D
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 
@@ -26,6 +31,10 @@ func _init() -> void:
 	_ray = RayCast3D.new()
 	_ray.target_position = Vector3(0, 0, -INTERACT_DISTANCE)
 	camera.add_child(_ray)
+
+	_build_ray = RayCast3D.new()
+	_build_ray.target_position = Vector3(0, 0, -BUILD_DISTANCE)
+	camera.add_child(_build_ray)
 
 
 func _ready() -> void:
@@ -78,3 +87,14 @@ func looking_at() -> Interactable:
 		return null
 	var target := _ray.get_collider()
 	return target if target is Interactable else null
+
+
+## 正面の届く範囲で狙っている地面の位置を返す。地面を狙っていなければ null。
+## 壁のように傾いた面は地面とみなさない。
+func aimed_ground() -> Variant:
+	if not _build_ray.is_colliding():
+		return null
+	var slope := rad_to_deg(_build_ray.get_collision_normal().angle_to(Vector3.UP))
+	if slope > MAX_GROUND_SLOPE:
+		return null
+	return _build_ray.get_collision_point()
