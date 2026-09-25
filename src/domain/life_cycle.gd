@@ -14,7 +14,7 @@ func _init() -> void:
 
 
 func _start_life() -> void:
-	life = Life.new()
+	life = Life.first_life()
 	life.ended.connect(_on_life_ended)
 
 

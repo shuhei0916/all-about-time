@@ -3,13 +3,13 @@ extends GutTest
 
 func test_目標ラベルに現在の目標が表示される():
 	var hud: Hud = add_child_autofree(Hud.new())
-	hud.update_from(Life.new())
+	hud.update_from(Life.first_life())
 	assert_eq(hud.objective_label.text, "刑期を全うする")
 
 
 func test_寿命ラベルに残り時間が表示される():
 	var hud: Hud = add_child_autofree(Hud.new())
-	hud.update_from(Life.new())
+	hud.update_from(Life.first_life())
 	assert_eq(hud.lifespan_label.text, "2年 0日 01:00:00")
 
 
@@ -21,7 +21,7 @@ func test_暗転を始めると画面が黒で覆われる():
 
 func test_寿命ラベルは画面内に収まる():
 	var hud: Hud = add_child_autofree(Hud.new())
-	hud.update_from(Life.new())
+	hud.update_from(Life.first_life())
 	await wait_process_frames(2)
 	var rect := hud.lifespan_label.get_global_rect()
 	var screen := hud.lifespan_label.get_viewport_rect()
@@ -48,7 +48,7 @@ func test_増加のラベルは緑文字になる():
 
 func test_変化量のラベルは寿命ラベルの下に出る():
 	var hud: Hud = add_child_autofree(Hud.new())
-	hud.update_from(Life.new())
+	hud.update_from(Life.first_life())
 	hud.show_lifespan_delta(-2.0 * Lifespan.SECONDS_PER_YEAR)
 	await wait_process_frames(2)
 	var delta_rect := hud.get_delta_labels()[0].get_global_rect()
@@ -74,13 +74,13 @@ func test_変化量のラベルは画面内に収まる():
 
 func test_持ち物がなければ持ち物欄は出ない():
 	var hud: Hud = add_child_autofree(Hud.new())
-	hud.update_from(Life.new())
+	hud.update_from(Life.first_life())
 	assert_false(hud.inventory_label.visible)
 
 
 func test_持ち物は番号と寿命の減り量を添えて並ぶ():
 	var hud: Hud = add_child_autofree(Hud.new())
-	var life := Life.new()
+	var life := Life.first_life()
 	life.inventory.add(Item.new("タバコ", 11.0 * 60))
 	life.inventory.add(Item.new("ロープ", Item.LETHAL))
 	hud.update_from(life)
@@ -90,7 +90,7 @@ func test_持ち物は番号と寿命の減り量を添えて並ぶ():
 
 func test_持ち物欄は画面内に収まる():
 	var hud: Hud = add_child_autofree(Hud.new())
-	var life := Life.new()
+	var life := Life.first_life()
 	life.inventory.add(Item.new("タバコ", 11.0 * 60))
 	hud.update_from(life)
 	await wait_process_frames(2)
