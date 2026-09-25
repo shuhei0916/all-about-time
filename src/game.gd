@@ -9,8 +9,8 @@ extends Node3D
 @export var player: Player
 ## 拾える道具。拾うと今の人生の持ち物に入り、次の人生で元の場所に戻る。
 @export var pickups: Array[ItemPickup] = []
-## 各人生の開始時にプレイヤーを置く位置。
-@export var spawn_position := Vector3.ZERO
+## 2世代目以降の人生の開始時にプレイヤーを置く位置。1世代目はシーンに置いた位置から始まる。
+@export var later_spawn_position := Vector3.ZERO
 
 var cycle := LifeCycle.new()
 var _prompted: Interactable
@@ -66,7 +66,7 @@ func _on_life_started(_generation: int) -> void:
 	for pickup in pickups:
 		pickup.restore()
 	if player:
-		player.respawn_at(spawn_position)
+		player.respawn_at(later_spawn_position)
 	if hud:
 		hud.start_death_fade()
 

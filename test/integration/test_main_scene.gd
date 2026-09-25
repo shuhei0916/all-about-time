@@ -60,3 +60,24 @@ func test_刑期を全うしロープを拾って使うと次の世代が始ま�
 	game.use_item_at(0)
 	assert_eq(game.cycle.generation, 2)
 	assert_eq(game.cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
+
+
+func _die_in_tutorial(game: Game) -> void:
+	game.bed.interact()
+	game.pickups[1].interact()
+	game.use_item_at(0)
+
+
+func test_2世代目は刑務所から離れた場所から始まる():
+	var game := _load_game()
+	_die_in_tutorial(game)
+	var distance := game.player.global_position.distance_to(game.door.global_position)
+	assert_gt(distance, 20.0)
+
+
+func test_2世代目の開始位置には足場がある():
+	var game := _load_game()
+	_die_in_tutorial(game)
+	var start := game.player.global_position
+	await wait_physics_frames(30)
+	assert_almost_eq(game.player.global_position.y, start.y, 0.2)
