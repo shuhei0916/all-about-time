@@ -12,6 +12,8 @@ signal emerged
 @export var rise_duration := 3.0
 ## 建物が地面を占める広さ(メートル、X と Z)。プレイヤーと重なる位置に建てないために使う。
 @export var footprint := Vector2(6, 6)
+## せり上がっている間だけ足元から出す砂ぼこり。なくてもよい。
+@export var dust: GPUParticles3D
 
 var _emergence: Emergence
 var _ground: Vector3
@@ -27,8 +29,9 @@ func _init() -> void:
 func emerge_at(ground: Vector3) -> void:
 	_ground = ground
 	_emergence = Emergence.new(height, rise_duration)
-	_emergence.finished.connect(emerged.emit)
+	_emergence.finished.connect(_on_emergence_finished)
 	_follow_emergence()
+	_start_dust()
 
 
 ## 地表まで上がりきったか。
@@ -41,6 +44,21 @@ func _physics_process(delta: float) -> void:
 		return
 	_emergence.advance(delta)
 	_follow_emergence()
+
+
+func _on_emergence_finished() -> void:
+	if dust:
+		dust.emitting = false
+	emerged.emit()
+
+
+## 砂ぼこりは建物と一緒に上がらず、地面に留まって出続ける。
+func _start_dust() -> void:
+	if not dust:
+		return
+	dust.top_level = true
+	dust.global_position = _ground
+	dust.emitting = true
 
 
 func _follow_emergence() -> void:
