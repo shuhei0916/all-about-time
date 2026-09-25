@@ -143,6 +143,77 @@ func test_持ち物を使うと減少の演出が出る():
 	game.use_item_at(0)
 	assert_eq(game.hud.get_delta_labels()[0].text, "-1分")
 
+
+## 上面が y=0 の広い床を作る。
+func _add_floor() -> void:
+	var floor_body := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(100, 0.2, 100)
+	shape.shape = box
+	floor_body.add_child(shape)
+	floor_body.position.y = -0.1
+	add_child_autofree(floor_body)
+
+
+## 床の上で、指定した角度だけ地面を見下ろすプレイヤーと、建物を建てられる Game を作る。
+func _make_builder_game(look_down_degrees: float) -> Game:
+	_add_floor()
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.new())
+	game.player.camera.rotation.x = -deg_to_rad(look_down_degrees)
+	var scene := PackedScene.new()
+	var building := Building.new()
+	building.footprint = Vector2(6, 6)
+	scene.pack(building)
+	building.free()
+	game.building_scene = scene
+	return game
+
+
+func test_地面を狙って建てると狙った位置に建物が現れ始める():
+	var game := _make_builder_game(10.0)
+	await wait_physics_frames(3)
+	var aimed: Vector3 = game.player.aimed_ground()
+	game.build()
+	assert_eq(game.buildings.size(), 1)
+	var building := game.buildings[0]
+	assert_almost_eq(Vector2(building.global_position.x, building.global_position.z), Vector2(aimed.x, aimed.z), Vector2.ONE * 0.01)
+	assert_lt(building.global_position.y, aimed.y)
+
+
+func test_地面を狙っていなければ建たない():
+	var game := _make_builder_game(-10.0)
+	await wait_physics_frames(3)
+	game.build()
+	assert_eq(game.buildings.size(), 0)
+
+
+func test_プレイヤーと重なる位置には建てない():
+	var game := _make_builder_game(45.0)
+	await wait_physics_frames(3)
+	game.build()
+	assert_eq(game.buildings.size(), 0)
+
+
+func test_建物は正面をプレイヤーに向けて現れる():
+	var game := _make_builder_game(10.0)
+	game.player.rotation.y = 1.0
+	await wait_physics_frames(3)
+	game.build()
+	assert_almost_eq(game.buildings[0].rotation.y, 1.0, 0.001)
+
+
+func test_Bキーで建てる():
+	var game := _make_builder_game(10.0)
+	await wait_physics_frames(3)
+	# 入力マップは物理キーで割り当てているので、実際のキーボードと同じく物理キーを載せて送る。
+	var press := InputEventKey.new()
+	press.physical_keycode = KEY_B
+	press.pressed = true
+	InputSender.new(game).send_event(press)
+	assert_eq(game.buildings.size(), 1)
+
 ## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:
 	var thing := Interactable.new()

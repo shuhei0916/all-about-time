@@ -11,6 +11,14 @@ extends Node3D
 @export var pickups: Array[ItemPickup] = []
 ## 2世代目以降の人生の開始時にプレイヤーを置く位置。1世代目はシーンに置いた位置から始まる。
 @export var later_spawn_position := Vector3.ZERO
+## B キーで地面から現れる建物。
+@export var building_scene: PackedScene
+
+## 建てた建物。
+var buildings: Array[Building] = []
+
+## 建物とプレイヤーの間に空ける最低限の距離(メートル)。
+const PLAYER_CLEARANCE := 0.5
 
 var cycle := LifeCycle.new()
 var _prompted: Interactable
@@ -38,8 +46,11 @@ func _physics_process(_delta: float) -> void:
 	_update_prompt()
 
 
-## 数字キーの 1〜9 で、その番号の持ち物を使う。
+## 数字キーの 1〜9 で、その番号の持ち物を使う。B キーで建物を建てる。
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("build"):
+		build()
+		return
 	var key := event as InputEventKey
 	if key and key.pressed and not key.echo and key.keycode >= KEY_1 and key.keycode <= KEY_9:
 		use_item_at(key.keycode - KEY_1)
@@ -50,6 +61,32 @@ func use_item_at(index: int) -> void:
 	var items := cycle.life.inventory.items()
 	if index < items.size():
 		cycle.life.use_item(items[index])
+
+
+## プレイヤーが狙っている地面から建物を現す。正面はプレイヤーに向ける。
+## 地面を狙っていない時や、プレイヤーと重なる位置では建てない。
+func build() -> void:
+	if not player or not building_scene:
+		return
+	var ground: Variant = player.aimed_ground()
+	if ground == null:
+		return
+	var building: Building = building_scene.instantiate()
+	if _overlaps_player(ground, building.footprint):
+		building.free()
+		return
+	add_child(building)
+	# 建物の正面(+Z)は、プレイヤーの正面(-Z)の逆、つまりプレイヤーの側を向く。
+	building.rotation.y = player.rotation.y
+	building.emerge_at(ground)
+	buildings.append(building)
+
+
+## 建物が置かれる範囲にプレイヤーが入っているか。向きによらず足りるよう、広い方の辺で測る。
+func _overlaps_player(ground: Vector3, footprint: Vector2) -> bool:
+	var reach := maxf(footprint.x, footprint.y) / 2.0 + PLAYER_CLEARANCE
+	var offset := player.global_position - ground
+	return Vector2(offset.x, offset.z).length() < reach
 
 
 ## 刑期を全うする。ベッドから呼ばれる。出所できるようドアを開ける。

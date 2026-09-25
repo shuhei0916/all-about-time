@@ -10,6 +10,8 @@ signal emerged
 @export var height := 4.0
 ## 地表まで上がりきるのにかかる秒数。
 @export var rise_duration := 3.0
+## 建物が地面を占める広さ(メートル、X と Z)。プレイヤーと重なる位置に建てないために使う。
+@export var footprint := Vector2(6, 6)
 
 var _emergence: Emergence
 var _ground: Vector3
