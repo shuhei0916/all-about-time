@@ -18,3 +18,10 @@ func _init(item_name: String, cost_seconds: float) -> void:
 ## 死に至る道具か。
 func is_lethal() -> bool:
 	return is_inf(lifespan_cost)
+
+
+## 持ち物欄に添える、使った時の効果の短い説明。
+func effect_text() -> String:
+	if is_lethal():
+		return "死"
+	return Lifespan.format_delta(-lifespan_cost)

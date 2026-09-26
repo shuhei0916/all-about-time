@@ -44,3 +44,11 @@ func test_死に至る道具を使うと寿命が尽きる():
 	inventory.add(rope)
 	inventory.use(rope, lifespan)
 	assert_true(lifespan.is_dead())
+
+
+func test_取り出した物はなくなる():
+	var inventory := Inventory.new()
+	var item := Item.new("タバコ", 60.0)
+	inventory.add(item)
+	inventory.remove(item)
+	assert_eq(inventory.items().size(), 0)

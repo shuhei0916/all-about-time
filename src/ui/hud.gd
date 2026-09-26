@@ -78,15 +78,9 @@ func _update_inventory(inventory: Inventory) -> void:
 	inventory_label.visible = not items.is_empty()
 	var lines: Array[String] = ["持ち物（数字キーで使う）"]
 	for i in items.size():
-		lines.append("%d: %s  %s" % [i + 1, items[i].name, _cost_text(items[i])])
+		lines.append("%d: %s  %s" % [i + 1, items[i].name, items[i].effect_text()])
 	inventory_label.text = "
 ".join(lines)
-
-
-func _cost_text(item: Item) -> String:
-	if item.is_lethal():
-		return "死"
-	return Lifespan.format_delta(-item.lifespan_cost)
 
 
 ## 寿命の増減を示すラベルを出す。減少は赤、増加は緑で、流れ落ちながら消える。
