@@ -22,7 +22,12 @@ func interact() -> void:
 	if _taken:
 		return
 	_set_taken(true)
-	picked_up.emit(Item.new(item_name, Item.LETHAL if lethal else lifespan_cost))
+	picked_up.emit(_make_item())
+
+
+## 拾った時に手に入る道具を作る。継承先で別の種類の持ち物にできる。
+func _make_item() -> Item:
+	return Item.new(item_name, Item.LETHAL if lethal else lifespan_cost)
 
 
 ## 拾われる前の状態に戻す。

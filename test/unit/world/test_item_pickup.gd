@@ -59,3 +59,14 @@ func test_案内には道具の名前が出る():
 	var pickup := _make_pickup("タバコ", 60.0)
 	pickup.show_prompt()
 	assert_eq(pickup.get_prompt_label().text, "E: タバコを拾う")
+
+
+func test_設計図を拾うと建てる建物を持った設計図が手に入る():
+	var pickup := BlueprintPickup.new()
+	pickup.item_name = "店の設計図"
+	pickup.building_scene = PackedScene.new()
+	add_child_autofree(pickup)
+	watch_signals(pickup)
+	pickup.interact()
+	var blueprint: Blueprint = get_signal_parameters(pickup, "picked_up")[0]
+	assert_eq(blueprint.building_scene, pickup.building_scene)
