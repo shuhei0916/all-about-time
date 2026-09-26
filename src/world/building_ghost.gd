@@ -15,6 +15,8 @@ var _material := StandardMaterial3D.new()
 func _init(scene: PackedScene) -> void:
 	_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# 自分と重なって赤くなる時はプレイヤーが影の内側にいるので、裏面も描く。
+	_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_material.albedo_color = PLACEABLE_COLOR
 
 	building = scene.instantiate()

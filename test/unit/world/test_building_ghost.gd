@@ -67,3 +67,9 @@ func test_指定した位置と向きに置ける():
 	ghost.place_at(Vector3(1, 2, 3), 0.5)
 	assert_eq(ghost.global_position, Vector3(1, 2, 3))
 	assert_almost_eq(ghost.rotation.y, 0.5, 0.001)
+
+
+func test_影は内側からも見える():
+	# 自分と重なって赤くなる時、プレイヤーは影の内側に立っている。
+	var ghost := _make_ghost()
+	assert_eq(_body_material(ghost).cull_mode, BaseMaterial3D.CULL_DISABLED)
