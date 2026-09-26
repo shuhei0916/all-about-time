@@ -1,6 +1,6 @@
 class_name Hud
 extends CanvasLayer
-## 画面左上に現在の目標、右上に残り寿命、左下に持ち物を表示する。
+## 画面左上に現在の目標、右上に残り寿命、左下に持ち物、下中央に設計図の配置の案内を表示する。
 ## 操作案内は画面ではなく対象物の側に出すため、ここでは扱わない。
 ## 死亡時は画面を黒で覆い、次の人生の開始とともに明けていく。
 
@@ -16,6 +16,7 @@ var fade_overlay: ColorRect
 var objective_label: Label
 var lifespan_label: Label
 var inventory_label: Label
+var placement_label: Label
 var _delta_container: VBoxContainer
 
 
@@ -31,6 +32,11 @@ func _init() -> void:
 	lifespan_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	inventory_label = _make_label(Control.PRESET_BOTTOM_LEFT)
 	inventory_label.add_theme_font_size_override("font_size", 22)
+	placement_label = _make_label(Control.PRESET_CENTER_BOTTOM)
+	placement_label.text = "左クリック: 建てる　右クリック: やめる"
+	placement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	placement_label.add_theme_font_size_override("font_size", 24)
+	placement_label.visible = false
 
 	# 変化量のラベルは寿命ラベルの真下に、新しいものから順に積む。
 	_delta_container = VBoxContainer.new()
@@ -51,7 +57,7 @@ func _make_label(preset: Control.LayoutPreset) -> Label:
 	# これがないと既定の右向きに伸びて、右上のラベルが画面外へはみ出す。
 	label.grow_horizontal = _grow_direction_for(preset)
 	# 下端に置くラベルは、行が増えた時に上へ伸びないと画面外へはみ出す。
-	if preset in [Control.PRESET_BOTTOM_LEFT, Control.PRESET_BOTTOM_RIGHT]:
+	if preset in [Control.PRESET_BOTTOM_LEFT, Control.PRESET_BOTTOM_RIGHT, Control.PRESET_CENTER_BOTTOM]:
 		label.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	label.add_theme_font_size_override("font_size", 28)
 	add_child(label)
@@ -62,6 +68,8 @@ func _grow_direction_for(preset: Control.LayoutPreset) -> Control.GrowDirection:
 	match preset:
 		Control.PRESET_TOP_RIGHT, Control.PRESET_BOTTOM_RIGHT, Control.PRESET_CENTER_RIGHT:
 			return Control.GROW_DIRECTION_BEGIN
+		Control.PRESET_CENTER_TOP, Control.PRESET_CENTER_BOTTOM, Control.PRESET_CENTER:
+			return Control.GROW_DIRECTION_BOTH
 		_:
 			return Control.GROW_DIRECTION_END
 
@@ -81,6 +89,11 @@ func _update_inventory(inventory: Inventory) -> void:
 		lines.append("%d: %s  %s" % [i + 1, items[i].name, items[i].effect_text()])
 	inventory_label.text = "
 ".join(lines)
+
+
+## 設計図の配置モード中の操作の案内を出す、または消す。
+func show_placement_hint(shown: bool) -> void:
+	placement_label.visible = shown
 
 
 ## 寿命の増減を示すラベルを出す。減少は赤、増加は緑で、流れ落ちながら消える。

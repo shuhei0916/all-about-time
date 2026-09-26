@@ -156,7 +156,7 @@ func _add_floor() -> void:
 	add_child_autofree(floor_body)
 
 
-## 床の上で、指定した角度だけ地面を見下ろすプレイヤーと、建物を建てられる Game を作る。
+## 床の上で、指定した角度だけ地面を見下ろすプレイヤーと、店の設計図を1枚持った Game を作る。
 func _make_builder_game(look_down_degrees: float) -> Game:
 	_add_floor()
 	var game: Game = add_child_autofree(Game.new())
@@ -167,52 +167,148 @@ func _make_builder_game(look_down_degrees: float) -> Game:
 	building.footprint = Vector2(6, 6)
 	scene.pack(building)
 	building.free()
-	game.building_scene = scene
+	game.cycle.life.inventory.add(Blueprint.new("店の設計図", scene))
 	return game
 
 
-func test_地面を狙って建てると狙った位置に建物が現れ始める():
+func _blueprints(game: Game) -> Array:
+	return game.cycle.life.inventory.items().filter(func(item: Item) -> bool: return item is Blueprint)
+
+
+func test_設計図を使うと配置モードに入る():
 	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	assert_true(game.is_placing())
+
+
+func test_配置モードに入っても設計図はまだ手元にある():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	assert_eq(_blueprints(game).size(), 1)
+
+
+func test_配置モードでは狙った地面に影が出る():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
 	await wait_physics_frames(3)
 	var aimed: Vector3 = game.player.aimed_ground()
-	game.build()
+	assert_true(game.ghost.visible)
+	assert_almost_eq(game.ghost.global_position, aimed, Vector3.ONE * 0.01)
+
+
+func test_建てられる位置では影が緑になる():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	await wait_physics_frames(3)
+	assert_true(game.is_placeable())
+
+
+func test_自分と重なる位置では影が赤くなる():
+	var game := _make_builder_game(45.0)
+	game.use_item_at(0)
+	await wait_physics_frames(3)
+	assert_true(game.ghost.visible)
+	assert_false(game.is_placeable())
+
+
+func test_地面を狙っていなければ影は出ない():
+	var game := _make_builder_game(-10.0)
+	game.use_item_at(0)
+	await wait_physics_frames(3)
+	assert_false(game.ghost.visible)
+	assert_false(game.is_placeable())
+
+
+func test_確定すると影の位置に建物が現れ始め_設計図はなくなる():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	await wait_physics_frames(3)
+	var aimed: Vector3 = game.player.aimed_ground()
+	game.confirm_placement()
 	assert_eq(game.buildings.size(), 1)
 	var building := game.buildings[0]
 	assert_almost_eq(Vector2(building.global_position.x, building.global_position.z), Vector2(aimed.x, aimed.z), Vector2.ONE * 0.01)
 	assert_lt(building.global_position.y, aimed.y)
+	assert_eq(_blueprints(game).size(), 0)
+	assert_false(game.is_placing())
 
 
-func test_地面を狙っていなければ建たない():
-	var game := _make_builder_game(-10.0)
-	await wait_physics_frames(3)
-	game.build()
-	assert_eq(game.buildings.size(), 0)
-
-
-func test_プレイヤーと重なる位置には建てない():
+func test_建てられない位置で確定しても建たず_配置モードのまま():
 	var game := _make_builder_game(45.0)
+	game.use_item_at(0)
 	await wait_physics_frames(3)
-	game.build()
+	game.confirm_placement()
 	assert_eq(game.buildings.size(), 0)
+	assert_true(game.is_placing())
+
+
+func test_取りやめると影が消え_設計図は手元に残る():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	await wait_physics_frames(3)
+	game.cancel_placement()
+	assert_false(game.is_placing())
+	assert_null(game.ghost)
+	assert_eq(_blueprints(game).size(), 1)
 
 
 func test_建物は正面をプレイヤーに向けて現れる():
 	var game := _make_builder_game(10.0)
 	game.player.rotation.y = 1.0
+	game.use_item_at(0)
 	await wait_physics_frames(3)
-	game.build()
+	game.confirm_placement()
 	assert_almost_eq(game.buildings[0].rotation.y, 1.0, 0.001)
 
 
-func test_Bキーで建てる():
+func _click(game: Game, button: MouseButton) -> void:
+	var click := InputEventMouseButton.new()
+	click.button_index = button
+	click.pressed = true
+	InputSender.new(game).send_event(click)
+
+
+func test_配置モードで左クリックすると確定する():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	await wait_physics_frames(3)
+	_click(game, MOUSE_BUTTON_LEFT)
+	assert_eq(game.buildings.size(), 1)
+
+
+func test_配置モードで右クリックすると取りやめる():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	await wait_physics_frames(3)
+	_click(game, MOUSE_BUTTON_RIGHT)
+	assert_false(game.is_placing())
+
+
+func test_配置モードでなければ左クリックしても何も建たない():
 	var game := _make_builder_game(10.0)
 	await wait_physics_frames(3)
-	# 入力マップは物理キーで割り当てているので、実際のキーボードと同じく物理キーを載せて送る。
-	var press := InputEventKey.new()
-	press.physical_keycode = KEY_B
-	press.pressed = true
-	InputSender.new(game).send_event(press)
-	assert_eq(game.buildings.size(), 1)
+	_click(game, MOUSE_BUTTON_LEFT)
+	assert_eq(game.buildings.size(), 0)
+
+
+func test_配置モードの途中で死ぬと配置モードを抜ける():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	game.serve_sentence()
+	simulate(game, 1, Life.INITIAL_LIFESPAN)
+	assert_false(game.is_placing())
+	assert_null(game.ghost)
+
+
+func test_配置モードの間はHUDに操作の案内が出る():
+	var game := _make_builder_game(10.0)
+	game.hud = add_child_autofree(Hud.new())
+	game.use_item_at(0)
+	simulate(game, 1, 0.0)
+	assert_true(game.hud.placement_label.visible)
+	game.cancel_placement()
+	simulate(game, 1, 0.0)
+	assert_false(game.hud.placement_label.visible)
 
 ## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:

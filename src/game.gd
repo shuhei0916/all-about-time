@@ -13,17 +13,18 @@ extends Node3D
 @export var pickups: Array[ItemPickup] = []
 ## 2世代目以降の人生の開始時にプレイヤーを置く位置。1世代目はシーンに置いた位置から始まる。
 @export var later_spawn_position := Vector3.ZERO
-## B キーで地面から現れる建物。
-@export var building_scene: PackedScene
-
-## 建てた建物。
-var buildings: Array[Building] = []
 
 ## 建物とプレイヤーの間に空ける最低限の距離(メートル)。
 const PLAYER_CLEARANCE := 0.5
 
 var cycle := LifeCycle.new()
+## 建てた建物。
+var buildings: Array[Building] = []
+## 設計図の配置モード中に、建つ位置を示す影。配置モードでなければ null。
+var ghost: BuildingGhost
 var _prompted: Interactable
+var _placing_blueprint: Blueprint
+var _placeable := false
 
 
 func _ready() -> void:
@@ -41,49 +42,102 @@ func _process(delta: float) -> void:
 	cycle.life.tick(delta)
 	if hud:
 		hud.update_from(cycle.life)
+		hud.show_placement_hint(is_placing())
 
 
 ## 案内は視線のレイと同じ物理フレームで更新する。
 ## _process で更新すると、1回の描画フレームに物理フレームがまとめて走った時に
 ## レイの結果より案内が遅れる。
+## 配置の影も、狙った地面を視線のレイから取るので同じく物理フレームで更新する。
 func _physics_process(_delta: float) -> void:
 	_update_prompt()
+	_update_placement()
 
 
-## 数字キーの 1〜9 で、その番号の持ち物を使う。B キーで建物を建てる。
+## 数字キーの 1〜9 で、その番号の持ち物を使う。
+## 設計図の配置モード中は、左クリックで建て、右クリックで取りやめる。
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("build"):
-		build()
-		return
+	if is_placing():
+		if event.is_action_pressed("place_confirm"):
+			confirm_placement()
+			return
+		if event.is_action_pressed("place_cancel"):
+			cancel_placement()
+			return
 	var key := event as InputEventKey
 	if key and key.pressed and not key.echo and key.keycode >= KEY_1 and key.keycode <= KEY_9:
 		use_item_at(key.keycode - KEY_1)
 
 
 ## 持ち物を番号(0始まり)で指定して使う。その番号の物がなければ何もしない。
+## 設計図は、すぐには使い切らずに配置モードに入る。
 func use_item_at(index: int) -> void:
 	var items := cycle.life.inventory.items()
-	if index < items.size():
+	if index >= items.size():
+		return
+	if items[index] is Blueprint:
+		_start_placement(items[index])
+	else:
 		cycle.life.use_item(items[index])
 
 
-## プレイヤーが狙っている地面から建物を現す。正面はプレイヤーに向ける。
-## 地面を狙っていない時や、プレイヤーと重なる位置では建てない。
-func build() -> void:
-	if not player or not building_scene:
+## 設計図の配置モード中か。
+func is_placing() -> bool:
+	return _placing_blueprint != null
+
+
+## 今の影の位置に建てられるか。
+func is_placeable() -> bool:
+	return is_placing() and _placeable
+
+
+## 影の位置に設計図の建物を現し、設計図を使い切る。建てられない位置なら何もしない。
+## 建物の正面(+Z)は、プレイヤーの正面(-Z)の逆、つまりプレイヤーの側を向く。
+func confirm_placement() -> void:
+	if not is_placeable():
+		return
+	var building: Building = _placing_blueprint.building_scene.instantiate()
+	add_child(building)
+	building.rotation.y = ghost.rotation.y
+	building.emerge_at(ghost.global_position)
+	buildings.append(building)
+	cycle.life.inventory.remove(_placing_blueprint)
+	_end_placement()
+
+
+## 配置モードを取りやめる。設計図は手元に残る。
+func cancel_placement() -> void:
+	_end_placement()
+
+
+func _start_placement(blueprint: Blueprint) -> void:
+	_end_placement()
+	_placing_blueprint = blueprint
+	ghost = BuildingGhost.new(blueprint.building_scene)
+	ghost.visible = false
+	add_child(ghost)
+
+
+func _end_placement() -> void:
+	_placing_blueprint = null
+	_placeable = false
+	if ghost:
+		ghost.queue_free()
+		ghost = null
+
+
+## 影を狙った地面へ動かし、建てられるかを色で示す。地面を狙っていなければ影を隠す。
+func _update_placement() -> void:
+	if not is_placing() or not player:
 		return
 	var ground: Variant = player.aimed_ground()
+	ghost.visible = ground != null
 	if ground == null:
+		_placeable = false
 		return
-	var building: Building = building_scene.instantiate()
-	if _overlaps_player(ground, building.footprint):
-		building.free()
-		return
-	add_child(building)
-	# 建物の正面(+Z)は、プレイヤーの正面(-Z)の逆、つまりプレイヤーの側を向く。
-	building.rotation.y = player.rotation.y
-	building.emerge_at(ground)
-	buildings.append(building)
+	ghost.place_at(ground, player.rotation.y)
+	_placeable = not _overlaps_player(ground, ghost.building.footprint)
+	ghost.set_placeable(_placeable)
 
 
 ## 建物が置かれる範囲にプレイヤーが入っているか。向きによらず足りるよう、広い方の辺で測る。
@@ -107,6 +161,8 @@ func serve_sentence() -> void:
 
 func _on_life_started(_generation: int) -> void:
 	_watch_lifespan()
+	# 設計図は前の人生の持ち物なので、配置の途中でも取りやめる。
+	cancel_placement()
 	if door:
 		door.close()
 	for pickup in pickups:

@@ -29,10 +29,10 @@ func test_メインシーンでベッドを使うと目標が死ぬになる():
 	assert_eq(game.hud.objective_label.text, "死ぬ")
 
 
-func test_メインシーンにはタバコとロープが落ちている():
+func test_メインシーンにはタバコとロープと店の設計図が落ちている():
 	var game := _load_game()
 	var names := game.pickups.map(func(p: ItemPickup) -> String: return p.item_name)
-	assert_eq(names, ["タバコ", "ロープ"])
+	assert_eq(names, ["タバコ", "ロープ", "店の設計図"])
 
 
 func test_ロープは死に至る道具():
@@ -83,21 +83,34 @@ func test_2世代目の開始位置には足場がある():
 	assert_almost_eq(game.player.global_position.y, start.y, 0.2)
 
 
-func test_2世代目の開始場所で地面を見下ろすと店を建てられる():
+func test_店の設計図は2世代目の開始位置のすぐ近くにある():
 	var game := _load_game()
+	var blueprint: ItemPickup = game.pickups[2]
+	assert_true(blueprint is BlueprintPickup)
+	assert_lt(blueprint.global_position.distance_to(game.later_spawn_position), 5.0)
+
+
+## 2世代目で店の設計図を拾い、地面を見下ろして配置モードに入る。
+func _start_placing_shop(game: Game) -> void:
 	_die_in_tutorial(game)
+	game.pickups[2].interact()
+	game.use_item_at(0)
 	game.player.camera.rotation.x = -deg_to_rad(10.0)
 	await wait_physics_frames(5)
-	game.build()
+
+
+func test_2世代目の開始場所で設計図を使うと店を建てられる():
+	var game := _load_game()
+	await _start_placing_shop(game)
+	assert_true(game.is_placeable())
+	game.confirm_placement()
 	assert_eq(game.buildings.size(), 1)
 
 
 func test_建てた店は時間が経つと地面の上に立つ():
 	var game := _load_game()
-	_die_in_tutorial(game)
-	game.player.camera.rotation.x = -deg_to_rad(10.0)
-	await wait_physics_frames(5)
-	game.build()
+	await _start_placing_shop(game)
+	game.confirm_placement()
 	var shop: Building = game.buildings[0]
 	simulate(shop, 10, 1.0)
 	assert_true(shop.is_emerged())

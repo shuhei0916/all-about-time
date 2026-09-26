@@ -97,3 +97,31 @@ func test_持ち物欄は画面内に収まる():
 	var rect := hud.inventory_label.get_global_rect()
 	var screen := hud.inventory_label.get_viewport_rect()
 	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
+
+
+func test_最初は配置の案内が出ていない():
+	var hud: Hud = add_child_autofree(Hud.new())
+	assert_false(hud.placement_label.visible)
+
+
+func test_配置の案内には確定と取りやめの操作が出る():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_placement_hint(true)
+	assert_true(hud.placement_label.visible)
+	assert_eq(hud.placement_label.text, "左クリック: 建てる　右クリック: やめる")
+
+
+func test_配置の案内を消せる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_placement_hint(true)
+	hud.show_placement_hint(false)
+	assert_false(hud.placement_label.visible)
+
+
+func test_配置の案内は画面内に収まる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_placement_hint(true)
+	await wait_process_frames(2)
+	var rect := hud.placement_label.get_global_rect()
+	var screen := hud.placement_label.get_viewport_rect()
+	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
