@@ -21,9 +21,11 @@ var level := 0.0
 
 
 ## 時間を進める。stimulus は今見えている物の目立ち度(見えていなければ 0)。
-func update(delta: float, stimulus: float) -> void:
-	if stimulus > 0.0:
-		level += stimulus * RISE_PER_SECOND * delta
+## ceiling はその刺激で上がれる上限。人づてに釣られて気にする時のように、
+## 刺激が弱い理由で気にする時に使う。上限より気にしていれば、その刺激では冷めていく。
+func update(delta: float, stimulus: float, ceiling := 1.0) -> void:
+	if stimulus > 0.0 and level < ceiling:
+		level = minf(level + stimulus * RISE_PER_SECOND * delta, ceiling)
 	else:
 		level -= DECAY_PER_SECOND * delta
 	level = clampf(level, 0.0, 1.0)

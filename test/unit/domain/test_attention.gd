@@ -72,3 +72,16 @@ func test_冷めると気にしなくなる():
 	attention.update(2.0, 1.0)
 	attention.update(60.0, 0.0)
 	assert_eq(attention.stage(), Attention.Stage.NONE)
+
+
+func test_上限を付けると注目度はそこまでしか上がらない():
+	var attention := Attention.new()
+	attention.update(10.0, 1.0, 0.5)
+	assert_eq(attention.level, 0.5)
+
+
+func test_上限より気にしている時は_その刺激では冷めていく():
+	var attention := Attention.new()
+	attention.level = 0.9
+	attention.update(1.0, 1.0, 0.5)
+	assert_lt(attention.level, 0.9)
