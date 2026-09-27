@@ -37,13 +37,24 @@ func walk_to(destination: Vector3) -> void:
 ## 相手を見て、見えていればその目立ち度に応じて気にする。毎フレーム呼ぶ。
 ## ignore には、視線を遮る物として扱わない物(相手自身の体など)を渡す。
 func observe(delta: float, target: Vector3, stimulus: float, ignore: Array[RID] = []) -> void:
+	attend(delta, target, stimulus if can_see(target, ignore) else 0.0)
+
+
+## 見えるかどうかを判断済みの刺激を受けて気にする。目で追う先は target。
+## ceiling は、その刺激で気にしてよい上限(人づてに釣られた時など)。
+func attend(delta: float, target: Vector3, stimulus: float, ceiling := 1.0) -> void:
 	_gaze_target = target
-	attention.update(delta, stimulus if can_see(target, ignore) else 0.0)
+	attention.update(delta, stimulus, ceiling)
+
+
+## 立ち止まってじっと見ているか。
+func is_staring() -> bool:
+	return attention.stage() == Attention.Stage.STARE
 
 
 ## 目の位置から point が見えるか。遠すぎる、視野の外、途中に遮る物があれば見えない。
 func can_see(point: Vector3, ignore: Array[RID] = []) -> bool:
-	var eye := _eye_position()
+	var eye := eye_position()
 	var to_point := point - eye
 	if to_point.length() > SIGHT_RANGE:
 		return false
@@ -101,7 +112,8 @@ func _turn_head(delta: float) -> void:
 	head.global_basis = head.global_basis.slerp(wanted.orthonormalized(), weight)
 
 
-func _eye_position() -> Vector3:
+## 目の位置。
+func eye_position() -> Vector3:
 	return global_position + Vector3(0, EYE_HEIGHT, 0)
 
 
