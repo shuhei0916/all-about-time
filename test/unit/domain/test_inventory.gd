@@ -52,3 +52,15 @@ func test_取り出した物はなくなる():
 	inventory.add(item)
 	inventory.remove(item)
 	assert_eq(inventory.items().size(), 0)
+
+
+func test_何も持っていなければ目立たない():
+	assert_eq(Inventory.new().conspicuousness(), 0.0)
+
+
+func test_持ち物の目立ち度は一番目立つ物で決まる():
+	var inventory := Inventory.new()
+	inventory.add(Item.new("タバコ", 60.0, 0.1))
+	inventory.add(Item.new("拳銃", Item.LETHAL, 0.9))
+	inventory.add(Item.new("設計図", 0.0, 0.3))
+	assert_almost_eq(inventory.conspicuousness(), 0.9, 0.0001)

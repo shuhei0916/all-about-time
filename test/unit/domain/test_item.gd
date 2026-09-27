@@ -15,3 +15,11 @@ func test_寿命を縮める道具の効果は減る量で表す():
 
 func test_死に至る道具の効果は死と表す():
 	assert_eq(Item.new("ロープ", Item.LETHAL).effect_text(), "死")
+
+
+func test_目立ち度を指定しなければ目立たない():
+	assert_eq(Item.new("タバコ", 60.0).conspicuousness, 0.0)
+
+
+func test_目立ち度を持てる():
+	assert_eq(Item.new("拳銃", Item.LETHAL, 1.0).conspicuousness, 1.0)

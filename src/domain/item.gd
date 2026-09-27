@@ -8,11 +8,14 @@ const LETHAL := INF
 var name: String
 ## 使った時に縮む寿命(秒)。
 var lifespan_cost: float
+## 持っているのが周りの人にどれだけ目立つか(0〜1)。拳銃のような物ほど高い。
+var conspicuousness: float
 
 
-func _init(item_name: String, cost_seconds: float) -> void:
+func _init(item_name: String, cost_seconds: float, conspicuousness_level := 0.0) -> void:
 	name = item_name
 	lifespan_cost = cost_seconds
+	conspicuousness = conspicuousness_level
 
 
 ## 死に至る道具か。

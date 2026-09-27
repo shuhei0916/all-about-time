@@ -70,3 +70,12 @@ func test_設計図を拾うと建てる建物を持った設計図が手に入�
 	pickup.interact()
 	var blueprint: Blueprint = get_signal_parameters(pickup, "picked_up")[0]
 	assert_eq(blueprint.building_scene, pickup.building_scene)
+
+
+func test_拾った道具には落ちていた時の目立ち度が付く():
+	var pickup := _make_pickup("拳銃", 0.0)
+	pickup.conspicuousness = 1.0
+	watch_signals(pickup)
+	pickup.interact()
+	var item: Item = get_signal_parameters(pickup, "picked_up")[0]
+	assert_eq(item.conspicuousness, 1.0)

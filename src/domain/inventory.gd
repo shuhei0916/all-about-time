@@ -15,6 +15,14 @@ func remove(item: Item) -> void:
 	_items.erase(item)
 
 
+## 持ち物全体がどれだけ目立つか。一番目立つ物で決まる。
+func conspicuousness() -> float:
+	var highest := 0.0
+	for item in _items:
+		highest = maxf(highest, item.conspicuousness)
+	return highest
+
+
 ## 持ち物の一覧を返す。
 func items() -> Array[Item]:
 	return _items.duplicate()

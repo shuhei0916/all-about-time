@@ -14,6 +14,8 @@ signal picked_up(item: Item)
 @export var lifespan_cost := 0.0
 ## 死に至る道具か。そうなら lifespan_cost によらず寿命が尽きる。
 @export var lethal := false
+## 拾った道具を持っているのが周りの人にどれだけ目立つか(0〜1)。
+@export_range(0.0, 1.0) var conspicuousness := 0.0
 
 var _taken := false
 
@@ -27,7 +29,7 @@ func interact() -> void:
 
 ## 拾った時に手に入る道具を作る。継承先で別の種類の持ち物にできる。
 func _make_item() -> Item:
-	return Item.new(item_name, Item.LETHAL if lethal else lifespan_cost)
+	return Item.new(item_name, Item.LETHAL if lethal else lifespan_cost, conspicuousness)
 
 
 ## 拾われる前の状態に戻す。
