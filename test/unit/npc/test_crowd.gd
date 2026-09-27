@@ -28,7 +28,7 @@ func _make_crowd(population: int) -> Crowd:
 
 ## NPC を指定した位置に立たせ、指定した方向を向かせる。
 func _stand(npc: Npc, position: Vector3, facing: Vector3) -> void:
-	npc.walk_to(position)
+	npc.stop()
 	npc.global_position = position
 	npc.look_at(position + facing, Vector3.UP)
 

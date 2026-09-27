@@ -120,3 +120,13 @@ func test_強く気になると体ごと相手に向く():
 	npc.observe(0.0, Vector3(5, Npc.EYE_HEIGHT, 0), 0.0)
 	simulate(npc, 30, 0.1)
 	assert_almost_eq(-npc.global_basis.z, Vector3.RIGHT, Vector3.ONE * 0.05)
+
+
+func test_止まるとその場に立ち止まり_着いたことにはならない():
+	var npc := _make_npc()
+	watch_signals(npc)
+	npc.walk_to(Vector3(0, 0, -10))
+	npc.stop()
+	simulate(npc, 10, 0.1)
+	assert_eq(npc.global_position, Vector3.ZERO)
+	assert_signal_not_emitted(npc, "arrived")

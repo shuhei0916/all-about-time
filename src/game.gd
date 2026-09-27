@@ -9,6 +9,8 @@ extends Node3D
 ## Esc で開く一時停止メニュー。
 @export var pause_menu: PauseMenu
 @export var player: Player
+## 街を歩く人々。プレイヤーの持ち物が目立つと気にし始める。
+@export var crowd: Crowd
 ## 拾える道具。拾うと今の人生の持ち物に入り、次の人生で元の場所に戻る。
 @export var pickups: Array[ItemPickup] = []
 ## 2世代目以降の人生の開始時にプレイヤーを置く位置。1世代目はシーンに置いた位置から始まる。
@@ -56,9 +58,11 @@ func _process(delta: float) -> void:
 ## _process で更新すると、1回の描画フレームに物理フレームがまとめて走った時に
 ## レイの結果より案内が遅れる。
 ## 配置の影も、狙った地面を視線のレイから取るので同じく物理フレームで更新する。
-func _physics_process(_delta: float) -> void:
+## 人々の視線の判定もレイを使うので、同じく物理フレームで行う。
+func _physics_process(delta: float) -> void:
 	_update_prompt()
 	_update_placement()
+	_show_player_to_crowd(delta)
 
 
 ## 数字キーの 1〜9 で、その番号の持ち物を使う。
@@ -192,6 +196,14 @@ func _watch_lifespan() -> void:
 func _on_lifespan_changed(amount: float) -> void:
 	if hud:
 		hud.show_lifespan_delta(amount)
+
+
+## 人々にプレイヤーの姿と、持ち物の目立ち度を見せる。
+func _show_player_to_crowd(delta: float) -> void:
+	if not crowd or not player:
+		return
+	var ignore: Array[RID] = [player.get_rid()]
+	crowd.watch(delta, player.camera.global_position, cycle.life.inventory.conspicuousness(), ignore)
 
 
 ## 見ている対象にだけ案内を出す。対象が変わったら前の案内を消す。

@@ -34,6 +34,11 @@ func walk_to(destination: Vector3) -> void:
 	_destination = destination
 
 
+## 目的地へ向かうのをやめ、その場に立ち止まる。
+func stop() -> void:
+	_destination = null
+
+
 ## 相手を見て、見えていればその目立ち度に応じて気にする。毎フレーム呼ぶ。
 ## ignore には、視線を遮る物として扱わない物(相手自身の体など)を渡す。
 func observe(delta: float, target: Vector3, stimulus: float, ignore: Array[RID] = []) -> void:

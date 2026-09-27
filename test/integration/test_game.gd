@@ -330,6 +330,39 @@ func test_チュートリアルを飛ばしても寿命の減少の演出は出�
 	game.use_item_at(0)
 	assert_eq(game.hud.get_delta_labels()[0].text, "-1分")
 
+
+## プレイヤーの正面 5m に、プレイヤーの方を向いて立つ人が1人いる Game を作る。
+func _make_watched_game() -> Game:
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.new())
+	var npc := Npc.new()
+	var scene := PackedScene.new()
+	scene.pack(npc)
+	npc.free()
+	var crowd := Crowd.new()
+	crowd.npc_scene = scene
+	crowd.population = 1
+	game.crowd = add_child_autofree(crowd)
+	var someone := crowd.npcs[0]
+	someone.global_position = Vector3(0, 0, -5)
+	someone.stop()
+	someone.look_at(Vector3(0, 0, 0), Vector3.UP)
+	return game
+
+
+func test_目立つ物を持っていると周りの人に気にされる():
+	var game := _make_watched_game()
+	game.cycle.life.inventory.add(Item.new("拳銃", Item.LETHAL, 1.0))
+	await wait_physics_frames(10)
+	assert_gt(game.crowd.npcs[0].attention.level, 0.0)
+
+
+func test_目立つ物を持っていなければ気にされない():
+	var game := _make_watched_game()
+	game.cycle.life.inventory.add(Item.new("タバコ", 60.0))
+	await wait_physics_frames(10)
+	assert_eq(game.crowd.npcs[0].attention.level, 0.0)
+
 ## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:
 	var thing := Interactable.new()
