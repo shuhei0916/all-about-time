@@ -13,6 +13,9 @@ extends Node3D
 @export var pickups: Array[ItemPickup] = []
 ## 2世代目以降の人生の開始時にプレイヤーを置く位置。1世代目はシーンに置いた位置から始まる。
 @export var later_spawn_position := Vector3.ZERO
+## チュートリアルを飛ばし、最初から2世代目以降の人生で、その開始位置から始める。
+## 実験や動作確認のための切り替え。
+@export var skip_tutorial := false
 
 ## 建物とプレイヤーの間に空ける最低限の距離(メートル)。
 const PLAYER_CLEARANCE := 0.5
@@ -28,6 +31,10 @@ var _placeable := false
 
 
 func _ready() -> void:
+	if skip_tutorial:
+		cycle = LifeCycle.new(true)
+		if player:
+			player.respawn_at(later_spawn_position)
 	cycle.life_started.connect(_on_life_started)
 	_watch_lifespan()
 	if bed:

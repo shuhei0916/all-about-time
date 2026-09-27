@@ -44,3 +44,10 @@ func test_2世代目が死ぬと3世代目も同じ人生になる():
 	cycle.life.tick(Life.LATER_LIFESPAN)
 	assert_eq(cycle.generation, 3)
 	assert_eq(cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
+
+
+func test_チュートリアルを飛ばすと最初から2世代目以降の人生になる():
+	var cycle := LifeCycle.new(true)
+	assert_eq(cycle.generation, 2)
+	assert_eq(cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
+	assert_null(cycle.life.sentence)

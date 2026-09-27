@@ -10,8 +10,13 @@ var generation := 1
 var life: Life
 
 
-func _init() -> void:
-	_start_life(Life.first_life())
+## skip_tutorial なら、チュートリアルの人生を飛ばして2世代目以降の人生から始める。
+func _init(skip_tutorial := false) -> void:
+	if skip_tutorial:
+		generation = 2
+		_start_life(Life.later_life())
+	else:
+		_start_life(Life.first_life())
 
 
 func _start_life(new_life: Life) -> void:

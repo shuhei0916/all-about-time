@@ -3,9 +3,13 @@ extends GutTest
 const MAIN_SCENE := "res://src/main.tscn"
 
 
-func _load_game() -> Game:
+## メインシーンを読み込む。チュートリアルを飛ばすかはシーンの設定によらず引数で決める。
+## シーンの設定は実験のために切り替えるものなので、テストをそれに左右させない。
+func _load_game(skip_tutorial := false) -> Game:
 	var scene: PackedScene = load(MAIN_SCENE)
-	return add_child_autofree(scene.instantiate())
+	var game: Game = scene.instantiate()
+	game.skip_tutorial = skip_tutorial
+	return add_child_autofree(game)
 
 
 func test_メインシーンにはベッド_ドア_HUD_プレイヤーが配線されている():
@@ -124,3 +128,10 @@ func test_メインシーンにはEscメニューが配線されている():
 func test_メインシーンではEscメニューの終了の要求でゲームを終える():
 	var game := _load_game()
 	assert_true(game.pause_menu.quit_requested.is_connected(game.quit_game))
+
+
+func test_チュートリアルを飛ばすと空き地で始まり_すぐに店の設計図を拾える():
+	var game := _load_game(true)
+	var blueprint: ItemPickup = game.pickups[2]
+	assert_lt(game.player.global_position.distance_to(blueprint.global_position), 5.0)
+	assert_null(game.cycle.life.sentence)

@@ -310,6 +310,26 @@ func test_配置モードの間はHUDに操作の案内が出る():
 	simulate(game, 1, 0.0)
 	assert_false(game.hud.placement_label.visible)
 
+
+func test_チュートリアルを飛ばすと最初から2世代目以降の開始位置で始まる():
+	var game := Game.new()
+	game.skip_tutorial = true
+	game.later_spawn_position = Vector3(60, 0.1, 9)
+	game.player = add_child_autofree(Player.new())
+	add_child_autofree(game)
+	assert_eq(game.cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
+	assert_eq(game.player.global_position, Vector3(60, 0.1, 9))
+
+
+func test_チュートリアルを飛ばしても寿命の減少の演出は出る():
+	var game := Game.new()
+	game.skip_tutorial = true
+	game.hud = add_child_autofree(Hud.new())
+	add_child_autofree(game)
+	game.cycle.life.inventory.add(Item.new("タバコ", 60.0))
+	game.use_item_at(0)
+	assert_eq(game.hud.get_delta_labels()[0].text, "-1分")
+
 ## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:
 	var thing := Interactable.new()

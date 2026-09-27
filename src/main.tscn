@@ -83,6 +83,7 @@ pause_menu = NodePath("PauseMenu")
 player = NodePath("Player")
 pickups = [NodePath("Yard/Cigarette"), NodePath("Yard/Rope"), NodePath("Lot/Blueprint")]
 later_spawn_position = Vector3(60, 0.1, 9)
+skip_tutorial = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1291468857]
 environment = SubResource("env")
