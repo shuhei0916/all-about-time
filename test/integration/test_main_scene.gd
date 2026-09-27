@@ -33,10 +33,10 @@ func test_メインシーンでベッドを使うと目標が死ぬになる():
 	assert_eq(game.hud.objective_label.text, "死ぬ")
 
 
-func test_メインシーンにはタバコとロープと店の設計図が落ちている():
+func test_メインシーンにはタバコとロープと店の設計図と拳銃が落ちている():
 	var game := _load_game()
 	var names := game.pickups.map(func(p: ItemPickup) -> String: return p.item_name)
-	assert_eq(names, ["タバコ", "ロープ", "店の設計図"])
+	assert_eq(names, ["タバコ", "ロープ", "店の設計図", "拳銃"])
 
 
 func test_ロープは死に至る道具():
@@ -135,3 +135,27 @@ func test_チュートリアルを飛ばすと空き地で始まり_すぐに店
 	var blueprint: ItemPickup = game.pickups[2]
 	assert_lt(game.player.global_position.distance_to(blueprint.global_position), 5.0)
 	assert_null(game.cycle.life.sentence)
+
+
+func test_拳銃は目立ち_使うと死に至る():
+	var game := _load_game()
+	var pistol: ItemPickup = game.pickups[3]
+	assert_eq(pistol.conspicuousness, 1.0)
+	assert_true(pistol.lethal)
+
+
+func test_拳銃は2世代目の開始位置のすぐ近くにある():
+	var game := _load_game()
+	assert_lt(game.pickups[3].global_position.distance_to(game.later_spawn_position), 5.0)
+
+
+func test_空き地には人々が歩いている():
+	var game := _load_game(true)
+	assert_not_null(game.crowd)
+	assert_gt(game.crowd.npcs.size(), 0)
+	assert_lt(game.crowd.global_position.distance_to(game.later_spawn_position), 20.0)
+
+
+func test_空き地の人々は頭を持つ():
+	var game := _load_game(true)
+	assert_not_null(game.crowd.npcs[0].head)
