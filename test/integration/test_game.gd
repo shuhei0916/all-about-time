@@ -363,6 +363,20 @@ func test_目立つ物を持っていなければ気にされない():
 	await wait_physics_frames(10)
 	assert_eq(game.crowd.npcs[0].attention.level, 0.0)
 
+
+func test_見ている物理の物に案内が出る():
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.new())
+	var item := PhysicalItem.new()
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	item.add_child(shape)
+	item.gravity_scale = 0.0
+	item.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
+	add_child_autofree(item)
+	await wait_physics_frames(4)
+	assert_true(item.is_prompt_visible())
+
 ## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:
 	var thing := Interactable.new()

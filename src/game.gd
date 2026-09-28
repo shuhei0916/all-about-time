@@ -27,7 +27,8 @@ var cycle := LifeCycle.new()
 var buildings: Array[Building] = []
 ## 設計図の配置モード中に、建つ位置を示す影。配置モードでなければ null。
 var ghost: BuildingGhost
-var _prompted: Interactable
+## 今案内を出している物。Interactable か PhysicalItem。
+var _prompted: Node3D
 var _placing_blueprint: Blueprint
 var _placeable := false
 
@@ -208,7 +209,11 @@ func _show_player_to_crowd(delta: float) -> void:
 
 ## 見ている対象にだけ案内を出す。対象が変わったら前の案内を消す。
 func _update_prompt() -> void:
-	var target := player.looking_at() if player else null
+	var target: Node3D = null
+	if player:
+		target = player.looking_at_item()
+		if not target:
+			target = player.looking_at()
 	if target == _prompted:
 		return
 	if is_instance_valid(_prompted):

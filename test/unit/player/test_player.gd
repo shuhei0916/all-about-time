@@ -63,3 +63,77 @@ func test_壁は地面として狙えない():
 	var player := _add_player_looking_down(0.0)
 	await wait_physics_frames(3)
 	assert_null(player.aimed_ground())
+
+
+## 当たり判定を持つ物理の物を、プレイヤーの目の高さの正面に置く。
+func _add_item_in_front(distance: float) -> PhysicalItem:
+	var item := PhysicalItem.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(0.3, 0.3, 0.3)
+	shape.shape = box
+	item.add_child(shape)
+	item.gravity_scale = 0.0
+	item.position = Vector3(0, Player.EYE_HEIGHT, -distance)
+	return add_child_autofree(item)
+
+
+func test_正面の届く範囲にある物理の物が分かる():
+	var player: Player = add_child_autofree(Player.new())
+	var item := _add_item_in_front(1.5)
+	await wait_physics_frames(3)
+	assert_eq(player.looking_at_item(), item)
+
+
+func test_物を持つと手元に来る():
+	var player: Player = add_child_autofree(Player.new())
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	await wait_physics_frames(2)
+	assert_eq(player.held_item, item)
+	assert_almost_eq(item.global_position, player.hold_position(), Vector3.ONE * 0.01)
+
+
+func test_持っている間は他の物を持てない():
+	var player: Player = add_child_autofree(Player.new())
+	var first := _add_item_in_front(1.5)
+	var second := _add_item_in_front(2.0)
+	player.grab(first)
+	player.grab(second)
+	assert_eq(player.held_item, first)
+	assert_false(second.is_held())
+
+
+func test_手を離すと持っていない状態に戻る():
+	var player: Player = add_child_autofree(Player.new())
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	player.release_held()
+	assert_null(player.held_item)
+	assert_false(item.is_held())
+
+
+func test_持っている物越しに別の物を見られる():
+	var player: Player = add_child_autofree(Player.new())
+	var held := _add_item_in_front(1.5)
+	var behind := _add_item_in_front(2.2)
+	player.grab(held)
+	await wait_physics_frames(3)
+	assert_eq(player.looking_at_item(), behind)
+
+
+func _press_e(player: Player) -> void:
+	var press := InputEventKey.new()
+	press.physical_keycode = KEY_E
+	press.pressed = true
+	InputSender.new(player).send_event(press)
+
+
+func test_Eで見ている物を持ち_もう一度Eで離す():
+	var player: Player = add_child_autofree(Player.new())
+	var item := _add_item_in_front(1.5)
+	await wait_physics_frames(3)
+	_press_e(player)
+	assert_eq(player.held_item, item)
+	_press_e(player)
+	assert_null(player.held_item)

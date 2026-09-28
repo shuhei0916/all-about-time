@@ -1,6 +1,7 @@
 class_name Player
 extends CharacterBody3D
 ## 一人称視点のプレイヤー。WASD で移動、マウスで視点、E で正面の物に働きかける。
+## E は、何か手に持っていれば手を離し、持っていなければ見ている物理の物を手に持つ。
 ## Esc でのマウスカーソルの解放は PauseMenu が受け持つ。
 
 const SPEED := 4.0
@@ -12,6 +13,12 @@ const BUILD_DISTANCE := 15.0
 ## これより傾いた面は地面とみなさない(度)。
 const MAX_GROUND_SLOPE := 30.0
 const MAX_PITCH := deg_to_rad(85.0)
+## 手に持った物を置く、目からの距離と高さ(メートル)。
+const HOLD_DISTANCE := 0.9
+const HOLD_DROP := 0.35
+
+## 手に持っている物。持っていなければ null。
+var held_item: PhysicalItem
 
 var camera: Camera3D
 var _ray: RayCast3D
@@ -53,6 +60,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_carry_held_item()
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -75,9 +83,58 @@ func _look(relative: Vector2) -> void:
 
 
 func _try_interact() -> void:
+	if held_item:
+		release_held()
+		return
+	var item := looking_at_item()
+	if item:
+		grab(item)
+		return
 	var target := looking_at()
 	if target:
 		target.interact()
+
+
+## 物を手に持つ。既に何か持っていれば持たない。
+## 持った物は視線の判定から外し、持った物越しに別の物を見られるようにする。
+func grab(item: PhysicalItem) -> void:
+	if held_item:
+		return
+	held_item = item
+	item.hold()
+	_ray.add_exception(item)
+	_build_ray.add_exception(item)
+	_carry_held_item()
+
+
+## 手に持っている物を離す。物は自分の歩く勢いを受け継いで落ちる。
+func release_held() -> void:
+	if not held_item:
+		return
+	_ray.remove_exception(held_item)
+	_build_ray.remove_exception(held_item)
+	held_item.release(velocity)
+	held_item = null
+
+
+## 手に持った物を置く位置。目の前の少し下。
+func hold_position() -> Vector3:
+	return camera.global_position - camera.global_basis.z * HOLD_DISTANCE + Vector3.DOWN * HOLD_DROP
+
+
+func _carry_held_item() -> void:
+	if not held_item:
+		return
+	held_item.global_position = hold_position()
+	held_item.global_rotation = Vector3(0, rotation.y, 0)
+
+
+## 正面の届く範囲にある物理の物を返す。なければ null。
+func looking_at_item() -> PhysicalItem:
+	if not _ray.is_colliding():
+		return null
+	var target := _ray.get_collider()
+	return target if target is PhysicalItem else null
 
 
 ## 正面の届く範囲にある Interactable を返す。なければ null。
