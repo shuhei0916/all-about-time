@@ -25,10 +25,13 @@ func _front(distance: float) -> Vector3:
 	return Vector3(0, Npc.EYE_HEIGHT, -distance)
 
 
+## 進む距離を確かめるテストは、実際の物理フレームで歩かせる。
+## simulate は物理フレームの外から呼ぶので、move_and_slide が描画フレームの間隔を使ってしまい、
+## 進む距離がその時の負荷しだいになる。
 func test_目的地へ歩く():
 	var npc := _make_npc()
 	npc.walk_to(Vector3(0, 0, -10))
-	simulate(npc, 10, 0.1)
+	await wait_physics_frames(40)
 	assert_lt(npc.global_position.z, -0.5)
 
 
@@ -43,7 +46,7 @@ func test_目的地に着くとarrivedシグナルが一度だけ出る():
 	var npc := _make_npc()
 	watch_signals(npc)
 	npc.walk_to(Vector3(0, 0, -1))
-	simulate(npc, 30, 0.1)
+	await wait_physics_frames(90)
 	assert_signal_emit_count(npc, "arrived", 1)
 
 

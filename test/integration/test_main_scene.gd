@@ -198,3 +198,11 @@ func test_札束をバッグに入れて閉じると中身になる():
 	await wait_physics_frames(10)
 	bag.close()
 	assert_true(bag.contents.has(cash))
+
+
+func test_空き地の人々は歩くアニメーションを流す():
+	var game := _load_game(true)
+	await wait_physics_frames(3)
+	var npc: Npc = game.crowd.npcs[0]
+	assert_not_null(npc.animation_player)
+	assert_eq(npc.animation_player.current_animation, "Walk")
