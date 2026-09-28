@@ -377,6 +377,23 @@ func test_見ている物理の物に案内が出る():
 	await wait_physics_frames(4)
 	assert_true(item.is_prompt_visible())
 
+
+func test_見ているバッグを開けると案内の文言も変わる():
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.new())
+	var bag := DuffelBag.new()
+	bag.item_name = "ダッフルバッグ"
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	bag.add_child(shape)
+	bag.gravity_scale = 0.0
+	bag.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
+	add_child_autofree(bag)
+	await wait_physics_frames(4)
+	bag.open()
+	await wait_physics_frames(2)
+	assert_eq(bag.get_prompt_label().text, "E: ダッフルバッグを持つ　F: 閉じる")
+
 ## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:
 	var thing := Interactable.new()

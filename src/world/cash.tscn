@@ -1,0 +1,29 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/world/physical_item.gd" id="1_item"]
+
+[sub_resource type="PhysicsMaterial" id="friction"]
+friction = 0.9
+
+[sub_resource type="BoxShape3D" id="shape_cash"]
+size = Vector3(0.2, 0.05, 0.09)
+
+[sub_resource type="StandardMaterial3D" id="mat_cash"]
+albedo_color = Color(0.55, 0.62, 0.45, 1)
+
+[sub_resource type="BoxMesh" id="mesh_cash"]
+size = Vector3(0.2, 0.05, 0.09)
+
+[node name="Cash" type="RigidBody3D"]
+mass = 0.1
+physics_material_override = SubResource("friction")
+continuous_cd = true
+script = ExtResource("1_item")
+item_name = "札束"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_cash")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("mesh_cash")
+surface_material_override/0 = SubResource("mat_cash")

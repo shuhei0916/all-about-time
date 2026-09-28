@@ -11,6 +11,8 @@
 [ext_resource type="Script" path="res://src/world/blueprint_pickup.gd" id="9_blueprint_pickup"]
 [ext_resource type="Script" path="res://src/npc/crowd.gd" id="10_crowd"]
 [ext_resource type="PackedScene" path="res://src/npc/npc.tscn" id="11_npc"]
+[ext_resource type="PackedScene" path="res://src/world/duffel_bag.tscn" id="12_duffel_bag"]
+[ext_resource type="PackedScene" path="res://src/world/cash.tscn" id="13_cash"]
 
 [sub_resource type="Environment" id="env"]
 background_mode = 1
@@ -311,6 +313,77 @@ script = ExtResource("10_crowd")
 npc_scene = ExtResource("11_npc")
 area_size = Vector2(36, 36)
 population = 6
+
+[node name="Stash" type="Node3D" parent="Lot"]
+
+[node name="CashTable" type="CSGBox3D" parent="Lot/Stash"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.2, 0.4, 10.5)
+use_collision = true
+size = Vector3(1.2, 0.8, 0.6)
+material = SubResource("mat_table")
+
+[node name="DuffelBag" parent="Lot/Stash" instance=ExtResource("12_duffel_bag")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 62.6, 0.01, 10.5)
+
+[node name="Cash01" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56.80, 0.825, 10.5)
+
+[node name="Cash02" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56.80, 0.876, 10.5)
+
+[node name="Cash03" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56.80, 0.927, 10.5)
+
+[node name="Cash04" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56.80, 0.978, 10.5)
+
+[node name="Cash05" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56.80, 1.029, 10.5)
+
+[node name="Cash06" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.06, 0.825, 10.5)
+
+[node name="Cash07" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.06, 0.876, 10.5)
+
+[node name="Cash08" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.06, 0.927, 10.5)
+
+[node name="Cash09" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.06, 0.978, 10.5)
+
+[node name="Cash10" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.06, 1.029, 10.5)
+
+[node name="Cash11" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.32, 0.825, 10.5)
+
+[node name="Cash12" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.32, 0.876, 10.5)
+
+[node name="Cash13" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.32, 0.927, 10.5)
+
+[node name="Cash14" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.32, 0.978, 10.5)
+
+[node name="Cash15" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.32, 1.029, 10.5)
+
+[node name="Cash16" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.58, 0.825, 10.5)
+
+[node name="Cash17" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.58, 0.876, 10.5)
+
+[node name="Cash18" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.58, 0.927, 10.5)
+
+[node name="Cash19" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.58, 0.978, 10.5)
+
+[node name="Cash20" parent="Lot/Stash" instance=ExtResource("13_cash")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.58, 1.029, 10.5)
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1646902574]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 1.5)

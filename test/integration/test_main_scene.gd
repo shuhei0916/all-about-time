@@ -159,3 +159,42 @@ func test_空き地には人々が歩いている():
 func test_空き地の人々は頭を持つ():
 	var game := _load_game(true)
 	assert_not_null(game.crowd.npcs[0].head)
+
+
+func _stash(game: Game) -> Node3D:
+	return game.get_node("Lot/Stash")
+
+
+func _cash_bundles(game: Game) -> Array:
+	return _stash(game).get_children().filter(func(n: Node) -> bool: return n is PhysicalItem and not n is DuffelBag)
+
+
+func _duffel_bag(game: Game) -> DuffelBag:
+	return _stash(game).get_node("DuffelBag")
+
+
+func test_空き地の開始位置の近くにダッフルバッグと20個の札束がある():
+	var game := _load_game(true)
+	assert_not_null(_duffel_bag(game))
+	assert_eq(_cash_bundles(game).size(), 20)
+	assert_lt(_duffel_bag(game).global_position.distance_to(game.later_spawn_position), 5.0)
+
+
+func test_札束は積んだまま崩れ落ちない():
+	var game := _load_game(true)
+	var cash: PhysicalItem = _cash_bundles(game)[0]
+	var start := cash.global_position
+	await wait_physics_frames(60)
+	assert_almost_eq(cash.global_position, start, Vector3.ONE * 0.1)
+
+
+func test_札束をバッグに入れて閉じると中身になる():
+	var game := _load_game(true)
+	var bag := _duffel_bag(game)
+	bag.open()
+	var cash: PhysicalItem = _cash_bundles(game)[0]
+	cash.global_position = bag.cavity.global_position + Vector3(0, 0.05, 0)
+	cash.linear_velocity = Vector3.ZERO
+	await wait_physics_frames(10)
+	bag.close()
+	assert_true(bag.contents.has(cash))

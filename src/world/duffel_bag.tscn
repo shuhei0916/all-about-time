@@ -1,0 +1,110 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/world/duffel_bag.gd" id="1_bag"]
+
+[sub_resource type="StandardMaterial3D" id="mat_bag"]
+albedo_color = Color(0.12, 0.14, 0.12, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="mat_lid"]
+albedo_color = Color(0.1, 0.11, 0.1, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="mesh_lid"]
+size = Vector3(0.76, 0.05, 0.41)
+
+[sub_resource type="BoxShape3D" id="shape_cavity"]
+size = Vector3(0.68, 0.34, 0.33)
+
+[sub_resource type="BoxShape3D" id="shape_0"]
+size = Vector3(0.76, 0.03, 0.41)
+
+[sub_resource type="BoxMesh" id="mesh_0"]
+size = Vector3(0.76, 0.03, 0.41)
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+size = Vector3(0.03, 0.34, 0.41)
+
+[sub_resource type="BoxMesh" id="mesh_1"]
+size = Vector3(0.03, 0.34, 0.41)
+
+[sub_resource type="BoxShape3D" id="shape_2"]
+size = Vector3(0.03, 0.34, 0.41)
+
+[sub_resource type="BoxMesh" id="mesh_2"]
+size = Vector3(0.03, 0.34, 0.41)
+
+[sub_resource type="BoxShape3D" id="shape_3"]
+size = Vector3(0.7, 0.34, 0.03)
+
+[sub_resource type="BoxMesh" id="mesh_3"]
+size = Vector3(0.7, 0.34, 0.03)
+
+[sub_resource type="BoxShape3D" id="shape_4"]
+size = Vector3(0.7, 0.34, 0.03)
+
+[sub_resource type="BoxMesh" id="mesh_4"]
+size = Vector3(0.7, 0.34, 0.03)
+
+[node name="DuffelBag" type="RigidBody3D" node_paths=PackedStringArray("cavity", "lid")]
+mass = 1.5
+script = ExtResource("1_bag")
+item_name = "ダッフルバッグ"
+cavity = NodePath("Cavity")
+lid = NodePath("Lid")
+
+[node name="BottomShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.015, 0)
+shape = SubResource("shape_0")
+
+[node name="Bottom" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.015, 0)
+mesh = SubResource("mesh_0")
+surface_material_override/0 = SubResource("mat_bag")
+
+[node name="WallLeftShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.365, 0.2, 0)
+shape = SubResource("shape_1")
+
+[node name="WallLeft" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.365, 0.2, 0)
+mesh = SubResource("mesh_1")
+surface_material_override/0 = SubResource("mat_bag")
+
+[node name="WallRightShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.365, 0.2, 0)
+shape = SubResource("shape_2")
+
+[node name="WallRight" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.365, 0.2, 0)
+mesh = SubResource("mesh_2")
+surface_material_override/0 = SubResource("mat_bag")
+
+[node name="WallFrontShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0.19)
+shape = SubResource("shape_3")
+
+[node name="WallFront" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0.19)
+mesh = SubResource("mesh_3")
+surface_material_override/0 = SubResource("mat_bag")
+
+[node name="WallBackShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, -0.19)
+shape = SubResource("shape_4")
+
+[node name="WallBack" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, -0.19)
+mesh = SubResource("mesh_4")
+surface_material_override/0 = SubResource("mat_bag")
+
+[node name="Lid" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.395, 0)
+mesh = SubResource("mesh_lid")
+surface_material_override/0 = SubResource("mat_lid")
+
+[node name="Cavity" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Cavity"]
+shape = SubResource("shape_cavity")

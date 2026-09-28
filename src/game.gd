@@ -215,6 +215,9 @@ func _update_prompt() -> void:
 		if not target:
 			target = player.looking_at()
 	if target == _prompted:
+		# 見たまま開け閉めした時のように、同じ物でも文言が変わることがあるので出し直す。
+		if target:
+			target.show_prompt()
 		return
 	if is_instance_valid(_prompted):
 		_prompted.hide_prompt()
