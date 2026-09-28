@@ -137,3 +137,20 @@ func test_Eで見ている物を持ち_もう一度Eで離す():
 	assert_eq(player.held_item, item)
 	_press_e(player)
 	assert_null(player.held_item)
+
+
+func test_Fで見ているバッグを開け閉めする():
+	var player: Player = add_child_autofree(Player.new())
+	var bag := DuffelBag.new()
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	bag.add_child(shape)
+	bag.gravity_scale = 0.0
+	bag.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
+	add_child_autofree(bag)
+	await wait_physics_frames(3)
+	var press := InputEventKey.new()
+	press.physical_keycode = KEY_F
+	press.pressed = true
+	InputSender.new(player).send_event(press)
+	assert_true(bag.is_open())

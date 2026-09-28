@@ -2,6 +2,7 @@ class_name Player
 extends CharacterBody3D
 ## 一人称視点のプレイヤー。WASD で移動、マウスで視点、E で正面の物に働きかける。
 ## E は、何か手に持っていれば手を離し、持っていなければ見ている物理の物を手に持つ。
+## F で、見ているバッグを開け閉めする。
 ## Esc でのマウスカーソルの解放は PauseMenu が受け持つ。
 
 const SPEED := 4.0
@@ -55,6 +56,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_look(event.relative)
 	elif event.is_action_pressed("interact"):
 		_try_interact()
+	elif event.is_action_pressed("toggle_container"):
+		_try_toggle_container()
 	elif event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -93,6 +96,12 @@ func _try_interact() -> void:
 	var target := looking_at()
 	if target:
 		target.interact()
+
+
+func _try_toggle_container() -> void:
+	var bag := looking_at_item() as DuffelBag
+	if bag:
+		bag.toggle()
 
 
 ## 物を手に持つ。既に何か持っていれば持たない。
