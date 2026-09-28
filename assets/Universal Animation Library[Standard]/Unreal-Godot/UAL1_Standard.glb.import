@@ -1,15 +1,15 @@
 [remap]
 
-importer="scene"
+importer="animation_library"
 importer_version=1
-type="PackedScene"
+type="AnimationLibrary"
 uid="uid://bfrej7ro4aykv"
-path="res://.godot/imported/UAL1_Standard.glb-66d7c0bf3185c279b1d5165b2e1bffb0.scn"
+path="res://.godot/imported/UAL1_Standard.glb-66d7c0bf3185c279b1d5165b2e1bffb0.res"
 
 [deps]
 
 source_file="res://assets/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb"
-dest_files=["res://.godot/imported/UAL1_Standard.glb-66d7c0bf3185c279b1d5165b2e1bffb0.scn"]
+dest_files=["res://.godot/imported/UAL1_Standard.glb-66d7c0bf3185c279b1d5165b2e1bffb0.res"]
 
 [params]
 
