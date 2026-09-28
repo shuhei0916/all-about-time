@@ -130,3 +130,42 @@ func test_止まるとその場に立ち止まり_着いたことにはならな
 	simulate(npc, 10, 0.1)
 	assert_eq(npc.global_position, Vector3.ZERO)
 	assert_signal_not_emitted(npc, "arrived")
+
+
+## Walk と Idle の2つのアニメーションを持つアニメーションプレイヤーを付けた NPC を作る。
+func _make_animated_npc() -> Npc:
+	var npc := _make_npc()
+	var player := AnimationPlayer.new()
+	var library := AnimationLibrary.new()
+	for anim_name in ["Walk", "Idle"]:
+		var anim := Animation.new()
+		anim.length = 1.0
+		anim.loop_mode = Animation.LOOP_LINEAR
+		library.add_animation(anim_name, anim)
+	player.add_animation_library("", library)
+	npc.add_child(player)
+	npc.animation_player = player
+	return npc
+
+
+func test_歩いている間は歩くアニメーションを流す():
+	var npc := _make_animated_npc()
+	npc.walk_to(Vector3(0, 0, -10))
+	simulate(npc, 1, 0.1)
+	assert_eq(npc.animation_player.current_animation, "Walk")
+
+
+func test_立ち止まっている間は待機のアニメーションを流す():
+	var npc := _make_animated_npc()
+	simulate(npc, 1, 0.1)
+	assert_eq(npc.animation_player.current_animation, "Idle")
+
+
+func test_強く気になって立ち止まると待機のアニメーションに変わる():
+	var npc := _make_animated_npc()
+	npc.walk_to(Vector3(0, 0, -10))
+	simulate(npc, 1, 0.1)
+	npc.attention.level = 1.0
+	npc.observe(0.0, _front(5.0), 0.0)
+	simulate(npc, 1, 0.1)
+	assert_eq(npc.animation_player.current_animation, "Idle")

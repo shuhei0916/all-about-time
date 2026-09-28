@@ -18,11 +18,17 @@ const ARRIVE_DISTANCE := 0.3
 const HEAD_TURN_RATE := 4.0
 ## 体ごと相手に向き直る速さ(ラジアン/秒)。
 const BODY_TURN_SPEED := 2.5
+## 歩きと待機を切り替える時に、前のアニメーションと混ぜる秒数。
+const ANIMATION_BLEND := 0.2
 
 ## 歩く速さ(メートル/秒)。
 @export var speed := 1.4
 ## 相手を目で追う時に回す頭。
 @export var head: Node3D
+## 歩きと待機のアニメーションを流す先。なければ見た目は動かさない。
+@export var animation_player: AnimationPlayer
+@export var walk_animation := "Walk"
+@export var idle_animation := "Idle"
 
 var attention := Attention.new()
 var _destination: Variant = null
@@ -78,6 +84,16 @@ func _physics_process(delta: float) -> void:
 		_walk()
 	move_and_slide()
 	_turn_head(delta)
+	_play_animation()
+
+
+## 動いていれば歩き、止まっていれば待機のアニメーションを流す。
+func _play_animation() -> void:
+	if not animation_player:
+		return
+	var wanted := walk_animation if not velocity.is_zero_approx() else idle_animation
+	if animation_player.current_animation != wanted:
+		animation_player.play(wanted, ANIMATION_BLEND)
 
 
 func _walk() -> void:
