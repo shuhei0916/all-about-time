@@ -62,8 +62,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
-func _physics_process(delta: float) -> void:
+## 持った物は、描画のたびに視点の向きへ合わせる。
+## 視点はマウスで描画のたびに動くので、物理フレームだけで合わせると揺れて見える。
+func _process(_delta: float) -> void:
 	_carry_held_item()
+
+
+func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -71,6 +76,8 @@ func _physics_process(delta: float) -> void:
 	velocity.x = direction.x * SPEED
 	velocity.z = direction.z * SPEED
 	move_and_slide()
+	# 動いた後の位置に合わせる。動く前に合わせると、物が1フレーム遅れて付いてきて震える。
+	_carry_held_item()
 
 
 ## 指定位置に置き直し、速度を止める。次の人生の開始時に呼ばれる。
@@ -113,6 +120,8 @@ func grab(item: PhysicalItem) -> void:
 	item.hold()
 	_ray.add_exception(item)
 	_build_ray.add_exception(item)
+	# 手元の物に自分がぶつかって押し出されないようにする。
+	add_collision_exception_with(item)
 	_carry_held_item()
 
 
@@ -122,6 +131,7 @@ func release_held() -> void:
 		return
 	_ray.remove_exception(held_item)
 	_build_ray.remove_exception(held_item)
+	remove_collision_exception_with(held_item)
 	held_item.release(velocity)
 	held_item = null
 

@@ -154,3 +154,27 @@ func test_Fで見ているバッグを開け閉めする():
 	press.pressed = true
 	InputSender.new(player).send_event(press)
 	assert_true(bag.is_open())
+
+
+func test_持った物はプレイヤーが動いた後の位置に付いてくる():
+	# 床がないのでプレイヤーは落ちる。落ちた後の手元に物があること。
+	var player: Player = add_child_autofree(Player.new())
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	simulate(player, 1, 0.1)
+	assert_almost_eq(item.global_position, player.hold_position(), Vector3.ONE * 0.001)
+
+
+func test_持った物とプレイヤーはぶつからない():
+	var player: Player = add_child_autofree(Player.new())
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	assert_true(player.get_collision_exceptions().has(item))
+
+
+func test_手を離すと持っていた物とプレイヤーは再びぶつかる():
+	var player: Player = add_child_autofree(Player.new())
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	player.release_held()
+	assert_false(player.get_collision_exceptions().has(item))
