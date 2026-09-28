@@ -46,3 +46,15 @@ func test_手を離すと再び物理で動き_手の勢いを受け継ぐ():
 	assert_false(item.is_held())
 	assert_false(item.freeze)
 	assert_eq(item.linear_velocity, Vector3(1, 0, 0))
+
+
+func test_案内は見た目のてっぺんの上に出る():
+	var item := _make_item()
+	var mesh := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(0.8, 0.4, 0.4)
+	mesh.mesh = box
+	mesh.position.y = 0.2
+	item.add_child(mesh)
+	item.show_prompt()
+	assert_almost_eq(item.get_prompt_label().global_position.y, 0.4 + PromptLabel.MARGIN, 0.001)

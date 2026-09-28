@@ -40,3 +40,14 @@ func test_案内は対象の上に浮かぶ():
 func test_案内は常にカメラを向く():
 	var thing: Interactable = add_child_autofree(Interactable.new())
 	assert_ne(thing.get_prompt_label().billboard, BaseMaterial3D.BILLBOARD_DISABLED)
+
+
+func test_案内は見た目のてっぺんの上に出る():
+	var thing: Interactable = add_child_autofree(Interactable.new())
+	var mesh := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(1, 0.6, 2)
+	mesh.mesh = box
+	thing.add_child(mesh)
+	thing.show_prompt()
+	assert_almost_eq(thing.get_prompt_label().global_position.y, 0.3 + PromptLabel.MARGIN, 0.001)

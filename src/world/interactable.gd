@@ -27,6 +27,7 @@ func get_prompt_label() -> Label3D:
 func show_prompt() -> void:
 	var label := get_prompt_label()
 	label.text = "%s: %s" % [INTERACT_KEY, prompt]
+	label.place_above(self)
 	label.show()
 
 

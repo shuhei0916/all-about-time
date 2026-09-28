@@ -21,6 +21,7 @@ func get_prompt_label() -> PromptLabel:
 func show_prompt() -> void:
 	var label := get_prompt_label()
 	label.text = prompt_text()
+	label.place_above(self)
 	label.show()
 
 
