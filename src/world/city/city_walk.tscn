@@ -5,20 +5,32 @@
 [ext_resource type="Script" path="res://src/player/player.gd" id="3_player"]
 [ext_resource type="Script" path="res://src/ui/pause_menu.gd" id="4_pause_menu"]
 
+[sub_resource type="ProceduralSkyMaterial" id="night_sky_material"]
+sky_top_color = Color(0.07, 0.1, 0.19, 1)
+sky_horizon_color = Color(0.3, 0.28, 0.33, 1)
+sky_curve = 0.12
+ground_bottom_color = Color(0.04, 0.04, 0.05, 1)
+ground_horizon_color = Color(0.3, 0.28, 0.33, 1)
+sun_angle_max = 0.0
+
+[sub_resource type="Sky" id="night_sky"]
+sky_material = SubResource("night_sky_material")
+
 [sub_resource type="Environment" id="night"]
-background_mode = 1
-background_color = Color(0.02, 0.025, 0.045, 1)
+background_mode = 2
+sky = SubResource("night_sky")
 ambient_light_source = 2
-ambient_light_color = Color(0.35, 0.4, 0.55, 1)
-ambient_light_energy = 0.35
+ambient_light_color = Color(0.4, 0.45, 0.6, 1)
+ambient_light_energy = 0.5
 tonemap_mode = 4
 ssao_enabled = true
 glow_enabled = true
 glow_intensity = 0.9
 glow_bloom = 0.1
 fog_enabled = true
-fog_light_color = Color(0.06, 0.07, 0.1, 1)
-fog_density = 0.012
+fog_light_color = Color(0.2, 0.2, 0.26, 1)
+fog_density = 0.008
+fog_sky_affect = 0.3
 
 [node name="CityWalk" type="Node3D" node_paths=PackedStringArray("pause_menu")]
 script = ExtResource("1_walk")
@@ -30,7 +42,7 @@ environment = SubResource("night")
 [node name="Moon" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866025, -0.321394, 0.383022, 0, 0.766044, 0.642788, -0.5, -0.55667, 0.663414, 0, 50, 0)
 light_color = Color(0.6, 0.68, 0.9, 1)
-light_energy = 0.25
+light_energy = 0.35
 shadow_enabled = true
 
 [node name="City" parent="." instance=ExtResource("2_city")]
