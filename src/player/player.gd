@@ -1,11 +1,13 @@
 class_name Player
 extends CharacterBody3D
-## 一人称視点のプレイヤー。WASD で移動、マウスで視点、E で正面の物に働きかける。
+## 一人称視点のプレイヤー。WASD で移動(Shift を押している間は走る)、マウスで視点、E で正面の物に働きかける。
 ## E は、何か手に持っていれば手を離し、持っていなければ見ている物理の物を手に持つ。
 ## F で、見ているバッグを開け閉めする。
 ## Esc でのマウスカーソルの解放は PauseMenu が受け持つ。
 
 const SPEED := 4.0
+## Shift を押している間の走る速さ。
+const SPRINT_SPEED := 7.0
 const MOUSE_SENSITIVITY := 0.002
 const EYE_HEIGHT := 1.6
 const INTERACT_DISTANCE := 2.5
@@ -73,8 +75,9 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= _gravity * delta
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction := (transform.basis * Vector3(input.x, 0, input.y)).normalized()
-	velocity.x = direction.x * SPEED
-	velocity.z = direction.z * SPEED
+	var speed := SPRINT_SPEED if Input.is_action_pressed("sprint") else SPEED
+	velocity.x = direction.x * speed
+	velocity.z = direction.z * speed
 	move_and_slide()
 	# 動いた後の位置に合わせる。動く前に合わせると、物が1フレーム遅れて付いてきて震える。
 	_carry_held_item()

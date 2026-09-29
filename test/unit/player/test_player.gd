@@ -178,3 +178,37 @@ func test_手を離すと持っていた物とプレイヤーは再びぶつか�
 	player.grab(item)
 	player.release_held()
 	assert_false(player.get_collision_exceptions().has(item))
+
+
+func after_each() -> void:
+	for action in ["move_forward", "sprint"]:
+		Input.action_release(action)
+
+
+func _horizontal_speed(player: Player) -> float:
+	return Vector2(player.velocity.x, player.velocity.z).length()
+
+
+func test_前に進むと歩く速さで進む():
+	var player: Player = add_child_autofree(Player.new())
+	Input.action_press("move_forward")
+	simulate(player, 1, 0.016)
+	assert_almost_eq(_horizontal_speed(player), Player.SPEED, 0.01)
+
+
+func test_スプリントしながら進むと走る速さで進む():
+	var player: Player = add_child_autofree(Player.new())
+	Input.action_press("move_forward")
+	Input.action_press("sprint")
+	simulate(player, 1, 0.016)
+	assert_almost_eq(_horizontal_speed(player), Player.SPRINT_SPEED, 0.01)
+
+
+func test_走る速さは歩く速さより速い():
+	assert_gt(Player.SPRINT_SPEED, Player.SPEED)
+
+
+func test_スプリントにはShiftキーが割り当てられている():
+	var shift := InputEventKey.new()
+	shift.physical_keycode = KEY_SHIFT
+	assert_true(InputMap.event_is_action(shift, "sprint"))
