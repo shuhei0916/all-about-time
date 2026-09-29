@@ -1,6 +1,7 @@
 class_name Player
 extends CharacterBody3D
-## 一人称視点のプレイヤー。WASD で移動(Shift を押している間は走る)、マウスで視点、E で正面の物に働きかける。
+## 一人称視点のプレイヤー。WASD で移動(Shift を押している間は走る)、Space でジャンプ、
+## マウスで視点、E で正面の物に働きかける。
 ## E は、何か手に持っていれば手を離し、持っていなければ見ている物理の物を手に持つ。
 ## F で、見ているバッグを開け閉めする。
 ## Esc でのマウスカーソルの解放は PauseMenu が受け持つ。
@@ -8,6 +9,8 @@ extends CharacterBody3D
 const SPEED := 4.0
 ## Shift を押している間の走る速さ。
 const SPRINT_SPEED := 7.0
+## ジャンプした瞬間の上向きの速さ。高さはおよそ 1m になる。
+const JUMP_VELOCITY := 4.5
 const MOUSE_SENSITIVITY := 0.002
 const EYE_HEIGHT := 1.6
 const INTERACT_DISTANCE := 2.5
@@ -73,6 +76,9 @@ func _process(_delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
+	elif Input.is_action_pressed("jump"):
+		# 床の上にいる時だけ跳べる。空中では跳べない。
+		velocity.y = JUMP_VELOCITY
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction := (transform.basis * Vector3(input.x, 0, input.y)).normalized()
 	var speed := SPRINT_SPEED if Input.is_action_pressed("sprint") else SPEED

@@ -181,7 +181,7 @@ func test_手を離すと持っていた物とプレイヤーは再びぶつか�
 
 
 func after_each() -> void:
-	for action in ["move_forward", "sprint"]:
+	for action in ["move_forward", "sprint", "jump"]:
 		Input.action_release(action)
 
 
@@ -212,3 +212,34 @@ func test_スプリントにはShiftキーが割り当てられている():
 	var shift := InputEventKey.new()
 	shift.physical_keycode = KEY_SHIFT
 	assert_true(InputMap.event_is_action(shift, "sprint"))
+
+
+## 床の上に立って落ち着くまで待ったプレイヤーを作る。
+func _add_standing_player() -> Player:
+	_add_floor()
+	var player: Player = add_child_autofree(Player.new())
+	player.position.y = 0.05
+	await wait_physics_frames(10)
+	return player
+
+
+func test_床の上でジャンプすると上へ跳ぶ():
+	var player := await _add_standing_player()
+	assert_true(player.is_on_floor(), "床の上にいること")
+	Input.action_press("jump")
+	await wait_physics_frames(2)
+	assert_gt(player.global_position.y, 0.1)
+
+
+func test_空中ではジャンプできない():
+	var player: Player = add_child_autofree(Player.new())
+	player.position.y = 10.0
+	Input.action_press("jump")
+	simulate(player, 1, 0.016)
+	assert_lte(player.velocity.y, 0.0)
+
+
+func test_ジャンプにはSpaceキーが割り当てられている():
+	var space := InputEventKey.new()
+	space.physical_keycode = KEY_SPACE
+	assert_true(InputMap.event_is_action(space, "jump"))
