@@ -1,55 +1,52 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bxxvijwgf4gbm"]
 
-[ext_resource type="Script" path="res://src/world/city/city_walk.gd" id="1_walk"]
+[ext_resource type="Script" uid="uid://utrjccl5f2en" path="res://src/world/city/city_walk.gd" id="1_walk"]
 [ext_resource type="PackedScene" path="res://src/world/city/city.tscn" id="2_city"]
-[ext_resource type="Script" path="res://src/player/player.gd" id="3_player"]
-[ext_resource type="Script" path="res://src/ui/pause_menu.gd" id="4_pause_menu"]
+[ext_resource type="Script" uid="uid://dnb2hj7bgnavo" path="res://src/player/player.gd" id="3_player"]
+[ext_resource type="Script" uid="uid://dlwsxcbmdk5t0" path="res://src/ui/pause_menu.gd" id="4_pause_menu"]
 
-[sub_resource type="ProceduralSkyMaterial" id="night_sky_material"]
-sky_top_color = Color(0.07, 0.1, 0.19, 1)
-sky_horizon_color = Color(0.3, 0.28, 0.33, 1)
-sky_curve = 0.12
-ground_bottom_color = Color(0.04, 0.04, 0.05, 1)
-ground_horizon_color = Color(0.3, 0.28, 0.33, 1)
-sun_angle_max = 0.0
+[sub_resource type="ProceduralSkyMaterial" id="day_sky_material"]
+sky_top_color = Color(0.32, 0.5, 0.78, 1)
+sky_horizon_color = Color(0.68, 0.75, 0.84, 1)
+ground_bottom_color = Color(0.2, 0.19, 0.18, 1)
+ground_horizon_color = Color(0.68, 0.75, 0.84, 1)
 
-[sub_resource type="Sky" id="night_sky"]
-sky_material = SubResource("night_sky_material")
+[sub_resource type="Sky" id="day_sky"]
+sky_material = SubResource("day_sky_material")
 
-[sub_resource type="Environment" id="night"]
+[sub_resource type="Environment" id="day"]
 background_mode = 2
-sky = SubResource("night_sky")
-ambient_light_source = 2
-ambient_light_color = Color(0.4, 0.45, 0.6, 1)
-ambient_light_energy = 0.5
+sky = SubResource("day_sky")
+ambient_light_source = 3
+ambient_light_energy = 1.0
 tonemap_mode = 4
 ssao_enabled = true
 glow_enabled = true
-glow_intensity = 0.9
-glow_bloom = 0.1
 fog_enabled = true
-fog_light_color = Color(0.2, 0.2, 0.26, 1)
-fog_density = 0.008
-fog_sky_affect = 0.3
+fog_light_color = Color(0.68, 0.75, 0.84, 1)
+fog_sun_scatter = 0.2
+fog_density = 0.002
+fog_sky_affect = 0.0
 
-[node name="CityWalk" type="Node3D" node_paths=PackedStringArray("pause_menu")]
+[node name="CityWalk" type="Node3D" unique_id=600743179 node_paths=PackedStringArray("pause_menu")]
 script = ExtResource("1_walk")
 pause_menu = NodePath("PauseMenu")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("night")
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=23493983]
+environment = SubResource("day")
 
-[node name="Moon" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866025, -0.321394, 0.383022, 0, 0.766044, 0.642788, -0.5, -0.55667, 0.663414, 0, 50, 0)
-light_color = Color(0.6, 0.68, 0.9, 1)
-light_energy = 0.35
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 50, 0)
+light_color = Color(1, 0.96, 0.9, 1)
+light_energy = 1.2
 shadow_enabled = true
+directional_shadow_max_distance = 150.0
 
-[node name="City" parent="." instance=ExtResource("2_city")]
+[node name="City" parent="." unique_id=1761802381 instance=ExtResource("2_city")]
 
-[node name="Player" type="CharacterBody3D" parent="."]
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1881366445]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 20, 0.1, 5.2)
 script = ExtResource("3_player")
 
-[node name="PauseMenu" type="CanvasLayer" parent="."]
+[node name="PauseMenu" type="CanvasLayer" parent="." unique_id=2013006802]
 script = ExtResource("4_pause_menu")
