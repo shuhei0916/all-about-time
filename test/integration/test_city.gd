@@ -4,9 +4,12 @@ extends GutTest
 const CITY_SCENE := "res://src/world/city/city.tscn"
 ## 部品どうしが接する所の、見た目の誤差として許す重なり(メートル)。
 const TOLERANCE := 0.05
-## 十字路の一辺と、出口(道路)の幅。
-const INTERSECTION := 24.67
-const STREET_WIDTH := 12.0
+## 十字路の一辺と、出口の車道の幅。十字路は4車線用で、出口はほぼ全幅が車道。
+## 出口の車道は、角の歩道より外側では中心から 5.72m まで(実測)。
+const INTERSECTION := 24.666
+const ROADWAY_WIDTH := 11.44
+## 十字路の四隅の丸い角の歩道がある、道路の中心からの帯(メートル)。
+const CORNER_SIDEWALK := Vector2(6.0, 9.0)
 
 var city: Node3D
 
@@ -25,7 +28,11 @@ func after_all() -> void:
 func _footprint(node: Node3D) -> Rect2:
 	var bounds := AABB()
 	var first := true
-	for mesh: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+	# 地面の板のように、ノード自身が見た目である場合も含める。
+	var meshes: Array = node.find_children("*", "MeshInstance3D", true, false)
+	if node is MeshInstance3D:
+		meshes.append(node)
+	for mesh: MeshInstance3D in meshes:
 		var box: AABB = mesh.global_transform * mesh.get_aabb()
 		bounds = box if first else bounds.merge(box)
 		first = false
@@ -50,8 +57,14 @@ func _road_rects() -> Array[Rect2]:
 	for street: Node3D in _streets():
 		if String(street.name).begins_with("Street_4WayIntersection"):
 			var c := Vector2(street.global_position.x, street.global_position.z)
-			rects.append(Rect2(c - Vector2(INTERSECTION, STREET_WIDTH) / 2, Vector2(INTERSECTION, STREET_WIDTH)))
-			rects.append(Rect2(c - Vector2(STREET_WIDTH, INTERSECTION) / 2, Vector2(STREET_WIDTH, INTERSECTION)))
+			rects.append(Rect2(c - Vector2(INTERSECTION, ROADWAY_WIDTH) / 2, Vector2(INTERSECTION, ROADWAY_WIDTH)))
+			rects.append(Rect2(c - Vector2(ROADWAY_WIDTH, INTERSECTION) / 2, Vector2(ROADWAY_WIDTH, INTERSECTION)))
+			# 四隅の丸い角の歩道。
+			for sx in [-1, 1]:
+				for sz in [-1, 1]:
+					var near := c + Vector2(sx, sz) * CORNER_SIDEWALK.x
+					var far := c + Vector2(sx, sz) * CORNER_SIDEWALK.y
+					rects.append(Rect2(near, far - near).abs())
 		else:
 			rects.append(_footprint(street))
 	return rects
@@ -144,10 +157,52 @@ func test_車道の上では歩道より低い路面の高さに立てる():
 	assert_lt(hit.get("position", Vector3.ZERO).y, -0.05)
 
 
-func test_道路の脇の歩道に立てる():
-	# 中央の十字路から東へ延びる道路の、南側の歩道。
+## 敷いた地面の板を、ワールドの X と Z で囲む矩形。
+func _ground_rects() -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	for ground: MeshInstance3D in city.get_node("Ground").get_children():
+		if ground.name == "Outskirts":
+			continue
+		rects.append(_shrunk(_footprint(ground)))
+	return rects
+
+
+func test_区画の地面は道路や歩道と重ならない():
+	var roads := _road_rects()
+	var overlaps := []
+	var names := city.get_node("Ground").get_children().filter(func(n: Node) -> bool: return n.name != "Outskirts")
+	var grounds := _ground_rects()
+	for i in grounds.size():
+		for road: Rect2 in roads:
+			if grounds[i].intersects(road.grow(-TOLERANCE)):
+				overlaps.append(names[i].name)
+				break
+	assert_eq(overlaps, [], "道路や歩道と重なっている地面")
+
+
+## 十字路のまわりを約 0.5m ごとに真上から調べ、足場のない所(穴)を返す。
+func _holes_around(center: Vector3) -> Array:
 	var space := city.get_world_3d().direct_space_state
-	var query := PhysicsRayQueryParameters3D.create(Vector3(20, 5, 5.2), Vector3(20, -5, 5.2))
+	var holes := []
+	for xi in range(-26, 27):
+		for zi in range(-26, 27):
+			# 部品のメッシュの三角形の継ぎ目の線上をぴったり通ると、視線が計算上すり抜けることがある。
+			# 幅のない継ぎ目でプレイヤーは落ちないので、調べる点を継ぎ目からずらす。
+			var p := center + Vector3(xi * 0.5 + 0.13, 0, zi * 0.5 + 0.07)
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(p + Vector3.UP * 2, p + Vector3.DOWN * 2))
+			if hit.is_empty() or hit.position.y < -0.2:
+				holes.append(Vector2(p.x, p.z))
+	return holes
+
+
+func test_中央の十字路のまわりの地面に穴がない():
+	assert_eq(_holes_around(Vector3.ZERO), [], "足場のない所")
+
+
+func test_道路の脇の歩道に立てる():
+	# 中央の十字路から東へ延びる道路の、南側の歩道(中心から6〜9m)。
+	var space := city.get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(Vector3(20, 5, 7.5), Vector3(20, -5, 7.5))
 	var hit := space.intersect_ray(query)
 	assert_false(hit.is_empty(), "足場があること")
 	assert_almost_eq(hit.get("position", Vector3.ZERO).y, 0.0, 0.05)

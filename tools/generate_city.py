@@ -15,13 +15,23 @@ from pathlib import Path
 SEED = 7
 # 道路は LINES 本 × LINES 本の格子。区画は (LINES - 1) × (LINES - 1)。
 LINES = 5
-# 十字路の一辺と、十字路の間をつなぐ直線の区間の長さ・本数。
-INTERSECTION = 24.67
+# 十字路の一辺(実測値)と、十字路の間をつなぐ直線の区間の長さ・本数。
+# キットの十字路は4車線用(出口は幅12mすべてが車道、四隅に中心から6〜9mの丸い角の歩道)なので、
+# 直線も4車線(幅18m = 歩道3m + 車道12m + 歩道3m)を使う。2車線の直線をつなぐと歩道がずれる。
+INTERSECTION = 24.66626
+STREET = "Street_4Lane"
 SEGMENT = 6.0
 SEGMENTS_PER_SPAN = 6
 PITCH = INTERSECTION + SEGMENT * SEGMENTS_PER_SPAN
 # 道路の幅(歩道込み)。区画はこの半分だけ道路の中心線から離れて始まる。
-STREET_WIDTH = 12.0
+STREET_WIDTH = 18.0
+# 車道の幅。歩道はその外側から STREET_WIDTH までの帯。
+ROADWAY_WIDTH = 12.0
+# 十字路の出口の車道は、角の歩道より外側では中心から 5.72m までしかない(実測)。
+# そこから直線の歩道の外側までを地面の板で埋める。
+INTERSECTION_ROADWAY_EDGE = 5.70
+# 地面の板の厚み。車道との段差で、板の縁の下に隙間が見えないよう、側面を縁石の代わりにする。
+GROUND_THICKNESS = 0.3
 # 外周の道路を、外へ何区間延ばして行き止まりにするか。
 DEAD_END_SEGMENTS = 3
 # 建物の正面を区画の縁から下げる距離。
@@ -134,12 +144,12 @@ def build_streets(scene: Scene) -> None:
             for k in range(count):
                 c = start + SEGMENT * (k + 0.5)
                 # 東西の道(X 方向に延びる)と南北の道(Z 方向に延びる)。
-                scene.instance("Street_2Lane", "Streets", (c, 0, along), 0, groups=["street"])
-                scene.instance("Street_2Lane", "Streets", (along, 0, c), 90, groups=["street"])
+                scene.instance(STREET, "Streets", (c, 0, along), 0, groups=["street"])
+                scene.instance(STREET, "Streets", (along, 0, c), 90, groups=["street"])
         # 行き止まりに車止めを並べる。
         for end in (last + half + SEGMENT * DEAD_END_SEGMENTS, first - half - SEGMENT * DEAD_END_SEGMENTS):
-            for n in range(9):
-                across = along - 4.8 + n * 1.2
+            for n in range(15):
+                across = along - 8.4 + n * 1.2
                 scene.instance("Prop_Bollard", "Streets", (end, 0, across))
                 scene.instance("Prop_Bollard", "Streets", (across, 0, end))
 
@@ -235,7 +245,8 @@ def build_lamps(scene: Scene) -> None:
     scene.sub('[sub_resource type="BoxMesh" id="mesh_lamp_head"]\nmaterial = SubResource("mat_lamp_head")\nsize = Vector3(0.5, 0.15, 0.3)')
     scene.node('[node name="Lamps" type="Node3D" parent="."]')
     half = INTERSECTION / 2
-    offset = STREET_WIDTH / 2 - 0.6
+    # 縁石のすぐ内側の歩道に立てる。
+    offset = ROADWAY_WIDTH / 2 + 0.6
     for line in range(LINES):
         along = line_position(line)
         for k in range(LINES - 1):
@@ -254,61 +265,103 @@ def build_lamps(scene: Scene) -> None:
                     )
 
 
-def build_ground(scene: Scene) -> float:
-    """区画の内側と十字路の四隅の隙間を、歩道と同じ高さのコンクリートで埋める。
+def ground_rects() -> list:
+    """歩道の高さに敷く地面の板の一覧。(名前, 中心X, 中心Z, 幅X, 幅Z)。
 
-    1枚で街全体を覆うと、歩道より低い車道のアスファルトまで隠れてしまうので、区画ごとに敷く。
+    - 区画: 道路の中心から STREET_WIDTH / 2 (歩道の外側)より内側
+    - 十字路の四隅の隙間: 十字路の部品は四隅に丸い角の歩道(中心から6〜9m)しか持たないので、
+      直線の歩道との間(中心から 9m〜十字路の端)と、区画に入らない外周の角を埋める
+    """
+    rects = []
+    inner = STREET_WIDTH / 2
+    for i in range(LINES - 1):
+        for j in range(LINES - 1):
+            x0, x1 = line_position(i) + inner, line_position(i + 1) - inner
+            z0, z1 = line_position(j) + inner, line_position(j + 1) - inner
+            rects.append((f"Block{i}{j}", (x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0))
+    half = INTERSECTION / 2
+    sidewalk_near = INTERSECTION_ROADWAY_EDGE
+    n = 0
+    for i in range(LINES):
+        for j in range(LINES):
+            cx, cz = line_position(i), line_position(j)
+            for sx in (-1, 1):
+                for sz in (-1, 1):
+                    # 直線の歩道と、十字路の角の歩道の間の隙間(道路に沿った2つの細長い帯)。
+                    pieces = [
+                        ((inner, half), (sidewalk_near, inner)),
+                        ((sidewalk_near, inner), (inner, half)),
+                    ]
+                    # 区画に入らない外周の角も埋める。
+                    outside_x = (i == 0 and sx < 0) or (i == LINES - 1 and sx > 0)
+                    outside_z = (j == 0 and sz < 0) or (j == LINES - 1 and sz > 0)
+                    if outside_x or outside_z:
+                        pieces.append(((inner, half), (inner, half)))
+                    for (ax, bx), (az, bz) in pieces:
+                        n += 1
+                        x = cx + sx * (ax + bx) / 2
+                        z = cz + sz * (az + bz) / 2
+                        rects.append((f"Corner{n}", x, z, bx - ax, bz - az))
+    return rects
+
+
+def build_ground(scene: Scene, rects: list) -> float:
+    """地面の板を敷く。1枚で街全体を覆うと、歩道より低い車道まで隠れるので、歩道の外側だけに敷く。
     街の外は、車道より低い所に1枚敷いて、行き止まりの先の地面にする。
     """
     size = PITCH * (LINES - 1) + INTERSECTION + SEGMENT * DEAD_END_SEGMENTS * 2 + 20
     albedo = scene.ext_id(KIT + "T_Concrete_BaseColor.png", "Texture2D")
     normal = scene.ext_id(KIT + "T_Concrete_Normal.png", "Texture2D")
-    # テクスチャ1枚を3m四方に貼る。ワールド座標で貼ると、区画ごとの継ぎ目が出ない。
+    # テクスチャ1枚を3m四方に貼る。ワールド座標で貼ると、板ごとの継ぎ目が出ない。
     scene.sub(
         '[sub_resource type="StandardMaterial3D" id="mat_ground"]\n'
         f'albedo_texture = ExtResource("{albedo}")\nnormal_enabled = true\nnormal_texture = ExtResource("{normal}")\n'
         "uv1_scale = Vector3(0.3333, 0.3333, 0.3333)\nuv1_triplanar = true\nuv1_world_triplanar = true\nroughness = 0.9"
     )
-    block = PITCH - STREET_WIDTH
-    scene.sub(f'[sub_resource type="PlaneMesh" id="mesh_block_ground"]\nmaterial = SubResource("mat_ground")\nsize = Vector2({block:.3f}, {block:.3f})')
     scene.sub(f'[sub_resource type="PlaneMesh" id="mesh_outskirts"]\nmaterial = SubResource("mat_ground")\nsize = Vector2({size}, {size})')
     scene.node('[node name="Ground" type="Node3D" parent="."]')
     scene.node('[node name="Outskirts" type="MeshInstance3D" parent="Ground"]', f'transform = {transform((0, -0.3, 0), 0)}\nmesh = SubResource("mesh_outskirts")')
-    for i in range(LINES - 1):
-        for j in range(LINES - 1):
-            x = (line_position(i) + line_position(i + 1)) / 2
-            z = (line_position(j) + line_position(j + 1)) / 2
-            scene.node(f'[node name="Block{i}{j}" type="MeshInstance3D" parent="Ground"]', f'transform = {transform((x, -0.005, z), 0)}\nmesh = SubResource("mesh_block_ground")')
+    for name, x, z, sx, sz in rects:
+        mesh_id = mesh_for(scene, "mesh_ground", "BoxMesh", f"size = Vector3({sx:.4f}, {GROUND_THICKNESS}, {sz:.4f})", 'material = SubResource("mat_ground")')
+        y = -0.005 - GROUND_THICKNESS / 2
+        scene.node(f'[node name="{name}" type="MeshInstance3D" parent="Ground"]', f'transform = {transform((x, y, z), 0)}\nmesh = SubResource("{mesh_id}")')
     return size
 
 
-def build_colliders(scene: Scene, ground_size: float) -> None:
+def build_colliders(scene: Scene, rects: list, ground_size: float) -> None:
     """地面の当たり判定。道路、歩道、建物、小物は、読み込み時に部品ごとに当たり判定が付く
-    (tools/kit_post_import.gd)ので、ここでは区画の地面と街の外の地面だけを作る。
+    (tools/kit_post_import.gd)ので、ここでは地面の板と街の外の地面だけを作る。
     """
     scene.node('[node name="GroundColliders" type="StaticBody3D" parent="."]')
-    block = PITCH - STREET_WIDTH
-    boxes = [("Outskirts", 0, -0.3, 0, ground_size)]
-    for i in range(LINES - 1):
-        for j in range(LINES - 1):
-            x = (line_position(i) + line_position(i + 1)) / 2
-            z = (line_position(j) + line_position(j + 1)) / 2
-            boxes.append((f"Block{i}{j}", x, -0.005, z, block))
-    scene.sub(f'[sub_resource type="BoxShape3D" id="shape_outskirts"]\nsize = Vector3({ground_size:.3f}, 1.0, {ground_size:.3f})')
-    scene.sub(f'[sub_resource type="BoxShape3D" id="shape_block"]\nsize = Vector3({block:.3f}, 1.0, {block:.3f})')
-    for name, x, top, z, _size in boxes:
-        shape = "shape_outskirts" if name == "Outskirts" else "shape_block"
-        scene.node(f'[node name="{name}" type="CollisionShape3D" parent="GroundColliders"]', f'transform = {transform((x, top - 0.5, z), 0)}\nshape = SubResource("{shape}")')
+    boxes = [("Outskirts", 0, 0, ground_size, ground_size, -0.3)] + [(n, x, z, sx, sz, -0.005) for n, x, z, sx, sz in rects]
+    for name, x, z, sx, sz, top in boxes:
+        shape_id = mesh_for(scene, "shape_ground", "BoxShape3D", f"size = Vector3({sx:.4f}, 1.0, {sz:.4f})")
+        scene.node(f'[node name="{name}" type="CollisionShape3D" parent="GroundColliders"]', f'transform = {transform((x, top - 0.5, z), 0)}\nshape = SubResource("{shape_id}")')
+
+
+_shared: dict = {}
+
+
+def mesh_for(scene: Scene, prefix: str, kind: str, size_line: str, extra: str = "") -> str:
+    """同じ大きさの板や箱は、1つのリソースを共有する。"""
+    key = (prefix, kind, size_line)
+    if key not in _shared:
+        rid = f"{prefix}_{len(_shared)}"
+        _shared[key] = rid
+        body = "\n".join(line for line in (extra, size_line) if line)
+        scene.sub(f'[sub_resource type="{kind}" id="{rid}"]\n{body}')
+    return _shared[key]
 
 
 def main() -> None:
     scene = Scene()
     scene.node('[node name="City" type="Node3D"]')
-    ground_size = build_ground(scene)
+    rects = ground_rects()
+    ground_size = build_ground(scene, rects)
     build_streets(scene)
     build_blocks(scene)
     build_lamps(scene)
-    build_colliders(scene, ground_size)
+    build_colliders(scene, rects, ground_size)
     scene.write(OUT)
     print(f"wrote {OUT} (ground {ground_size:.0f}m)")
 
