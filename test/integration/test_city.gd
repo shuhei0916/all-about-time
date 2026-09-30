@@ -105,22 +105,49 @@ func _distance_to_roads(point: Vector3, roads: Array) -> float:
 	return nearest
 
 
-func test_どの建物にも当たり判定がある():
-	var space := city.get_world_3d().direct_space_state
+## 建物の正面の少し手前から、上の階の高さで建物の奥へ向けて視線を飛ばす。当たった物を返す(なければ空)。
+## 1階は入口が開いていて視線が中へ抜けることがあるので、壁のある上の階を狙う。
+func _cast_at_front(building: Node3D) -> Dictionary:
+	var outside := building.global_position + building.global_basis.z * 4.0 + Vector3.UP * 8.0
+	var behind := building.global_position - building.global_basis.z * 30.0 + Vector3.UP * 8.0
+	var query := PhysicsRayQueryParameters3D.create(outside, behind)
+	return city.get_world_3d().direct_space_state.intersect_ray(query)
+
+
+func test_どの建物も自分の当たり判定を持つ():
 	var missing := []
 	for building: Node3D in _buildings():
-		var rect := _footprint(building)
-		var center := Vector3(rect.get_center().x, 5.0, rect.get_center().y)
-		var query := PhysicsPointQueryParameters3D.new()
-		query.position = center
-		if space.intersect_point(query).is_empty():
+		var hit := _cast_at_front(building)
+		if hit.is_empty() or not building.is_ancestor_of(hit.collider):
 			missing.append(building.name)
-	assert_eq(missing, [], "当たり判定のない建物")
+	assert_eq(missing, [], "自分の当たり判定を持たない建物")
 
 
-func test_十字路の脇の歩道に立てる():
+func test_建物を動かすと当たり判定も一緒に動く():
+	var building: Node3D = _buildings()[0]
+	var start := building.global_position
+	building.global_position += Vector3(0, 0, 1000)
+	await wait_physics_frames(2)
+	var hit := _cast_at_front(building)
+	building.global_position = start
+	await wait_physics_frames(2)
+	assert_false(hit.is_empty(), "動かした先で当たること")
+	assert_true(not hit.is_empty() and building.is_ancestor_of(hit.collider), "その建物の当たり判定であること")
+
+
+func test_車道の上では歩道より低い路面の高さに立てる():
+	# 中央の十字路から東へ延びる道路の、車線の中央。
 	var space := city.get_world_3d().direct_space_state
-	var query := PhysicsRayQueryParameters3D.create(Vector3(0, 5, 5.5), Vector3(0, -5, 5.5))
+	var query := PhysicsRayQueryParameters3D.create(Vector3(20, 5, 0), Vector3(20, -5, 0))
+	var hit := space.intersect_ray(query)
+	assert_false(hit.is_empty(), "足場があること")
+	assert_lt(hit.get("position", Vector3.ZERO).y, -0.05)
+
+
+func test_道路の脇の歩道に立てる():
+	# 中央の十字路から東へ延びる道路の、南側の歩道。
+	var space := city.get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(Vector3(20, 5, 5.2), Vector3(20, -5, 5.2))
 	var hit := space.intersect_ray(query)
 	assert_false(hit.is_empty(), "足場があること")
 	assert_almost_eq(hit.get("position", Vector3.ZERO).y, 0.0, 0.05)

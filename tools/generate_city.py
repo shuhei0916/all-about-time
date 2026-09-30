@@ -116,7 +116,7 @@ def world_footprint(name: str, origin, yaw: float):
     return (min(xs), max(xs)), (min(zs), max(zs))
 
 
-def build_streets(scene: Scene, colliders: list) -> None:
+def build_streets(scene: Scene) -> None:
     scene.node('[node name="Streets" type="Node3D" parent="."]')
     first, last = line_position(0), line_position(LINES - 1)
     half = INTERSECTION / 2
@@ -170,14 +170,14 @@ def depth(name: str) -> float:
     return z1 - z0
 
 
-def place_row(scene: Scene, colliders: list, row, gap, edge: str, block, start: float) -> float:
+def place_row(scene: Scene, row, gap, edge: str, block, start: float) -> float:
     """区画 block の縁 edge に、row の建物を start から並べる。並べた建物の最大の奥行きを返す。"""
     (bx0, bx1), (bz0, bz1) = block
     yaw = {"south": 0, "north": 180, "east": 90, "west": -90}[edge]
     cursor = start + gap
     deepest = 0.0
     for name in row:
-        (lx0, lx1), (lz0, lz1), height = BUILDINGS[name]
+        (lx0, lx1), (lz0, lz1), _height = BUILDINGS[name]
         w = lx1 - lx0
         # 並べる方向に沿った建物の中心と、正面の位置から原点を決める。
         mid_local = (lx0 + lx1) / 2
@@ -190,14 +190,12 @@ def place_row(scene: Scene, colliders: list, row, gap, edge: str, block, start: 
         else:
             origin = (bx0 + SETBACK + lz1, 0, cursor + w / 2 - mid_local)
         scene.instance(name, "Buildings", origin, yaw, groups=["building"])
-        (fx0, fx1), (fz0, fz1) = world_footprint(name, origin, yaw)
-        colliders.append(((fx0 + fx1) / 2, height / 2, (fz0 + fz1) / 2, fx1 - fx0, height, fz1 - fz0))
         cursor += w + gap
         deepest = max(deepest, depth(name) + SETBACK)
     return deepest
 
 
-def build_blocks(scene: Scene, colliders: list) -> None:
+def build_blocks(scene: Scene) -> None:
     scene.node('[node name="Buildings" type="Node3D" parent="."]')
     scene.node('[node name="Plazas" type="Node3D" parent="."]')
     inner = STREET_WIDTH / 2
@@ -211,12 +209,12 @@ def build_blocks(scene: Scene, colliders: list) -> None:
             (bx0, bx1), (bz0, bz1) = block
             south, south_gap = fill_row(bx1 - bx0)
             north, north_gap = fill_row(bx1 - bx0)
-            d_south = place_row(scene, colliders, south, south_gap, "south", block, bx0)
-            d_north = place_row(scene, colliders, north, north_gap, "north", block, bx0)
+            d_south = place_row(scene, south, south_gap, "south", block, bx0)
+            d_north = place_row(scene, north, north_gap, "north", block, bx0)
             side_start, side_end = bz0 + d_north + MIN_GAP, bz1 - d_south - MIN_GAP
             for edge in ("east", "west"):
                 row, gap = fill_row(side_end - side_start)
-                place_row(scene, colliders, row, gap, edge, block, side_start)
+                place_row(scene, row, gap, edge, block, side_start)
 
 
 def build_plaza(scene: Scene, block) -> None:
@@ -284,27 +282,35 @@ def build_ground(scene: Scene) -> float:
     return size
 
 
-def build_colliders(scene: Scene, colliders: list, ground_size: float) -> None:
-    """床1枚と、建物ごとの箱の当たり判定。"""
-    scene.node('[node name="Colliders" type="StaticBody3D" parent="."]')
-    boxes = [(0, -0.5, 0, ground_size, 1.0, ground_size)] + colliders
-    for n, (x, y, z, sx, sy, sz) in enumerate(boxes):
-        scene.sub(f'[sub_resource type="BoxShape3D" id="shape_{n}"]\nsize = Vector3({sx:.3f}, {sy:.3f}, {sz:.3f})')
-        name = "Floor" if n == 0 else f"Building{n}"
-        scene.node(f'[node name="{name}" type="CollisionShape3D" parent="Colliders"]', f'transform = {transform((x, y, z), 0)}\nshape = SubResource("shape_{n}")')
+def build_colliders(scene: Scene, ground_size: float) -> None:
+    """地面の当たり判定。道路、歩道、建物、小物は、読み込み時に部品ごとに当たり判定が付く
+    (tools/kit_post_import.gd)ので、ここでは区画の地面と街の外の地面だけを作る。
+    """
+    scene.node('[node name="GroundColliders" type="StaticBody3D" parent="."]')
+    block = PITCH - STREET_WIDTH
+    boxes = [("Outskirts", 0, -0.3, 0, ground_size)]
+    for i in range(LINES - 1):
+        for j in range(LINES - 1):
+            x = (line_position(i) + line_position(i + 1)) / 2
+            z = (line_position(j) + line_position(j + 1)) / 2
+            boxes.append((f"Block{i}{j}", x, -0.005, z, block))
+    scene.sub(f'[sub_resource type="BoxShape3D" id="shape_outskirts"]\nsize = Vector3({ground_size:.3f}, 1.0, {ground_size:.3f})')
+    scene.sub(f'[sub_resource type="BoxShape3D" id="shape_block"]\nsize = Vector3({block:.3f}, 1.0, {block:.3f})')
+    for name, x, top, z, _size in boxes:
+        shape = "shape_outskirts" if name == "Outskirts" else "shape_block"
+        scene.node(f'[node name="{name}" type="CollisionShape3D" parent="GroundColliders"]', f'transform = {transform((x, top - 0.5, z), 0)}\nshape = SubResource("{shape}")')
 
 
 def main() -> None:
     scene = Scene()
     scene.node('[node name="City" type="Node3D"]')
-    colliders: list = []
     ground_size = build_ground(scene)
-    build_streets(scene, colliders)
-    build_blocks(scene, colliders)
+    build_streets(scene)
+    build_blocks(scene)
     build_lamps(scene)
-    build_colliders(scene, colliders, ground_size)
+    build_colliders(scene, ground_size)
     scene.write(OUT)
-    print(f"wrote {OUT} ({len(colliders)} buildings, ground {ground_size:.0f}m)")
+    print(f"wrote {OUT} (ground {ground_size:.0f}m)")
 
 
 if __name__ == "__main__":
