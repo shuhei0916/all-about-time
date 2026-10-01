@@ -15,21 +15,24 @@ from pathlib import Path
 SEED = 7
 # 道路は LINES 本 × LINES 本の格子。区画は (LINES - 1) × (LINES - 1)。
 LINES = 5
-# 十字路の一辺(実測値)と、十字路の間をつなぐ直線の区間の長さ・本数。
 # キットの十字路は4車線用(出口は幅12mすべてが車道、四隅に中心から6〜9mの丸い角の歩道)なので、
 # 直線も4車線(幅18m = 歩道3m + 車道12m + 歩道3m)を使う。2車線の直線をつなぐと歩道がずれる。
+# 十字路の部品は一辺 24.666m(実測)だが、出口の先端(中心から 9m より外)には歩道がない。
+# そこで十字路は中心から ±9m だけを使い、その外側は直線の道路を重ねて覆う。
+# こうすると、十字路の角の歩道と直線の歩道がつながる。
 INTERSECTION = 24.66626
+INTERSECTION_CORE = 18.0
 STREET = "Street_4Lane"
 SEGMENT = 6.0
-SEGMENTS_PER_SPAN = 6
-PITCH = INTERSECTION + SEGMENT * SEGMENTS_PER_SPAN
+SEGMENTS_PER_SPAN = 7
+# 十字路の中心どうしの間隔。十字路の使う範囲と直線7本で、ちょうど隙間なく埋まる。
+PITCH = INTERSECTION_CORE + SEGMENT * SEGMENTS_PER_SPAN
+# 直線を十字路よりわずかに下げる。重なった所で車道どうしがちらつかず、十字路の横断歩道などが上に見える。
+STREET_DROP = 0.003
 # 道路の幅(歩道込み)。区画はこの半分だけ道路の中心線から離れて始まる。
 STREET_WIDTH = 18.0
 # 車道の幅。歩道はその外側から STREET_WIDTH までの帯。
 ROADWAY_WIDTH = 12.0
-# 十字路の出口の車道は、角の歩道より外側では中心から 5.72m までしかない(実測)。
-# そこから直線の歩道の外側までを地面の板で埋める。
-INTERSECTION_ROADWAY_EDGE = 5.70
 # 地面の板の厚み。車道との段差で、板の縁の下に隙間が見えないよう、側面を縁石の代わりにする。
 GROUND_THICKNESS = 0.3
 # 外周の道路を、外へ何区間延ばして行き止まりにするか。
@@ -129,25 +132,25 @@ def world_footprint(name: str, origin, yaw: float):
 def build_streets(scene: Scene) -> None:
     scene.node('[node name="Streets" type="Node3D" parent="."]')
     first, last = line_position(0), line_position(LINES - 1)
-    half = INTERSECTION / 2
+    core = INTERSECTION_CORE / 2
     for i in range(LINES):
         for j in range(LINES):
             scene.instance("Street_4WayIntersection", "Streets", (line_position(i), 0, line_position(j)), groups=["street"])
     for line in range(LINES):
         along = line_position(line)
-        # 十字路の間と、外周から外への延長。
-        starts = [line_position(k) + half for k in range(LINES - 1)]
+        # 十字路の間と、外周から外への延長。どれも十字路の中心から 9m の所から並べる。
+        starts = [line_position(k) + core for k in range(LINES - 1)]
         runs = [(s, SEGMENTS_PER_SPAN) for s in starts]
-        runs.append((last + half, DEAD_END_SEGMENTS))
-        runs.append((first - half - SEGMENT * DEAD_END_SEGMENTS, DEAD_END_SEGMENTS))
+        runs.append((last + core, DEAD_END_SEGMENTS))
+        runs.append((first - core - SEGMENT * DEAD_END_SEGMENTS, DEAD_END_SEGMENTS))
         for start, count in runs:
             for k in range(count):
                 c = start + SEGMENT * (k + 0.5)
                 # 東西の道(X 方向に延びる)と南北の道(Z 方向に延びる)。
-                scene.instance(STREET, "Streets", (c, 0, along), 0, groups=["street"])
-                scene.instance(STREET, "Streets", (along, 0, c), 90, groups=["street"])
+                scene.instance(STREET, "Streets", (c, -STREET_DROP, along), 0, groups=["street"])
+                scene.instance(STREET, "Streets", (along, -STREET_DROP, c), 90, groups=["street"])
         # 行き止まりに車止めを並べる。
-        for end in (last + half + SEGMENT * DEAD_END_SEGMENTS, first - half - SEGMENT * DEAD_END_SEGMENTS):
+        for end in (last + core + SEGMENT * DEAD_END_SEGMENTS, first - core - SEGMENT * DEAD_END_SEGMENTS):
             for n in range(15):
                 across = along - 8.4 + n * 1.2
                 scene.instance("Prop_Bollard", "Streets", (end, 0, across))
@@ -244,14 +247,14 @@ def build_lamps(scene: Scene) -> None:
     scene.sub('[sub_resource type="StandardMaterial3D" id="mat_lamp_head"]\nalbedo_color = Color(1, 0.85, 0.6, 1)\nemission_enabled = true\nemission = Color(1, 0.75, 0.45, 1)\nemission_energy_multiplier = 3.0')
     scene.sub('[sub_resource type="BoxMesh" id="mesh_lamp_head"]\nmaterial = SubResource("mat_lamp_head")\nsize = Vector3(0.5, 0.15, 0.3)')
     scene.node('[node name="Lamps" type="Node3D" parent="."]')
-    half = INTERSECTION / 2
+    core = INTERSECTION_CORE / 2
     # 縁石のすぐ内側の歩道に立てる。
     offset = ROADWAY_WIDTH / 2 + 0.6
     for line in range(LINES):
         along = line_position(line)
         for k in range(LINES - 1):
-            start = line_position(k) + half
-            for n, side in ((1, 1), (4, -1)):
+            start = line_position(k) + core
+            for n, side in ((1, 1), (5, -1)):
                 c = start + SEGMENT * (n + 0.5)
                 for position in ((c, along + side * offset), (along + side * offset, c)):
                     name = scene.unique("Lamp")
@@ -268,9 +271,8 @@ def build_lamps(scene: Scene) -> None:
 def ground_rects() -> list:
     """歩道の高さに敷く地面の板の一覧。(名前, 中心X, 中心Z, 幅X, 幅Z)。
 
-    - 区画: 道路の中心から STREET_WIDTH / 2 (歩道の外側)より内側
-    - 十字路の四隅の隙間: 十字路の部品は四隅に丸い角の歩道(中心から6〜9m)しか持たないので、
-      直線の歩道との間(中心から 9m〜十字路の端)と、区画に入らない外周の角を埋める
+    区画の中だけに敷く。道路の中心から STREET_WIDTH / 2 (歩道の外側)より内側。
+    十字路の出口の先端の両脇は、重ねた直線の歩道が埋めるので、板は要らない。
     """
     rects = []
     inner = STREET_WIDTH / 2
@@ -279,29 +281,6 @@ def ground_rects() -> list:
             x0, x1 = line_position(i) + inner, line_position(i + 1) - inner
             z0, z1 = line_position(j) + inner, line_position(j + 1) - inner
             rects.append((f"Block{i}{j}", (x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0))
-    half = INTERSECTION / 2
-    sidewalk_near = INTERSECTION_ROADWAY_EDGE
-    n = 0
-    for i in range(LINES):
-        for j in range(LINES):
-            cx, cz = line_position(i), line_position(j)
-            for sx in (-1, 1):
-                for sz in (-1, 1):
-                    # 直線の歩道と、十字路の角の歩道の間の隙間(道路に沿った2つの細長い帯)。
-                    pieces = [
-                        ((inner, half), (sidewalk_near, inner)),
-                        ((sidewalk_near, inner), (inner, half)),
-                    ]
-                    # 区画に入らない外周の角も埋める。
-                    outside_x = (i == 0 and sx < 0) or (i == LINES - 1 and sx > 0)
-                    outside_z = (j == 0 and sz < 0) or (j == LINES - 1 and sz > 0)
-                    if outside_x or outside_z:
-                        pieces.append(((inner, half), (inner, half)))
-                    for (ax, bx), (az, bz) in pieces:
-                        n += 1
-                        x = cx + sx * (ax + bx) / 2
-                        z = cz + sz * (az + bz) / 2
-                        rects.append((f"Corner{n}", x, z, bx - ax, bz - az))
     return rects
 
 
@@ -318,7 +297,9 @@ def build_ground(scene: Scene, rects: list) -> float:
         f'albedo_texture = ExtResource("{albedo}")\nnormal_enabled = true\nnormal_texture = ExtResource("{normal}")\n'
         "uv1_scale = Vector3(0.3333, 0.3333, 0.3333)\nuv1_triplanar = true\nuv1_world_triplanar = true\nroughness = 0.9"
     )
-    scene.sub(f'[sub_resource type="PlaneMesh" id="mesh_outskirts"]\nmaterial = SubResource("mat_ground")\nsize = Vector2({size}, {size})')
+    # 土台はわざと世界にそぐわない紫にする。上から見て紫が見える所は、キットの素材で埋まっていない所。
+    scene.sub('[sub_resource type="StandardMaterial3D" id="mat_outskirts_debug"]\nresource_name = "OutskirtsDebugPurple"\nshading_mode = 0\nalbedo_color = Color(0.85, 0.1, 0.95, 1)')
+    scene.sub(f'[sub_resource type="PlaneMesh" id="mesh_outskirts"]\nmaterial = SubResource("mat_outskirts_debug")\nsize = Vector2({size}, {size})')
     scene.node('[node name="Ground" type="Node3D" parent="."]')
     scene.node('[node name="Outskirts" type="MeshInstance3D" parent="Ground"]', f'transform = {transform((0, -0.3, 0), 0)}\nmesh = SubResource("mesh_outskirts")')
     for name, x, z, sx, sz in rects:

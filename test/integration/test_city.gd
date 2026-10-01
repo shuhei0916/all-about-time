@@ -199,6 +199,19 @@ func test_中央の十字路のまわりの地面に穴がない():
 	assert_eq(_holes_around(Vector3.ZERO), [], "足場のない所")
 
 
+func test_十字路の間の道路の全幅に穴がない():
+	# 中央の十字路から東隣の十字路まで、車道と両側の歩道(中心から ±9m)を調べる。
+	var space := city.get_world_3d().direct_space_state
+	var holes := []
+	for xi in range(0, 121):
+		for zi in range(-17, 18):
+			var p := Vector3(xi * 0.5 + 0.13, 0, zi * 0.5 + 0.07)
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(p + Vector3.UP * 2, p + Vector3.DOWN * 2))
+			if hit.is_empty() or hit.position.y < -0.2:
+				holes.append(Vector2(p.x, p.z))
+	assert_eq(holes, [], "足場のない所")
+
+
 func test_道路の脇の歩道に立てる():
 	# 中央の十字路から東へ延びる道路の、南側の歩道(中心から6〜9m)。
 	var space := city.get_world_3d().direct_space_state
