@@ -33,6 +33,8 @@ const ANIMATION_BLEND := 0.2
 var attention := Attention.new()
 var _destination: Variant = null
 var _gaze_target: Variant = null
+## 往復する2点。往復していなければ空。
+var _patrol_points: Array[Vector3] = []
 
 
 ## 目的地へ歩き始める。
@@ -40,9 +42,16 @@ func walk_to(destination: Vector3) -> void:
 	_destination = destination
 
 
-## 目的地へ向かうのをやめ、その場に立ち止まる。
+## 2点の間を往復する。まず first へ向かい、着いたら second へ、と繰り返す。
+func patrol(first: Vector3, second: Vector3) -> void:
+	_patrol_points = [first, second]
+	walk_to(first)
+
+
+## 目的地へ向かうのをやめ、その場に立ち止まる。往復もやめる。
 func stop() -> void:
 	_destination = null
+	_patrol_points.clear()
 
 
 ## 相手を見て、見えていればその目立ち度に応じて気にする。毎フレーム呼ぶ。
@@ -104,11 +113,20 @@ func _walk() -> void:
 	to_destination.y = 0.0
 	if to_destination.length() < ARRIVE_DISTANCE:
 		_destination = null
+		_continue_patrol()
 		arrived.emit()
 		return
 	var direction := to_destination.normalized()
 	velocity = direction * speed
 	look_at(global_position + direction, Vector3.UP)
+
+
+## 往復していれば、着いた所と反対の点へ向かう。
+func _continue_patrol() -> void:
+	if _patrol_points.is_empty():
+		return
+	_patrol_points.reverse()
+	walk_to(_patrol_points[0])
 
 
 func _turn_body_toward(point: Vector3, delta: float) -> void:

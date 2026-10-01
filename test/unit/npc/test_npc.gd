@@ -172,3 +172,21 @@ func test_強く気になって立ち止まると待機のアニメーション�
 	npc.observe(0.0, _front(5.0), 0.0)
 	simulate(npc, 1, 0.1)
 	assert_eq(npc.animation_player.current_animation, "Idle")
+
+
+func test_2点の間を往復する():
+	var npc := _make_npc()
+	npc.speed = 10.0
+	watch_signals(npc)
+	npc.patrol(Vector3(0, 0, -3), Vector3.ZERO)
+	await wait_physics_frames(120)
+	assert_gte(get_signal_emit_count(npc, "arrived"), 3, "行って、戻って、また行く")
+
+
+func test_往復の途中で止まると往復をやめる():
+	var npc := _make_npc()
+	npc.speed = 10.0
+	npc.patrol(Vector3(0, 0, -3), Vector3.ZERO)
+	npc.stop()
+	await wait_physics_frames(30)
+	assert_almost_eq(npc.global_position, Vector3.ZERO, Vector3.ONE * 0.01)
