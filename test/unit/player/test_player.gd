@@ -243,3 +243,81 @@ func test_ジャンプにはSpaceキーが割り当てられている():
 	var space := InputEventKey.new()
 	space.physical_keycode = KEY_SPACE
 	assert_true(InputMap.event_is_action(space, "jump"))
+
+
+func _body_shape(player: Player) -> CollisionShape3D:
+	return player.find_children("*", "CollisionShape3D", false, false)[0]
+
+
+func test_体の当たり判定は身長1_7mで半径0_3m():
+	var player: Player = add_child_autofree(Player.new())
+	var capsule: CapsuleShape3D = _body_shape(player).shape
+	assert_almost_eq(capsule.height, 1.7, 0.001)
+	assert_almost_eq(capsule.radius, 0.3, 0.001)
+
+
+func test_体の当たり判定は足元から頭のてっぺんまで():
+	var player: Player = add_child_autofree(Player.new())
+	var shape := _body_shape(player)
+	var capsule: CapsuleShape3D = shape.shape
+	assert_almost_eq(shape.position.y - capsule.height / 2, 0.0, 0.001, "足元が原点")
+	assert_almost_eq(shape.position.y + capsule.height / 2, Player.HEIGHT, 0.001, "頭のてっぺんが身長の高さ")
+
+
+func test_目の高さは頭のてっぺんより下():
+	assert_lt(Player.EYE_HEIGHT, Player.HEIGHT)
+
+
+func test_幅1mのドアを通り抜けられる太さ():
+	assert_lt(Player.RADIUS * 2.0, 1.0)
+
+
+## 床の上で、正面(-Z)の 1.5m 先から、指定した高さの段を置く。
+func _add_step(height: float) -> void:
+	_add_floor()
+	var step := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(10, height, 10)
+	shape.shape = box
+	step.add_child(shape)
+	step.position = Vector3(0, height / 2, -1.5 - 5)
+	add_child_autofree(step)
+
+
+## 床に立ったプレイヤーを、前へ指定した物理フレーム数だけ歩かせる。
+func _walk_forward(frames: int) -> Player:
+	var player: Player = add_child_autofree(Player.new())
+	player.position.y = 0.05
+	await wait_physics_frames(10)
+	Input.action_press("move_forward")
+	await wait_physics_frames(frames)
+	Input.action_release("move_forward")
+	return player
+
+
+func test_縁石くらいの段差は乗り越えて進める():
+	_add_step(0.15)
+	var player := await _walk_forward(90)
+	assert_lt(player.global_position.z, -2.0, "段の先まで進めること")
+	assert_almost_eq(player.global_position.y, 0.15, 0.05, "段の上に立っていること")
+
+
+func test_階段の一段くらいの段差も上れる():
+	_add_step(0.3)
+	var player := await _walk_forward(90)
+	assert_lt(player.global_position.z, -2.0)
+	assert_almost_eq(player.global_position.y, 0.3, 0.05)
+
+
+func test_上れる高さを超える段差は上れない():
+	_add_step(Player.STEP_HEIGHT + 0.15)
+	var player := await _walk_forward(90)
+	assert_gt(player.global_position.z, -1.5, "段の手前で止まること")
+	assert_almost_eq(player.global_position.y, 0.0, 0.05)
+
+
+func test_平らな床を歩いても高さは変わらない():
+	_add_floor()
+	var player := await _walk_forward(60)
+	assert_almost_eq(player.global_position.y, 0.0, 0.02)

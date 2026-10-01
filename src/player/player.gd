@@ -11,7 +11,14 @@ const SPEED := 4.0
 const SPRINT_SPEED := 7.0
 ## ジャンプした瞬間の上向きの速さ。高さはおよそ 1m になる。
 const JUMP_VELOCITY := 4.5
+## 歩いてそのまま上れる段差の高さ(メートル)。縁石(0.15m)や階段の一段を上れる。
+const STEP_HEIGHT := 0.35
+## 段に乗った後、段の縁の角に引っかからないよう少しだけ余分に持ち上げる高さ。
+const STEP_CLEARANCE := 0.01
 const MOUSE_SENSITIVITY := 0.002
+## 身長(体の当たり判定の高さ)と太さ。半径 0.3m なので幅 1m のドアを通り抜けられる。
+const HEIGHT := 1.7
+const RADIUS := 0.3
 const EYE_HEIGHT := 1.6
 const INTERACT_DISTANCE := 2.5
 ## 建物を建てる地面を狙える距離。建物が自分と重ならないよう、働きかけより遠くまで届く。
@@ -34,8 +41,12 @@ var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 func _init() -> void:
 	var shape := CollisionShape3D.new()
-	shape.shape = CapsuleShape3D.new()
-	shape.position = Vector3(0, 1.0, 0)
+	var capsule := CapsuleShape3D.new()
+	capsule.height = HEIGHT
+	capsule.radius = RADIUS
+	shape.shape = capsule
+	# 足元が原点に来るよう、身長の半分だけ持ち上げる。
+	shape.position = Vector3(0, HEIGHT / 2, 0)
 	add_child(shape)
 
 	camera = Camera3D.new()
@@ -84,9 +95,43 @@ func _physics_process(delta: float) -> void:
 	var speed := SPRINT_SPEED if Input.is_action_pressed("sprint") else SPEED
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
+	if is_on_floor():
+		_step_up(Vector3(velocity.x, 0, velocity.z) * delta)
 	move_and_slide()
 	# 動いた後の位置に合わせる。動く前に合わせると、物が1フレーム遅れて付いてきて震える。
 	_carry_held_item()
+
+
+## 進む先に上れる高さの段があれば、その段の高さまで体を持ち上げる。
+## 体の当たり判定(カプセル)の底の丸みで乗り越えられるのは、半径のおよそ3割の高さまでなので、
+## それより高い縁石や階段はここで上る。
+func _step_up(motion: Vector3) -> void:
+	if motion.is_zero_approx():
+		return
+	# 進む先が壁のように急な面でふさがれていなければ、上る必要はない。
+	var blocked := KinematicCollision3D.new()
+	if not test_move(global_transform, motion, blocked) or _is_floor_normal(blocked.get_normal()):
+		return
+	# 上れる高さまで持ち上げた所で、頭がつかえないか。
+	var lift := Vector3.UP * STEP_HEIGHT
+	if test_move(global_transform, lift):
+		return
+	# 持ち上げた所から前が空いているか。段の上に体が乗るよう、少なくとも半径ぶん先まで確かめる。
+	var raised := global_transform.translated(lift)
+	var probe := motion.normalized() * maxf(motion.length(), RADIUS)
+	if test_move(raised, probe):
+		return
+	# そこから下ろして、乗れる床があるか。
+	var landing := KinematicCollision3D.new()
+	if not test_move(raised.translated(probe), -lift, landing) or not _is_floor_normal(landing.get_normal()):
+		return
+	var rise := STEP_HEIGHT + landing.get_travel().y
+	if rise > STEP_CLEARANCE:
+		global_position.y += rise + STEP_CLEARANCE
+
+
+func _is_floor_normal(normal: Vector3) -> bool:
+	return normal.angle_to(Vector3.UP) <= floor_max_angle + 0.01
 
 
 ## 指定位置に置き直し、速度を止める。次の人生の開始時に呼ばれる。
