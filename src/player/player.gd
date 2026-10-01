@@ -71,6 +71,8 @@ func _init() -> void:
 	_blink_ray.target_position = Vector3(0, 0, -BLINK_RANGE)
 	camera.add_child(_blink_ray)
 
+	add_child(Crosshair.new())
+
 
 func _ready() -> void:
 	if DisplayServer.get_name() != "headless":

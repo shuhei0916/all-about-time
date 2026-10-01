@@ -444,3 +444,8 @@ func test_背後へ跳ぶにはQキーが割り当てられている():
 	var q := InputEventKey.new()
 	q.physical_keycode = KEY_Q
 	assert_true(InputMap.event_is_action(q, "blink"))
+
+
+func test_プレイヤーは画面の中央に照準を持つ():
+	var player: Player = add_child_autofree(Player.new())
+	assert_eq(player.find_children("*", "Crosshair", true, false).size(), 1)
