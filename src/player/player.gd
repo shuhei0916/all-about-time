@@ -19,6 +19,8 @@ const STEP_CLEARANCE := 0.01
 const BLINK_RANGE := 50.0
 const BLINK_BEHIND_DISTANCE := 1.2
 const BLINK_COOLDOWN := 2.0
+## 背後へ駆け寄る速さ(メートル/秒)。瞬間移動ではなく、ものすごい速さで駆け寄る。
+const DASH_SPEED := 60.0
 const MOUSE_SENSITIVITY := 0.002
 ## 身長(体の当たり判定の高さ)と太さ。半径 0.3m なので幅 1m のドアを通り抜けられる。
 const HEIGHT := 1.7
@@ -42,6 +44,14 @@ var _ray: RayCast3D
 var _build_ray: RayCast3D
 var _blink_ray: RayCast3D
 var _blink_cooldown := 0.0
+## 駆け寄っている間の、出発点、着く点、狙った相手、経った時間、かかる時間。
+var _dash_from := Vector3.ZERO
+var _dash_to := Vector3.ZERO
+var _dash_target: Npc
+var _dash_elapsed := 0.0
+var _dash_duration := 0.0
+## 駆け寄っている間は当たり判定を外すので、元に戻すために覚えておく。
+var _dash_saved_layers := Vector2i.ZERO
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 
@@ -100,6 +110,10 @@ func _process(_delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	_blink_cooldown = maxf(_blink_cooldown - delta, 0.0)
+	if is_dashing():
+		_advance_dash(delta)
+		_carry_held_item()
+		return
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	elif Input.is_action_pressed("jump"):
@@ -131,10 +145,10 @@ func can_blink() -> bool:
 	return _blink_cooldown <= 0.0
 
 
-## 狙っている NPC の背後へ一瞬で移動し、その NPC の方を向く。跳べたかを返す。
+## 狙っている NPC の背後へ、ものすごい速さでまっすぐ駆け寄り始める。跳べたかを返す。
 ## 待ち時間の間、狙う相手がいない時、背後に立つ場所がない時は跳ばない。
 func blink() -> bool:
-	if not can_blink():
+	if not can_blink() or is_dashing():
 		return false
 	var target := blink_target()
 	if target == null:
@@ -142,14 +156,44 @@ func blink() -> bool:
 	var landing: Variant = _blink_landing(target)
 	if landing == null:
 		return false
-	global_position = landing
-	velocity = Vector3.ZERO
-	var to_target := target.global_position - global_position
-	to_target.y = 0.0
-	if not to_target.is_zero_approx():
-		look_at(global_position + to_target, Vector3.UP)
+	_dash_from = global_position
+	_dash_to = landing
+	_dash_target = target
+	_dash_elapsed = 0.0
+	_dash_duration = maxf(_dash_from.distance_to(_dash_to) / DASH_SPEED, 0.001)
+	velocity = (_dash_to - _dash_from).normalized() * DASH_SPEED
+	# 途中の物(狙った相手も含む)を押しのけないよう、駆け寄っている間は当たり判定を外す。
+	# 着く点に体が収まることは、駆け寄り始める前に確かめてある。
+	_dash_saved_layers = Vector2i(collision_layer, collision_mask)
+	collision_layer = 0
+	collision_mask = 0
 	_blink_cooldown = BLINK_COOLDOWN
 	return true
+
+
+## 背後へ駆け寄っている途中か。
+func is_dashing() -> bool:
+	return _dash_duration > 0.0
+
+
+## 駆け寄る途中を進める。途中の物には当たらず、出発点から着く点までまっすぐ進む。
+## 着いたら止まり、狙った相手の方を向く。
+func _advance_dash(delta: float) -> void:
+	_dash_elapsed += delta
+	var t := minf(_dash_elapsed / _dash_duration, 1.0)
+	global_position = _dash_from.lerp(_dash_to, t)
+	if t < 1.0:
+		return
+	_dash_duration = 0.0
+	velocity = Vector3.ZERO
+	collision_layer = _dash_saved_layers.x
+	collision_mask = _dash_saved_layers.y
+	if is_instance_valid(_dash_target):
+		var to_target := _dash_target.global_position - global_position
+		to_target.y = 0.0
+		if not to_target.is_zero_approx():
+			look_at(global_position + to_target, Vector3.UP)
+	_dash_target = null
 
 
 ## 相手の背後の立つ位置。床があり、体が収まる隙間がなければ null。

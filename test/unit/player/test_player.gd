@@ -362,23 +362,33 @@ func test_届く範囲より遠いNPCは狙えない():
 	assert_null(player.blink_target())
 
 
-func test_背後へ跳ぶとNPCの背後に立つ():
+## 背後へ駆け寄り終わるまで待つ。
+func _finish_dash(player: Player) -> void:
+	for i in 120:
+		if not player.is_dashing():
+			return
+		await wait_physics_frames(1)
+
+
+func test_背後へ跳ぶと駆け寄り終わった時にNPCの背後に立つ():
 	_add_floor()
 	var npc := _add_npc_ahead(20.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	assert_true(player.blink())
+	await _finish_dash(player)
 	# NPC の正面は -Z なので、背後は +Z の側。
 	var behind := npc.global_position + npc.global_basis.z * Player.BLINK_BEHIND_DISTANCE
 	assert_almost_eq(Vector2(player.global_position.x, player.global_position.z), Vector2(behind.x, behind.z), Vector2.ONE * 0.05)
 
 
-func test_背後へ跳ぶとNPCの方を向く():
+func test_背後へ駆け寄り終わるとNPCの方を向く():
 	_add_floor()
 	var npc := _add_npc_ahead(20.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
+	await _finish_dash(player)
 	var to_npc := npc.global_position - player.global_position
 	to_npc.y = 0
 	assert_almost_eq(-player.global_basis.z, to_npc.normalized(), Vector3.ONE * 0.01)
@@ -449,3 +459,74 @@ func test_背後へ跳ぶにはQキーが割り当てられている():
 func test_プレイヤーは画面の中央に照準を持つ():
 	var player: Player = add_child_autofree(Player.new())
 	assert_eq(player.find_children("*", "Crosshair", true, false).size(), 1)
+
+
+func test_跳んだ瞬間はまだ背後に着いておらず_駆け寄っている途中():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	assert_true(player.is_dashing())
+	await wait_physics_frames(5)
+	assert_between(player.global_position.z, -20.0, -1.0, "スタートと背後の間にいること")
+
+
+func test_駆け寄る速さで背後までの距離を進む():
+	_add_floor()
+	_add_npc_ahead(30.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	var start := player.global_position
+	player.blink()
+	await wait_physics_frames(6)
+	var expected: float = Player.DASH_SPEED * 6.0 / Engine.physics_ticks_per_second
+	# 待った物理フレームの数は1つ前後することがあるので、1フレームぶんの誤差を許す。
+	var per_frame: float = Player.DASH_SPEED / Engine.physics_ticks_per_second
+	assert_almost_eq(start.distance_to(player.global_position), expected, per_frame * 1.5)
+
+
+func test_駆け寄っている間はキー入力で動かない():
+	_add_floor()
+	_add_npc_ahead(40.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	Input.action_press("move_left")
+	await wait_physics_frames(5)
+	Input.action_release("move_left")
+	assert_almost_eq(player.global_position.x, 0.0, 0.05)
+
+
+func test_駆け寄り終わると止まる():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	await _finish_dash(player)
+	assert_almost_eq(Vector2(player.velocity.x, player.velocity.z), Vector2.ZERO, Vector2.ONE * 0.01)
+
+
+func test_駆け寄っても狙った相手を押しのけない():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	var start := npc.global_position
+	player.blink()
+	await _finish_dash(player)
+	await wait_physics_frames(5)
+	assert_almost_eq(npc.global_position, start, Vector3.ONE * 0.02)
+
+
+func test_駆け寄り終わると当たり判定が元に戻る():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	var layer := player.collision_layer
+	var mask := player.collision_mask
+	player.blink()
+	await _finish_dash(player)
+	assert_eq([player.collision_layer, player.collision_mask], [layer, mask])
