@@ -15,6 +15,10 @@ const JUMP_VELOCITY := 4.5
 const STEP_HEIGHT := 0.35
 ## 段に乗った後、段の縁の角に引っかからないよう少しだけ余分に持ち上げる高さ。
 const STEP_CLEARANCE := 0.01
+## 背後へ跳ぶ能力(Q)。狙える距離、相手の背後のどれだけ後ろに立つか、続けて使えない待ち時間。
+const BLINK_RANGE := 50.0
+const BLINK_BEHIND_DISTANCE := 1.2
+const BLINK_COOLDOWN := 2.0
 const MOUSE_SENSITIVITY := 0.002
 ## 身長(体の当たり判定の高さ)と太さ。半径 0.3m なので幅 1m のドアを通り抜けられる。
 const HEIGHT := 1.7
@@ -36,6 +40,8 @@ var held_item: PhysicalItem
 var camera: Camera3D
 var _ray: RayCast3D
 var _build_ray: RayCast3D
+var _blink_ray: RayCast3D
+var _blink_cooldown := 0.0
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 
@@ -61,6 +67,10 @@ func _init() -> void:
 	_build_ray.target_position = Vector3(0, 0, -BUILD_DISTANCE)
 	camera.add_child(_build_ray)
 
+	_blink_ray = RayCast3D.new()
+	_blink_ray.target_position = Vector3(0, 0, -BLINK_RANGE)
+	camera.add_child(_blink_ray)
+
 
 func _ready() -> void:
 	if DisplayServer.get_name() != "headless":
@@ -74,6 +84,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_try_interact()
 	elif event.is_action_pressed("toggle_container"):
 		_try_toggle_container()
+	elif event.is_action_pressed("blink"):
+		blink()
 	elif event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -85,6 +97,7 @@ func _process(_delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_blink_cooldown = maxf(_blink_cooldown - delta, 0.0)
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	elif Input.is_action_pressed("jump"):
@@ -100,6 +113,65 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	# 動いた後の位置に合わせる。動く前に合わせると、物が1フレーム遅れて付いてきて震える。
 	_carry_held_item()
+
+
+## 視線の先の届く範囲にいる、背後へ跳べる相手の NPC。いなければ null。
+## 間に壁などがあれば、視線は壁に当たるので狙えない。
+func blink_target() -> Npc:
+	if not _blink_ray.is_colliding():
+		return null
+	var hit := _blink_ray.get_collider()
+	return hit if hit is Npc else null
+
+
+## 待ち時間が終わっていて、今すぐ背後へ跳べるか。
+func can_blink() -> bool:
+	return _blink_cooldown <= 0.0
+
+
+## 狙っている NPC の背後へ一瞬で移動し、その NPC の方を向く。跳べたかを返す。
+## 待ち時間の間、狙う相手がいない時、背後に立つ場所がない時は跳ばない。
+func blink() -> bool:
+	if not can_blink():
+		return false
+	var target := blink_target()
+	if target == null:
+		return false
+	var landing: Variant = _blink_landing(target)
+	if landing == null:
+		return false
+	global_position = landing
+	velocity = Vector3.ZERO
+	var to_target := target.global_position - global_position
+	to_target.y = 0.0
+	if not to_target.is_zero_approx():
+		look_at(global_position + to_target, Vector3.UP)
+	_blink_cooldown = BLINK_COOLDOWN
+	return true
+
+
+## 相手の背後の立つ位置。床があり、体が収まる隙間がなければ null。
+func _blink_landing(target: Npc) -> Variant:
+	# 相手の正面は -Z なので、背後は +Z の側。
+	var behind := target.global_position + target.global_basis.z * BLINK_BEHIND_DISTANCE
+	var space := get_world_3d().direct_space_state
+	var down := PhysicsRayQueryParameters3D.create(behind + Vector3.UP * STEP_HEIGHT * 2, behind + Vector3.DOWN * STEP_HEIGHT * 2)
+	down.exclude = [get_rid(), target.get_rid()]
+	var floor_hit := space.intersect_ray(down)
+	if floor_hit.is_empty() or not _is_floor_normal(floor_hit.normal):
+		return null
+	var landing: Vector3 = floor_hit.position + Vector3.UP * STEP_CLEARANCE
+	# 立った時の体が、壁などに食い込まないか。
+	var body := PhysicsShapeQueryParameters3D.new()
+	var shape := CapsuleShape3D.new()
+	shape.height = HEIGHT
+	shape.radius = RADIUS
+	body.shape = shape
+	body.transform = Transform3D(Basis.IDENTITY, landing + Vector3.UP * (HEIGHT / 2 + STEP_CLEARANCE))
+	body.exclude = [get_rid(), target.get_rid()]
+	if not space.intersect_shape(body, 1).is_empty():
+		return null
+	return landing
 
 
 ## 進む先に上れる高さの段があれば、その段の高さまで体を持ち上げる。

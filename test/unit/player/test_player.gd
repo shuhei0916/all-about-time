@@ -181,7 +181,7 @@ func test_手を離すと持っていた物とプレイヤーは再びぶつか�
 
 
 func after_each() -> void:
-	for action in ["move_forward", "sprint", "jump"]:
+	for action in ["move_forward", "sprint", "jump", "blink"]:
 		Input.action_release(action)
 
 
@@ -321,3 +321,126 @@ func test_平らな床を歩いても高さは変わらない():
 	_add_floor()
 	var player := await _walk_forward(60)
 	assert_almost_eq(player.global_position.y, 0.0, 0.02)
+
+
+## 当たり判定を持ち、プレイヤーの方(+Z)を向いて立つ NPC を、正面(-Z)の distance 先に置く。
+func _add_npc_ahead(distance: float) -> Npc:
+	var npc := Npc.new()
+	var shape := CollisionShape3D.new()
+	var capsule := CapsuleShape3D.new()
+	capsule.height = 1.8
+	capsule.radius = 0.3
+	shape.shape = capsule
+	shape.position.y = 0.9
+	npc.add_child(shape)
+	npc.position = Vector3(0, 0, -distance)
+	add_child_autofree(npc)
+	npc.look_at(Vector3(0, 0, 0), Vector3.UP)
+	return npc
+
+
+## 床の上に立ち、正面を向いたプレイヤーを作る。
+func _add_blinker() -> Player:
+	var player: Player = add_child_autofree(Player.new())
+	player.position.y = 0.05
+	return player
+
+
+func test_視線の先の届く範囲にいるNPCを狙える():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_eq(player.blink_target(), npc)
+
+
+func test_届く範囲より遠いNPCは狙えない():
+	_add_floor()
+	_add_npc_ahead(Player.BLINK_RANGE + 5.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_null(player.blink_target())
+
+
+func test_背後へ跳ぶとNPCの背後に立つ():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_true(player.blink())
+	# NPC の正面は -Z なので、背後は +Z の側。
+	var behind := npc.global_position + npc.global_basis.z * Player.BLINK_BEHIND_DISTANCE
+	assert_almost_eq(Vector2(player.global_position.x, player.global_position.z), Vector2(behind.x, behind.z), Vector2.ONE * 0.05)
+
+
+func test_背後へ跳ぶとNPCの方を向く():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	var to_npc := npc.global_position - player.global_position
+	to_npc.y = 0
+	assert_almost_eq(-player.global_basis.z, to_npc.normalized(), Vector3.ONE * 0.01)
+
+
+func test_NPCの背後に壁があって立てなければ跳ばない():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var wall := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(10, 4, 1)
+	shape.shape = box
+	wall.add_child(shape)
+	# NPC の背後(+Z の側)に壁を置く。
+	wall.position = npc.global_position + npc.global_basis.z * Player.BLINK_BEHIND_DISTANCE + Vector3.UP * 2
+	add_child_autofree(wall)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	var start := player.global_position
+	assert_false(player.blink())
+	assert_eq(player.global_position, start)
+
+
+func test_NPCの背後に床がなければ跳ばない():
+	# 床は NPC の足元までしかない。
+	var ground := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(10, 0.2, 20.3)
+	shape.shape = box
+	ground.add_child(shape)
+	ground.position = Vector3(0, -0.1, -10.0)
+	add_child_autofree(ground)
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_false(player.blink())
+
+
+func test_跳んだ直後は待ち時間が終わるまで続けて跳べない():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	player.rotate_y(PI)
+	await wait_physics_frames(5)
+	assert_false(player.can_blink())
+
+
+func test_待ち時間が終わるとまた跳べる():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	simulate(player, 1, Player.BLINK_COOLDOWN + 0.1)
+	assert_true(player.can_blink())
+
+
+func test_背後へ跳ぶにはQキーが割り当てられている():
+	var q := InputEventKey.new()
+	q.physical_keycode = KEY_Q
+	assert_true(InputMap.event_is_action(q, "blink"))
