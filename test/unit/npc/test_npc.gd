@@ -311,3 +311,29 @@ func test_叩かれると頭の上にダメージの数字が出る():
 	assert_eq(added[0].text, "30")
 	assert_gt(added[0].global_position.y, npc.head.global_position.y)
 	added[0].free()
+
+
+func test_止められている間は目的地へ歩かない():
+	var npc := _make_npc()
+	npc.walk_to(Vector3(0, 0, -10))
+	npc.hold_still(true)
+	await wait_physics_frames(10)
+	assert_almost_eq(npc.global_position, Vector3.ZERO, Vector3.ONE * 0.01)
+
+
+func test_止められている間は強く気になっても向き直らない():
+	var npc := _make_npc()
+	npc.hold_still(true)
+	npc.attention.level = 1.0
+	npc.observe(0.0, Vector3(5, Npc.EYE_HEIGHT, 0), 0.0)
+	simulate(npc, 5, 0.1)
+	assert_almost_eq(-npc.global_basis.z, Vector3.FORWARD, Vector3.ONE * 0.01)
+
+
+func test_止めるのをやめるとまた歩き出す():
+	var npc := _make_npc()
+	npc.walk_to(Vector3(0, 0, -10))
+	npc.hold_still(true)
+	npc.hold_still(false)
+	await wait_physics_frames(10)
+	assert_lt(npc.global_position.z, -0.1)

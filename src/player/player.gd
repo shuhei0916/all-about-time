@@ -224,6 +224,8 @@ func blink() -> bool:
 	_dash_from = global_position
 	_dash_to = landing
 	_dash_target = target
+	# 着く点は今の相手の位置と向きで決めたので、駆け寄っている間は相手を止めておく。
+	target.hold_still(true)
 	_dash_elapsed = 0.0
 	_dash_duration = maxf(_dash_from.distance_to(_dash_to) / DASH_SPEED, 0.001)
 	velocity = (_dash_to - _dash_from).normalized() * DASH_SPEED
@@ -255,6 +257,7 @@ func _advance_dash(delta: float) -> void:
 	collision_layer = _dash_saved_layers.x
 	collision_mask = _dash_saved_layers.y
 	if is_instance_valid(_dash_target):
+		_dash_target.hold_still(false)
 		var to_target := _dash_target.global_position - global_position
 		to_target.y = 0.0
 		if not to_target.is_zero_approx():

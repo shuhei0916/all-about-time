@@ -703,3 +703,25 @@ func test_叩くには左クリックが割り当てられている():
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
 	assert_true(InputMap.event_is_action(click, "attack"))
+
+
+func test_背後へ駆け寄っている間は相手のNPCが立ち止まる():
+	_add_floor()
+	var npc := _add_npc_ahead(40.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	npc.walk_to(Vector3(10, 0, -40))
+	player.blink()
+	var start := npc.global_position
+	await _finish_dash(player)
+	assert_almost_eq(npc.global_position, start, Vector3.ONE * 0.01)
+
+
+func test_駆け寄り終わると相手のNPCはまた動ける():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	await _finish_dash(player)
+	assert_false(npc.is_held_still())
