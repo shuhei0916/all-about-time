@@ -6,6 +6,8 @@ extends CharacterBody3D
 
 ## 目的地に着いた時に発火する。
 signal arrived
+## 叩かれて体力が尽き、倒れた時に発火する。
+signal died
 
 ## NPC が入るグループ。背後へ跳ぶ相手の候補を探す時に使う。
 const GROUP := &"npc"
@@ -25,6 +27,9 @@ const HEAD_TURN_RATE := 4.0
 const BODY_TURN_SPEED := 2.5
 ## 歩きと待機を切り替える時に、前のアニメーションと混ぜる秒数。
 const ANIMATION_BLEND := 0.2
+const MAX_HEALTH := 100.0
+## 叩かれてよろけ、立ち止まっている秒数。
+const STAGGER_DURATION := 0.5
 
 ## 歩く速さ(メートル/秒)。
 @export var speed := 1.4
@@ -34,13 +39,18 @@ const ANIMATION_BLEND := 0.2
 @export var animation_player: AnimationPlayer
 @export var walk_animation := "Walk"
 @export var idle_animation := "Idle"
+@export var hit_animation := "Hit_Chest"
+@export var death_animation := "Death01"
 
 var attention := Attention.new()
+var health := Health.new(MAX_HEALTH)
 var _destination: Variant = null
 var _gaze_target: Variant = null
 ## 往復する2点。往復していなければ空。
 var _patrol_points: Array[Vector3] = []
 var _highlighted := false
+## よろけて立ち止まっている残りの秒数。
+var _stagger_left := 0.0
 
 
 func _init() -> void:
@@ -56,6 +66,33 @@ func set_highlighted(highlighted: bool) -> void:
 
 func is_highlighted() -> bool:
 	return _highlighted
+
+
+## amount だけのダメージを受ける。体力が残っていればよろけ、尽きれば倒れる。
+func take_hit(amount: float) -> void:
+	if is_dead():
+		return
+	health.damage(amount)
+	if is_dead():
+		_die()
+	else:
+		_stagger_left = STAGGER_DURATION
+
+
+func is_dead() -> bool:
+	return health.is_dead()
+
+
+## 倒れる。その場に残るが、狙える候補から外れ、他の物に当たらなくなる。
+func _die() -> void:
+	set_highlighted(false)
+	remove_from_group(GROUP)
+	collision_layer = 0
+	velocity = Vector3.ZERO
+	# 倒れるアニメーションはループしないので、流し終えたら最後の姿勢のまま残す。
+	if animation_player:
+		animation_player.play(death_animation, ANIMATION_BLEND)
+	died.emit()
 
 
 ## 目的地へ歩き始める。
@@ -107,7 +144,12 @@ func can_see(point: Vector3, ignore: Array[RID] = []) -> bool:
 
 
 func _physics_process(delta: float) -> void:
-	if attention.stage() == Attention.Stage.STARE and _gaze_target != null:
+	if is_dead():
+		return
+	if _stagger_left > 0.0:
+		_stagger_left -= delta
+		velocity = Vector3.ZERO
+	elif attention.stage() == Attention.Stage.STARE and _gaze_target != null:
 		velocity = Vector3.ZERO
 		_turn_body_toward(_gaze_target, delta)
 	else:
@@ -117,11 +159,15 @@ func _physics_process(delta: float) -> void:
 	_play_animation()
 
 
-## 動いていれば歩き、止まっていれば待機のアニメーションを流す。
+## よろけていれば叩かれた、動いていれば歩き、止まっていれば待機のアニメーションを流す。
 func _play_animation() -> void:
 	if not animation_player:
 		return
-	var wanted := walk_animation if not velocity.is_zero_approx() else idle_animation
+	var wanted := idle_animation
+	if _stagger_left > 0.0:
+		wanted = hit_animation
+	elif not velocity.is_zero_approx():
+		wanted = walk_animation
 	if animation_player.current_animation != wanted:
 		animation_player.play(wanted, ANIMATION_BLEND)
 

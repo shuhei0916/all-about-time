@@ -140,7 +140,7 @@ func _make_animated_npc() -> Npc:
 	var npc := _make_npc()
 	var player := AnimationPlayer.new()
 	var library := AnimationLibrary.new()
-	for anim_name in ["Walk", "Idle"]:
+	for anim_name in ["Walk", "Idle", "Hit_Chest", "Death01"]:
 		var anim := Animation.new()
 		anim.length = 1.0
 		anim.loop_mode = Animation.LOOP_LINEAR
@@ -229,3 +229,70 @@ func test_ハイライトをやめると色が消える():
 	npc.set_highlighted(true)
 	npc.set_highlighted(false)
 	assert_true(_overlays(npc).all(func(m: Material) -> bool: return m == null), "どのメッシュにも色が重なっていないこと")
+
+
+func test_叩かれると体力が減る():
+	var npc := _make_npc()
+	npc.take_hit(30.0)
+	assert_eq(npc.health.current, Npc.MAX_HEALTH - 30.0)
+
+
+func test_体力が尽きるまでは倒れない():
+	var npc := _make_npc()
+	npc.take_hit(Npc.MAX_HEALTH - 1.0)
+	assert_false(npc.is_dead())
+
+
+func test_体力が尽きると倒れる():
+	var npc := _make_npc()
+	watch_signals(npc)
+	npc.take_hit(Npc.MAX_HEALTH)
+	assert_true(npc.is_dead())
+	assert_signal_emitted(npc, "died")
+
+
+func test_倒れると狙える候補から外れる():
+	var npc := _make_visible_npc()
+	npc.set_highlighted(true)
+	npc.take_hit(Npc.MAX_HEALTH)
+	assert_false(npc.is_in_group(Npc.GROUP))
+	assert_false(npc.is_highlighted())
+
+
+func test_倒れると他の物に当たらなくなる():
+	var npc := _make_npc()
+	npc.take_hit(Npc.MAX_HEALTH)
+	assert_eq(npc.collision_layer, 0)
+
+
+func test_倒れると歩くのをやめる():
+	var npc := _make_npc()
+	npc.walk_to(Vector3(0, 0, -10))
+	npc.take_hit(Npc.MAX_HEALTH)
+	simulate(npc, 1, 0.1)
+	assert_eq(npc.velocity, Vector3.ZERO)
+
+
+func test_倒れると倒れるアニメーションを流す():
+	var npc := _make_animated_npc()
+	npc.take_hit(Npc.MAX_HEALTH)
+	simulate(npc, 1, 0.1)
+	assert_eq(npc.animation_player.current_animation, "Death01")
+
+
+func test_叩かれるとよろけて少しの間立ち止まる():
+	var npc := _make_animated_npc()
+	npc.walk_to(Vector3(0, 0, -10))
+	npc.take_hit(10.0)
+	simulate(npc, 1, 0.1)
+	assert_eq(npc.velocity, Vector3.ZERO)
+	assert_eq(npc.animation_player.current_animation, "Hit_Chest")
+
+
+func test_よろけ終わるとまた歩き出す():
+	var npc := _make_animated_npc()
+	npc.walk_to(Vector3(0, 0, -10))
+	npc.take_hit(10.0)
+	simulate(npc, int(Npc.STAGGER_DURATION / 0.1) + 2, 0.1)
+	assert_ne(npc.velocity, Vector3.ZERO)
+	assert_eq(npc.animation_player.current_animation, "Walk")
