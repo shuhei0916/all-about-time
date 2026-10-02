@@ -19,7 +19,6 @@ sky_material = SubResource("day_sky_material")
 background_mode = 2
 sky = SubResource("day_sky")
 ambient_light_source = 3
-ambient_light_energy = 1.0
 tonemap_mode = 4
 ssao_enabled = true
 glow_enabled = true
@@ -38,7 +37,7 @@ patrols = Array[Vector3]([Vector3(12, 0, 7.5), Vector3(48, 0, 7.5), Vector3(48, 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=23493983]
 environment = SubResource("day")
 
-[node name="Sun" type="DirectionalLight3D" parent="."]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=963720090]
 transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 50, 0)
 light_color = Color(1, 0.96, 0.9, 1)
 light_energy = 1.2

@@ -20,7 +20,7 @@ const BLINK_RANGE := 50.0
 const BLINK_BEHIND_DISTANCE := 1.2
 const BLINK_COOLDOWN := 2.0
 ## 照準をぴったり合わせなくても狙えるよう、視線からこの角度(度)以内にいる相手を狙える。
-const BLINK_AIM_ANGLE := 5.0
+const BLINK_AIM_ANGLE := 10.0
 ## 相手のどこを狙うか(足元からの高さ)。胸のあたり。
 const BLINK_AIM_HEIGHT := 1.2
 ## 背後へ駆け寄る速さ(メートル/秒)。瞬間移動ではなく、ものすごい速さで駆け寄る。
