@@ -61,12 +61,14 @@ var attacks_enabled := true
 var _blink_cooldown := 0.0
 ## 今ハイライトしている、跳べる相手。
 var _highlighted_target: Npc
-## 駆け寄っている間の、出発点、着く点、狙った相手、経った時間、かかる時間。
-var _dash_from := Vector3.ZERO
-var _dash_to := Vector3.ZERO
+## 駆け寄っている間の、道筋、狙った相手、経った時間、かかる時間。
+var _dash_path: DashPath
 var _dash_target: Npc
 var _dash_elapsed := 0.0
 var _dash_duration := 0.0
+## 駆け寄り始めた時と、着いた時のカメラの上下の向き(ラジアン)。
+var _dash_start_pitch := 0.0
+var _dash_end_pitch := 0.0
 ## 駆け寄っている間は当たり判定を外すので、元に戻すために覚えておく。
 var _dash_saved_layers := Vector2i.ZERO
 var _attack_cooldown := 0.0
@@ -91,7 +93,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_look(event.relative)
+		look(event.relative)
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		# マウスが外れている時のクリックは、マウスを捕まえ直すだけにする。
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -221,14 +223,18 @@ func blink() -> bool:
 	var landing: Variant = _blink_landing(target)
 	if landing == null:
 		return false
-	_dash_from = global_position
-	_dash_to = landing
+	var to_target: Vector3 = target.global_position - landing
+	_dash_path = DashPath.new(global_position, -global_basis.z, landing, to_target)
 	_dash_target = target
 	# 着く点は今の相手の位置と向きで決めたので、駆け寄っている間は相手を止めておく。
 	target.hold_still(true)
 	_dash_elapsed = 0.0
-	_dash_duration = maxf(_dash_from.distance_to(_dash_to) / DASH_SPEED, 0.001)
-	velocity = (_dash_to - _dash_from).normalized() * DASH_SPEED
+	_dash_duration = maxf(_dash_path.length() / DASH_SPEED, 0.001)
+	_dash_start_pitch = camera.rotation.x
+	# 着いた時に、相手の背中(狙う高さ)を見る向き。
+	var eye_drop: float = target.global_position.y + BLINK_AIM_HEIGHT - (landing.y + EYE_HEIGHT)
+	_dash_end_pitch = atan2(eye_drop, Vector2(to_target.x, to_target.z).length())
+	velocity = _dash_path.direction_at(0.0) * DASH_SPEED
 	# 途中の物(狙った相手も含む)を押しのけないよう、駆け寄っている間は当たり判定を外す。
 	# 着く点に体が収まることは、駆け寄り始める前に確かめてある。
 	_dash_saved_layers = Vector2i(collision_layer, collision_mask)
@@ -243,12 +249,18 @@ func is_dashing() -> bool:
 	return _dash_duration > 0.0
 
 
-## 駆け寄る途中を進める。途中の物には当たらず、出発点から着く点までまっすぐ進む。
-## 着いたら止まり、狙った相手の方を向く。
+## 駆け寄る途中を進める。途中の物には当たらず、道筋(DashPath)に沿って同じ速さで進み、
+## 体は進む向きへ向ける。カメラの上下の向きは、着いた時に相手の背中を見るよう少しずつ変える。
+## 道筋は最後に相手の背中へ向かうので、着いた時には相手の方を向いている。
 func _advance_dash(delta: float) -> void:
 	_dash_elapsed += delta
 	var t := minf(_dash_elapsed / _dash_duration, 1.0)
-	global_position = _dash_from.lerp(_dash_to, t)
+	global_position = _dash_path.position_at(t)
+	var direction := _dash_path.direction_at(t)
+	if not direction.is_zero_approx():
+		rotation.y = atan2(-direction.x, -direction.z)
+	camera.rotation.x = lerpf(_dash_start_pitch, _dash_end_pitch, smoothstep(0.0, 1.0, t))
+	velocity = direction * DASH_SPEED
 	if t < 1.0:
 		return
 	_dash_duration = 0.0
@@ -258,11 +270,8 @@ func _advance_dash(delta: float) -> void:
 	collision_mask = _dash_saved_layers.y
 	if is_instance_valid(_dash_target):
 		_dash_target.hold_still(false)
-		var to_target := _dash_target.global_position - global_position
-		to_target.y = 0.0
-		if not to_target.is_zero_approx():
-			look_at(global_position + to_target, Vector3.UP)
 	_dash_target = null
+	_dash_path = null
 
 
 ## 相手の背後の立つ位置。床があり、体が収まる隙間がなければ null。
@@ -327,7 +336,10 @@ func respawn_at(position_in_world: Vector3) -> void:
 	velocity = Vector3.ZERO
 
 
-func _look(relative: Vector2) -> void:
+## マウスを relative だけ動かした分、向きを変える。背後へ駆け寄っている間は、道筋に向きを合わせるので変えない。
+func look(relative: Vector2) -> void:
+	if is_dashing():
+		return
 	rotate_y(-relative.x * MOUSE_SENSITIVITY)
 	camera.rotate_x(-relative.y * MOUSE_SENSITIVITY)
 	camera.rotation.x = clampf(camera.rotation.x, -MAX_PITCH, MAX_PITCH)

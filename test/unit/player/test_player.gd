@@ -488,7 +488,9 @@ func test_駆け寄る速さで背後までの距離を進む():
 
 func test_駆け寄っている間はキー入力で動かない():
 	_add_floor()
-	_add_npc_ahead(40.0)
+	var npc := _add_npc_ahead(40.0)
+	# 向こうを向いた相手の背後へは、まっすぐ駆け寄る。
+	npc.look_at(Vector3(0, 0, -80), Vector3.UP)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
@@ -713,8 +715,11 @@ func test_背後へ駆け寄っている間は相手のNPCが立ち止まる():
 	npc.walk_to(Vector3(10, 0, -40))
 	player.blink()
 	var start := npc.global_position
-	await _finish_dash(player)
-	assert_almost_eq(npc.global_position, start, Vector3.ONE * 0.01)
+	var farthest := 0.0
+	while player.is_dashing():
+		farthest = maxf(farthest, start.distance_to(npc.global_position))
+		await get_tree().physics_frame
+	assert_almost_eq(farthest, 0.0, 0.001)
 
 
 func test_駆け寄り終わると相手のNPCはまた動ける():
@@ -725,3 +730,63 @@ func test_駆け寄り終わると相手のNPCはまた動ける():
 	player.blink()
 	await _finish_dash(player)
 	assert_false(npc.is_held_still())
+
+
+func test_こちらを向いたNPCの背後へは横へ回り込んで駆け寄る():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	var widest := 0.0
+	while player.is_dashing():
+		widest = maxf(widest, absf(player.global_position.x))
+		await wait_physics_frames(1)
+	assert_gt(widest, 2.0, "NPC の体をすり抜けずに横を回る")
+
+
+func test_駆け寄る間は向きがなめらかに変わる():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	var previous := -player.global_basis.z
+	player.blink()
+	var largest := 0.0
+	while player.is_dashing():
+		# wait_physics_frames(1) は2フレーム待つので、1フレームずつ待つ。
+		await get_tree().physics_frame
+		var facing := -player.global_basis.z
+		largest = maxf(largest, rad_to_deg(previous.angle_to(facing)))
+		previous = facing
+	assert_lt(largest, 30.0, "1フレームで変わる向き(度)")
+
+
+func test_駆け寄り終わるとNPCの背中を見ている():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var player := _add_blinker()
+	# 照準から狙える範囲(BLINK_AIM_ANGLE)の内側で、少し見上げておく。
+	player.camera.rotation.x = deg_to_rad(5.0)
+	await wait_physics_frames(5)
+	player.blink()
+	await _finish_dash(player)
+	var to_back := npc.global_position + Vector3.UP * Player.BLINK_AIM_HEIGHT - player.camera.global_position
+	assert_lt(rad_to_deg((-player.camera.global_basis.z).angle_to(to_back)), 2.0)
+
+
+func test_駆け寄る間はマウスで向きを変えられない():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	var pitch := player.camera.rotation.x
+	player.look(Vector2(0, 300))
+	assert_eq(player.camera.rotation.x, pitch)
+
+
+func test_マウスを動かすと上下を向く():
+	var player: Player = add_child_autofree(Player.create())
+	player.look(Vector2(0, 100))
+	assert_lt(player.camera.rotation.x, 0.0, "マウスを下へ動かすと下を向く")

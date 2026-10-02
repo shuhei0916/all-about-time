@@ -5,11 +5,19 @@ extends RefCounted
 ## 道筋は4次のベジェ曲線。両端の向きは、端の隣の制御点で決まる。真ん中の制御点を横へずらして、
 ## 出だしと最後の向きが逆になる(こちらを向いた相手の背後へ回る)時に横へ回り込ませる。
 
-## 端の隣の制御点を、出発点と着く点の間の距離のこの割合だけ、進む向きへ離す。
-const HANDLE := 0.33
+## 出発点の隣の制御点を、出発点と着く点の間の距離のこの割合だけ、出だしの向きへ離す。
+const START_HANDLE := 0.33
+## 着く点の隣の制御点を、出発点と着く点の間の距離のこの割合だけ、最後の向きと逆へ離す。
+## 出だしより長くして、相手の背中へ回り込む所の曲がり方をゆるやかにする。
+const END_HANDLE := 0.5
 ## 出だしと最後の向きが逆の時に、真ん中の制御点を、出発点と着く点の間の距離のこの割合だけ横へずらす。
 ## 道筋は、この 3/8 ほど横へふくらむ。
-const SWING := 0.8
+const SWING := 1.0
+## 真ん中の制御点を、両隣の制御点の間のどこに置くか(0 で出発点の側、1 で着く点の側)。
+## 着く点の側へ寄せて、相手の横を大きく回るようにする。
+const SWING_AT := 0.7
+## 上の4つの値は、180度向きを変える時(こちらを向いた相手の背後へ回る時)に、
+## 曲がり方が一番きつい所が1メートルあたり約16度、道のりがまっすぐの約1.7倍になるよう選んだ。
 ## 出発点から着く点まで、点をこれだけ並べて道のりを測る。
 const SAMPLES := 64
 
@@ -25,12 +33,11 @@ func _init(from: Vector3, start_direction: Vector3, to: Vector3, end_direction: 
 	var chord := to - from
 	chord.y = 0.0
 	var span := chord.length()
-	var handle := span * HANDLE
-	var p1 := from + start * handle
-	var p3 := to - end * handle
+	var p1 := from + start * span * START_HANDLE
+	var p3 := to - end * span * END_HANDLE
 	# 向きが同じなら 0、逆なら 1。
 	var opposition := (1.0 - start.dot(end)) / 2.0
-	var p2 := (p1 + p3) / 2.0 + _swing_side(start, end, chord) * span * SWING * opposition
+	var p2 := p1.lerp(p3, SWING_AT) + _swing_side(start, end, chord) * span * SWING * opposition
 	_points = [from, p1, p2, p3, to]
 	_measure()
 
