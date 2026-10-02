@@ -635,3 +635,71 @@ func test_プレイヤーは体の部品をシーンに置かれた子ノード�
 func test_カメラは目の高さにある():
 	var player: Player = add_child_autofree(Player.create())
 	assert_almost_eq(player.camera.position.y, Player.EYE_HEIGHT, 0.001)
+
+
+func _full_health() -> float:
+	return Npc.MAX_HEALTH
+
+
+func test_目の前のNPCを叩くと体力が減る():
+	_add_floor()
+	var npc := _add_npc_ahead(1.5)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_eq(player.attack(), npc)
+	assert_almost_eq(npc.health.current, _full_health() - Player.ATTACK_DAMAGE, 0.01, "立ったまま叩くと基本のダメージ")
+
+
+func test_届かない所のNPCは叩けない():
+	_add_floor()
+	var npc := _add_npc_ahead(Player.ATTACK_RANGE + 1.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_null(player.attack())
+	assert_eq(npc.health.current, _full_health())
+
+
+func test_横にいるNPCは叩けない():
+	_add_floor()
+	var npc := _add_npc_off_aim(90.0, 1.5)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_null(player.attack())
+	assert_eq(npc.health.current, _full_health())
+
+
+func test_叩いた後すぐにはもう一度叩けない():
+	_add_floor()
+	_add_npc_ahead(1.5)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.attack()
+	assert_null(player.attack())
+
+
+func test_待ち時間が過ぎるとまた叩ける():
+	_add_floor()
+	var npc := _add_npc_ahead(1.5)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.attack()
+	simulate(player, int(Player.ATTACK_COOLDOWN / 0.1) + 1, 0.1)
+	assert_eq(player.attack(), npc)
+
+
+func test_背後へ駆け寄った直後に叩くと大きなダメージになる():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	await _finish_dash(player)
+	player.attack()
+	var dealt := _full_health() - npc.health.current
+	assert_gt(dealt, Player.ATTACK_DAMAGE * 2.0, "駆け寄った勢いが残っている")
+
+
+func test_叩くには左クリックが割り当てられている():
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	assert_true(InputMap.event_is_action(click, "attack"))

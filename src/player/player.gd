@@ -25,6 +25,14 @@ const BLINK_AIM_ANGLE := 10.0
 const BLINK_AIM_HEIGHT := 1.2
 ## 背後へ駆け寄る速さ(メートル/秒)。瞬間移動ではなく、ものすごい速さで駆け寄る。
 const DASH_SPEED := 60.0
+## 叩ける距離(目から相手の体の中ほどまで、メートル)。
+const ATTACK_RANGE := 2.0
+## 照準から何度までずれた相手を叩けるか。近くの相手を叩くので、跳ぶ相手を狙う時より広い。
+const ATTACK_AIM_ANGLE := 45.0
+## 一度叩いてから次に叩けるまでの秒数。
+const ATTACK_COOLDOWN := 0.4
+## 止まって叩いた時のダメージ。速く動きながら叩くほど増える(MeleeDamage)。
+const ATTACK_DAMAGE := 25.0
 const MOUSE_SENSITIVITY := 0.002
 ## 身長(体の当たり判定の高さ)と太さ。半径 0.3m なので幅 1m のドアを通り抜けられる。
 const HEIGHT := 1.7
@@ -42,6 +50,8 @@ const HOLD_DROP := 0.35
 
 ## 手に持っている物。持っていなければ null。
 var held_item: PhysicalItem
+## 左クリックで叩くか。設計図の配置モード中は、左クリックを建てる操作に使うので叩かない。
+var attacks_enabled := true
 
 ## 体の部品は player.tscn に置いてある。体の当たり判定の大きさとカメラの高さは、
 ## HEIGHT、RADIUS、EYE_HEIGHT と同じ値にしておく(テストで確かめている)。
@@ -59,6 +69,9 @@ var _dash_elapsed := 0.0
 var _dash_duration := 0.0
 ## 駆け寄っている間は当たり判定を外すので、元に戻すために覚えておく。
 var _dash_saved_layers := Vector2i.ZERO
+var _attack_cooldown := 0.0
+## 背後へ駆け寄り終わってからの秒数。駆け寄った勢いを叩く速さに足すのに使う。
+var _since_dash := INF
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 
@@ -79,14 +92,17 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		_look(event.relative)
+	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		# マウスが外れている時のクリックは、マウスを捕まえ直すだけにする。
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	elif event.is_action_pressed("attack") and attacks_enabled:
+		attack()
 	elif event.is_action_pressed("interact"):
 		_try_interact()
 	elif event.is_action_pressed("toggle_container"):
 		_try_toggle_container()
 	elif event.is_action_pressed("blink"):
 		blink()
-	elif event is InputEventMouseButton and event.pressed:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 ## 持った物は、描画のたびに視点の向きへ合わせる。
@@ -97,6 +113,8 @@ func _process(_delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	_blink_cooldown = maxf(_blink_cooldown - delta, 0.0)
+	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
+	_since_dash += delta
 	if is_dashing():
 		_advance_dash(delta)
 		_carry_held_item()
@@ -123,16 +141,36 @@ func _physics_process(delta: float) -> void:
 ## 照準の近く(BLINK_AIM_ANGLE 以内)の届く範囲にいて、間に壁などがなく見えている NPC のうち、
 ## 照準に一番近い相手。いなければ null。選ぶ判断は BlinkTargeting に任せる。
 func blink_target() -> Npc:
+	return _aimed_npc(BLINK_RANGE, BLINK_AIM_ANGLE)
+
+
+## 照準から max_angle 度以内の、目から max_range 以内にいて見えている NPC のうち、照準に一番近い相手。
+func _aimed_npc(max_range: float, max_angle: float) -> Npc:
 	var eye := camera.global_position
 	var visible: Array[Npc] = []
 	var aims: Array[Vector3] = []
 	for npc: Npc in get_tree().get_nodes_in_group(Npc.GROUP):
 		var aim := npc.global_position + Vector3.UP * BLINK_AIM_HEIGHT
-		if eye.distance_to(aim) <= BLINK_RANGE and _can_see(npc, aim):
+		if eye.distance_to(aim) <= max_range and _can_see(npc, aim):
 			visible.append(npc)
 			aims.append(aim)
-	var chosen := BlinkTargeting.choose(eye, -camera.global_basis.z, aims, BLINK_AIM_ANGLE, BLINK_RANGE)
+	var chosen := BlinkTargeting.choose(eye, -camera.global_basis.z, aims, max_angle, max_range)
 	return visible[chosen] if chosen >= 0 else null
+
+
+## 目の前の NPC を叩く。叩いた相手を返し、届く所に相手がいなければ null。
+## 速く動きながら叩くほど、ダメージが大きい。背後へ駆け寄った直後は、その勢いも速さに数える。
+## 空振りしても待ち時間は始まる。
+func attack() -> Npc:
+	if _attack_cooldown > 0.0 or is_dashing():
+		return null
+	_attack_cooldown = ATTACK_COOLDOWN
+	var target := _aimed_npc(ATTACK_RANGE, ATTACK_AIM_ANGLE)
+	if target == null:
+		return null
+	var speed := maxf(Vector2(velocity.x, velocity.z).length(), MeleeDamage.momentum(DASH_SPEED, _since_dash))
+	target.take_hit(MeleeDamage.compute(ATTACK_DAMAGE, speed))
+	return target
 
 
 ## 目から相手の aim の点まで、間に遮る物がないか。相手自身と、手に持っている物は遮る物に数えない。
@@ -212,6 +250,7 @@ func _advance_dash(delta: float) -> void:
 	if t < 1.0:
 		return
 	_dash_duration = 0.0
+	_since_dash = 0.0
 	velocity = Vector3.ZERO
 	collision_layer = _dash_saved_layers.x
 	collision_mask = _dash_saved_layers.y

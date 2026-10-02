@@ -125,6 +125,9 @@ func cancel_placement() -> void:
 func _start_placement(blueprint: Blueprint) -> void:
 	_end_placement()
 	_placing_blueprint = blueprint
+	# 配置モード中の左クリックは建てる操作なので、その間は叩かない。
+	if player:
+		player.attacks_enabled = false
 	ghost = BuildingGhost.new(blueprint.building_scene)
 	ghost.visible = false
 	add_child(ghost)
@@ -133,6 +136,8 @@ func _start_placement(blueprint: Blueprint) -> void:
 func _end_placement() -> void:
 	_placing_blueprint = null
 	_placeable = false
+	if player:
+		player.attacks_enabled = true
 	if ghost:
 		ghost.queue_free()
 		ghost = null

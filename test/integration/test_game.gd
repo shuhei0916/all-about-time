@@ -181,6 +181,19 @@ func test_設計図を使うと配置モードに入る():
 	assert_true(game.is_placing())
 
 
+func test_配置モードの間は左クリックで叩かない():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	assert_false(game.player.attacks_enabled)
+
+
+func test_配置モードを取りやめるとまた叩ける():
+	var game := _make_builder_game(10.0)
+	game.use_item_at(0)
+	game.cancel_placement()
+	assert_true(game.player.attacks_enabled)
+
+
 func test_配置モードに入っても設計図はまだ手元にある():
 	var game := _make_builder_game(10.0)
 	game.use_item_at(0)
