@@ -37,7 +37,7 @@ func test_毎フレームHUDが更新される():
 
 func test_次の人生は2世代目以降の開始位置から始まる():
 	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.new())
+	game.player = add_child_autofree(Player.create())
 	game.later_spawn_position = Vector3(1, 2, 3)
 	game.player.global_position = Vector3(9, 9, 9)
 	game.serve_sentence()
@@ -160,7 +160,7 @@ func _add_floor() -> void:
 func _make_builder_game(look_down_degrees: float) -> Game:
 	_add_floor()
 	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.new())
+	game.player = add_child_autofree(Player.create())
 	game.player.camera.rotation.x = -deg_to_rad(look_down_degrees)
 	var scene := PackedScene.new()
 	var building := Building.new()
@@ -315,7 +315,7 @@ func test_チュートリアルを飛ばすと最初から2世代目以降の開
 	var game := Game.new()
 	game.skip_tutorial = true
 	game.later_spawn_position = Vector3(60, 0.1, 9)
-	game.player = add_child_autofree(Player.new())
+	game.player = add_child_autofree(Player.create())
 	add_child_autofree(game)
 	assert_eq(game.cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
 	assert_eq(game.player.global_position, Vector3(60, 0.1, 9))
@@ -334,7 +334,7 @@ func test_チュートリアルを飛ばしても寿命の減少の演出は出�
 ## プレイヤーの正面 5m に、プレイヤーの方を向いて立つ人が1人いる Game を作る。
 func _make_watched_game() -> Game:
 	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.new())
+	game.player = add_child_autofree(Player.create())
 	var npc := Npc.new()
 	var scene := PackedScene.new()
 	scene.pack(npc)
@@ -366,7 +366,7 @@ func test_目立つ物を持っていなければ気にされない():
 
 func test_見ている物理の物に案内が出る():
 	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.new())
+	game.player = add_child_autofree(Player.create())
 	var item := PhysicalItem.new()
 	var shape := CollisionShape3D.new()
 	shape.shape = BoxShape3D.new()
@@ -380,7 +380,7 @@ func test_見ている物理の物に案内が出る():
 
 func test_見ているバッグを開けると案内の文言も変わる():
 	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.new())
+	game.player = add_child_autofree(Player.create())
 	var bag := DuffelBag.new()
 	bag.item_name = "ダッフルバッグ"
 	var shape := CollisionShape3D.new()
@@ -408,7 +408,7 @@ func _make_thing(z: float) -> Interactable:
 
 func test_見ている対象に案内が出る():
 	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.new())
+	game.player = add_child_autofree(Player.create())
 	var thing: Interactable = add_child_autofree(_make_thing(-1.5))
 	await wait_physics_frames(4)
 	assert_true(thing.is_prompt_visible())
@@ -416,7 +416,7 @@ func test_見ている対象に案内が出る():
 
 func test_見ていない対象には案内が出ない():
 	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.new())
+	game.player = add_child_autofree(Player.create())
 	var behind: Interactable = add_child_autofree(_make_thing(1.5))
 	await wait_physics_frames(4)
 	assert_false(behind.is_prompt_visible())
@@ -424,7 +424,7 @@ func test_見ていない対象には案内が出ない():
 
 func test_見るのをやめると案内が消える():
 	var game: Game = add_child_autofree(Game.new())
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	game.player = player
 	var thing: Interactable = add_child_autofree(_make_thing(-1.5))
 	await wait_physics_frames(4)
@@ -435,7 +435,7 @@ func test_見るのをやめると案内が消える():
 
 func test_別の対象を見ると前の案内が消える():
 	var game: Game = add_child_autofree(Game.new())
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	game.player = player
 	var front: Interactable = add_child_autofree(_make_thing(-1.5))
 	add_child_autofree(_make_thing(1.5))
@@ -447,7 +447,7 @@ func test_別の対象を見ると前の案内が消える():
 
 func test_遠すぎる対象には案内が出ない():
 	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.new())
+	game.player = add_child_autofree(Player.create())
 	var far: Interactable = add_child_autofree(_make_thing(-(Player.INTERACT_DISTANCE + 2.0)))
 	await wait_physics_frames(4)
 	assert_false(far.is_prompt_visible())

@@ -2,14 +2,14 @@ extends GutTest
 
 
 func test_リスポーンすると指定位置に移動する():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	player.global_position = Vector3(5, 0, 5)
 	player.respawn_at(Vector3(1, 2, 3))
 	assert_eq(player.global_position, Vector3(1, 2, 3))
 
 
 func test_リスポーンすると速度が止まる():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	player.velocity = Vector3(1, 1, 1)
 	player.respawn_at(Vector3.ZERO)
 	assert_eq(player.velocity, Vector3.ZERO)
@@ -29,7 +29,7 @@ func _add_floor() -> StaticBody3D:
 
 ## 床の上に立ち、指定した角度だけ見下ろしたプレイヤーを作る。
 func _add_player_looking_down(degrees: float) -> Player:
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	player.camera.rotation.x = -deg_to_rad(degrees)
 	return player
 
@@ -79,14 +79,14 @@ func _add_item_in_front(distance: float) -> PhysicalItem:
 
 
 func test_正面の届く範囲にある物理の物が分かる():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	await wait_physics_frames(3)
 	assert_eq(player.looking_at_item(), item)
 
 
 func test_物を持つと手元に来る():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	player.grab(item)
 	await wait_physics_frames(2)
@@ -95,7 +95,7 @@ func test_物を持つと手元に来る():
 
 
 func test_持っている間は他の物を持てない():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var first := _add_item_in_front(1.5)
 	var second := _add_item_in_front(2.0)
 	player.grab(first)
@@ -105,7 +105,7 @@ func test_持っている間は他の物を持てない():
 
 
 func test_手を離すと持っていない状態に戻る():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	player.grab(item)
 	player.release_held()
@@ -114,7 +114,7 @@ func test_手を離すと持っていない状態に戻る():
 
 
 func test_持っている物越しに別の物を見られる():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var held := _add_item_in_front(1.5)
 	var behind := _add_item_in_front(2.2)
 	player.grab(held)
@@ -130,7 +130,7 @@ func _press_e(player: Player) -> void:
 
 
 func test_Eで見ている物を持ち_もう一度Eで離す():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	await wait_physics_frames(3)
 	_press_e(player)
@@ -140,7 +140,7 @@ func test_Eで見ている物を持ち_もう一度Eで離す():
 
 
 func test_Fで見ているバッグを開け閉めする():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var bag := DuffelBag.new()
 	var shape := CollisionShape3D.new()
 	shape.shape = BoxShape3D.new()
@@ -158,7 +158,7 @@ func test_Fで見ているバッグを開け閉めする():
 
 func test_持った物はプレイヤーが動いた後の位置に付いてくる():
 	# 床がないのでプレイヤーは落ちる。落ちた後の手元に物があること。
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	player.grab(item)
 	simulate(player, 1, 0.1)
@@ -166,14 +166,14 @@ func test_持った物はプレイヤーが動いた後の位置に付いてく�
 
 
 func test_持った物とプレイヤーはぶつからない():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	player.grab(item)
 	assert_true(player.get_collision_exceptions().has(item))
 
 
 func test_手を離すと持っていた物とプレイヤーは再びぶつかる():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	player.grab(item)
 	player.release_held()
@@ -190,14 +190,14 @@ func _horizontal_speed(player: Player) -> float:
 
 
 func test_前に進むと歩く速さで進む():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	Input.action_press("move_forward")
 	simulate(player, 1, 0.016)
 	assert_almost_eq(_horizontal_speed(player), Player.SPEED, 0.01)
 
 
 func test_スプリントしながら進むと走る速さで進む():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	Input.action_press("move_forward")
 	Input.action_press("sprint")
 	simulate(player, 1, 0.016)
@@ -217,7 +217,7 @@ func test_スプリントにはShiftキーが割り当てられている():
 ## 床の上に立って落ち着くまで待ったプレイヤーを作る。
 func _add_standing_player() -> Player:
 	_add_floor()
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	player.position.y = 0.05
 	await wait_physics_frames(10)
 	return player
@@ -232,7 +232,7 @@ func test_床の上でジャンプすると上へ跳ぶ():
 
 
 func test_空中ではジャンプできない():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	player.position.y = 10.0
 	Input.action_press("jump")
 	simulate(player, 1, 0.016)
@@ -250,14 +250,14 @@ func _body_shape(player: Player) -> CollisionShape3D:
 
 
 func test_体の当たり判定は身長1_7mで半径0_3m():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var capsule: CapsuleShape3D = _body_shape(player).shape
 	assert_almost_eq(capsule.height, 1.7, 0.001)
 	assert_almost_eq(capsule.radius, 0.3, 0.001)
 
 
 func test_体の当たり判定は足元から頭のてっぺんまで():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	var shape := _body_shape(player)
 	var capsule: CapsuleShape3D = shape.shape
 	assert_almost_eq(shape.position.y - capsule.height / 2, 0.0, 0.001, "足元が原点")
@@ -287,7 +287,7 @@ func _add_step(height: float) -> void:
 
 ## 床に立ったプレイヤーを、前へ指定した物理フレーム数だけ歩かせる。
 func _walk_forward(frames: int) -> Player:
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	player.position.y = 0.05
 	await wait_physics_frames(10)
 	Input.action_press("move_forward")
@@ -341,7 +341,7 @@ func _add_npc_ahead(distance: float) -> Npc:
 
 ## 床の上に立ち、正面を向いたプレイヤーを作る。
 func _add_blinker() -> Player:
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	player.position.y = 0.05
 	return player
 
@@ -457,7 +457,7 @@ func test_背後へ跳ぶにはQキーが割り当てられている():
 
 
 func test_プレイヤーは画面の中央に照準を持つ():
-	var player: Player = add_child_autofree(Player.new())
+	var player: Player = add_child_autofree(Player.create())
 	assert_eq(player.find_children("*", "Crosshair", true, false).size(), 1)
 
 
@@ -619,3 +619,19 @@ func test_背後に立てない相手はハイライトされない():
 	_add_blinker()
 	await wait_physics_frames(5)
 	assert_false(npc.is_highlighted())
+
+
+func test_プレイヤーは体の部品をシーンに置かれた子ノードとして持つ():
+	# シーンに置かれた子ノードは、持ち主(owner)がプレイヤーになる。
+	# スクリプトで作った子ノードは持ち主を持たず、エディタに「シェイプがない」と警告される。
+	var player: Player = add_child_autofree(Player.create())
+	for path in ["CollisionShape3D", "Camera3D", "Camera3D/InteractRay", "Camera3D/BuildRay", "Crosshair"]:
+		var part := player.get_node_or_null(path)
+		assert_not_null(part, path)
+		if part:
+			assert_eq(part.owner, player, path + " がシーンに置かれていること")
+
+
+func test_カメラは目の高さにある():
+	var player: Player = add_child_autofree(Player.create())
+	assert_almost_eq(player.camera.position.y, Player.EYE_HEIGHT, 0.001)

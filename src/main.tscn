@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://dhs8dtuat2dap" path="res://src/game.gd" id="1_game"]
 [ext_resource type="Script" uid="uid://dxvosddun6i6y" path="res://src/world/bed.gd" id="2_bed"]
 [ext_resource type="Script" uid="uid://km0ngwiha3np" path="res://src/world/door.gd" id="3_door"]
-[ext_resource type="Script" uid="uid://dnb2hj7bgnavo" path="res://src/player/player.gd" id="4_player"]
+[ext_resource type="PackedScene" path="res://src/player/player.tscn" id="4_player_scene"]
 [ext_resource type="Script" uid="uid://dwv8sopp3yl3g" path="res://src/ui/hud.gd" id="5_hud"]
 [ext_resource type="Script" uid="uid://bmqiisy6xyvd2" path="res://src/world/item_pickup.gd" id="6_pickup"]
 [ext_resource type="PackedScene" path="res://src/world/shop.tscn" id="7_shop"]
@@ -385,9 +385,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.58, 0.978, 10.5)
 [node name="Cash20" parent="Lot/Stash" instance=ExtResource("13_cash")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.58, 1.029, 10.5)
 
-[node name="Player" type="CharacterBody3D" parent="." unique_id=1646902574]
+[node name="Player" parent="." unique_id=1646902574 instance=ExtResource("4_player_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 1.5)
-script = ExtResource("4_player")
 
 [node name="Hud" type="CanvasLayer" parent="." unique_id=630867235]
 script = ExtResource("5_hud")

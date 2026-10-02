@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://utrjccl5f2en" path="res://src/world/city/city_walk.gd" id="1_walk"]
 [ext_resource type="PackedScene" path="res://src/world/city/city.tscn" id="2_city"]
-[ext_resource type="Script" uid="uid://dnb2hj7bgnavo" path="res://src/player/player.gd" id="3_player"]
+[ext_resource type="PackedScene" path="res://src/player/player.tscn" id="3_player_scene"]
 [ext_resource type="Script" uid="uid://dlwsxcbmdk5t0" path="res://src/ui/pause_menu.gd" id="4_pause_menu"]
 [ext_resource type="PackedScene" path="res://src/npc/npc.tscn" id="5_npc"]
 
@@ -46,9 +46,8 @@ directional_shadow_max_distance = 150.0
 
 [node name="City" parent="." unique_id=1761802381 instance=ExtResource("2_city")]
 
-[node name="Player" type="CharacterBody3D" parent="." unique_id=1881366445]
+[node name="Player" parent="." unique_id=1881366445 instance=ExtResource("3_player_scene")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 20, 0.1, 7.5)
-script = ExtResource("3_player")
 
 [node name="PauseMenu" type="CanvasLayer" parent="." unique_id=2013006802]
 script = ExtResource("4_pause_menu")

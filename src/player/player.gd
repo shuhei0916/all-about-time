@@ -43,9 +43,11 @@ const HOLD_DROP := 0.35
 ## 手に持っている物。持っていなければ null。
 var held_item: PhysicalItem
 
-var camera: Camera3D
-var _ray: RayCast3D
-var _build_ray: RayCast3D
+## 体の部品は player.tscn に置いてある。体の当たり判定の大きさとカメラの高さは、
+## HEIGHT、RADIUS、EYE_HEIGHT と同じ値にしておく(テストで確かめている)。
+@onready var camera: Camera3D = $Camera3D
+@onready var _ray: RayCast3D = $Camera3D/InteractRay
+@onready var _build_ray: RayCast3D = $Camera3D/BuildRay
 var _blink_cooldown := 0.0
 ## 今ハイライトしている、跳べる相手。
 var _highlighted_target: Npc
@@ -60,32 +62,16 @@ var _dash_saved_layers := Vector2i.ZERO
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 
-func _init() -> void:
-	var shape := CollisionShape3D.new()
-	var capsule := CapsuleShape3D.new()
-	capsule.height = HEIGHT
-	capsule.radius = RADIUS
-	shape.shape = capsule
-	# 足元が原点に来るよう、身長の半分だけ持ち上げる。
-	shape.position = Vector3(0, HEIGHT / 2, 0)
-	add_child(shape)
-
-	camera = Camera3D.new()
-	camera.position = Vector3(0, EYE_HEIGHT, 0)
-	add_child(camera)
-
-	_ray = RayCast3D.new()
-	_ray.target_position = Vector3(0, 0, -INTERACT_DISTANCE)
-	camera.add_child(_ray)
-
-	_build_ray = RayCast3D.new()
-	_build_ray.target_position = Vector3(0, 0, -BUILD_DISTANCE)
-	camera.add_child(_build_ray)
-
-	add_child(Crosshair.new())
+## player.tscn からプレイヤーを作る。テストやスクリプトから作る時はこれを使う。
+## (Player.new() では体の部品が付かない)
+static func create() -> Player:
+	return load("res://src/player/player.tscn").instantiate()
 
 
 func _ready() -> void:
+	# 視線のレイの長さは判断に使う値なので、シーンではなく定数で決める。
+	_ray.target_position = Vector3(0, 0, -INTERACT_DISTANCE)
+	_build_ray.target_position = Vector3(0, 0, -BUILD_DISTANCE)
 	if DisplayServer.get_name() != "headless":
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
