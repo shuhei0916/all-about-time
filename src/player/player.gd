@@ -25,6 +25,9 @@ const BLINK_AIM_ANGLE := 10.0
 const BLINK_AIM_HEIGHT := 1.2
 ## 背後へ駆け寄る速さ(メートル/秒)。瞬間移動ではなく、ものすごい速さで駆け寄る。
 const DASH_SPEED := 60.0
+## Q を押してから、相手の NPC をその場に止めておく秒数。駆け寄っている間に着く点がずれないよう、
+## 駆け寄る時間より長くする。
+const BLINK_HOLD_DURATION := 10.0
 ## 叩ける距離(目から相手の体の中ほどまで、メートル)。
 const ATTACK_RANGE := 2.0
 ## 照準から何度までずれた相手を叩けるか。近くの相手を叩くので、跳ぶ相手を狙う時より広い。
@@ -61,9 +64,8 @@ var attacks_enabled := true
 var _blink_cooldown := 0.0
 ## 今ハイライトしている、跳べる相手。
 var _highlighted_target: Npc
-## 駆け寄っている間の、道筋、狙った相手、経った時間、かかる時間。
+## 駆け寄っている間の、道筋、経った時間、かかる時間。
 var _dash_path: DashPath
-var _dash_target: Npc
 var _dash_elapsed := 0.0
 var _dash_duration := 0.0
 ## 駆け寄り始めた時と、着いた時のカメラの上下の向き(ラジアン)。
@@ -225,9 +227,8 @@ func blink() -> bool:
 		return false
 	var to_target: Vector3 = target.global_position - landing
 	_dash_path = DashPath.new(global_position, -global_basis.z, landing, to_target)
-	_dash_target = target
-	# 着く点は今の相手の位置と向きで決めたので、駆け寄っている間は相手を止めておく。
-	target.hold_still(true)
+	# 着く点は今の相手の位置と向きで決めたので、駆け寄っている間とその後しばらくは、相手を止めておく。
+	target.hold_still_for(BLINK_HOLD_DURATION)
 	_dash_elapsed = 0.0
 	_dash_duration = maxf(_dash_path.length() / DASH_SPEED, 0.001)
 	_dash_start_pitch = camera.rotation.x
@@ -268,9 +269,6 @@ func _advance_dash(delta: float) -> void:
 	velocity = Vector3.ZERO
 	collision_layer = _dash_saved_layers.x
 	collision_mask = _dash_saved_layers.y
-	if is_instance_valid(_dash_target):
-		_dash_target.hold_still(false)
-	_dash_target = null
 	_dash_path = null
 
 

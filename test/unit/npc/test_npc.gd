@@ -316,24 +316,35 @@ func test_叩かれると頭の上にダメージの数字が出る():
 func test_止められている間は目的地へ歩かない():
 	var npc := _make_npc()
 	npc.walk_to(Vector3(0, 0, -10))
-	npc.hold_still(true)
+	npc.hold_still_for(5.0)
 	await wait_physics_frames(10)
 	assert_almost_eq(npc.global_position, Vector3.ZERO, Vector3.ONE * 0.01)
 
 
 func test_止められている間は強く気になっても向き直らない():
 	var npc := _make_npc()
-	npc.hold_still(true)
+	npc.hold_still_for(5.0)
 	npc.attention.level = 1.0
 	npc.observe(0.0, Vector3(5, Npc.EYE_HEIGHT, 0), 0.0)
 	simulate(npc, 5, 0.1)
 	assert_almost_eq(-npc.global_basis.z, Vector3.FORWARD, Vector3.ONE * 0.01)
 
 
-func test_止めるのをやめるとまた歩き出す():
+func test_止める時間が過ぎるとまた歩き出す():
 	var npc := _make_npc()
 	npc.walk_to(Vector3(0, 0, -10))
-	npc.hold_still(true)
-	npc.hold_still(false)
+	npc.hold_still_for(0.5)
+	simulate(npc, 4, 0.1)
+	assert_true(npc.is_held_still(), "まだ 0.4 秒")
+	simulate(npc, 2, 0.1)
+	assert_false(npc.is_held_still())
 	await wait_physics_frames(10)
 	assert_lt(npc.global_position.z, -0.1)
+
+
+func test_止めている間にまた止めると長い方の時間だけ止まる():
+	var npc := _make_npc()
+	npc.hold_still_for(1.0)
+	npc.hold_still_for(0.2)
+	simulate(npc, 5, 0.1)
+	assert_true(npc.is_held_still())

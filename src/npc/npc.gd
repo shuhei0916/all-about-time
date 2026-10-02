@@ -53,8 +53,8 @@ var _patrol_points: Array[Vector3] = []
 var _highlighted := false
 ## よろけて立ち止まっている残りの秒数。
 var _stagger_left := 0.0
-## 止められているか。背後へ駆け寄られている間は、着く点がずれないよう、その場で動かず向きも変えない。
-var _held_still := false
+## 止められている残りの秒数。止められている間は、その場で動かず向きも変えない。
+var _hold_left := 0.0
 
 
 func _init() -> void:
@@ -110,13 +110,14 @@ func _die() -> void:
 	died.emit()
 
 
-## その場に止める、または止めるのをやめる。目的地や往復は覚えたままで、やめるとまた歩き出す。
-func hold_still(held: bool) -> void:
-	_held_still = held
+## seconds 秒の間、その場に止める。目的地や往復は覚えたままで、時間が過ぎるとまた歩き出す。
+## 止めている間にまた止めると、残りの長い方の時間だけ止まる。
+func hold_still_for(seconds: float) -> void:
+	_hold_left = maxf(_hold_left, seconds)
 
 
 func is_held_still() -> bool:
-	return _held_still
+	return _hold_left > 0.0
 
 
 ## 目的地へ歩き始める。
@@ -170,7 +171,8 @@ func can_see(point: Vector3, ignore: Array[RID] = []) -> bool:
 func _physics_process(delta: float) -> void:
 	if is_dead():
 		return
-	if _held_still:
+	if _hold_left > 0.0:
+		_hold_left -= delta
 		velocity = Vector3.ZERO
 	elif _stagger_left > 0.0:
 		_stagger_left -= delta

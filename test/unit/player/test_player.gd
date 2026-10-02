@@ -722,14 +722,19 @@ func test_背後へ駆け寄っている間は相手のNPCが立ち止まる():
 	assert_almost_eq(farthest, 0.0, 0.001)
 
 
-func test_駆け寄り終わると相手のNPCはまた動ける():
+func test_駆け寄り終わっても相手のNPCは止まったまま():
 	_add_floor()
 	var npc := _add_npc_ahead(20.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
 	await _finish_dash(player)
-	assert_false(npc.is_held_still())
+	assert_true(npc.is_held_still())
+
+
+func test_相手のNPCを止める時間は駆け寄る時間より長い():
+	var longest_dash := Player.BLINK_RANGE * 2.0 / Player.DASH_SPEED
+	assert_gt(Player.BLINK_HOLD_DURATION, longest_dash)
 
 
 func test_こちらを向いたNPCの背後へは横へ回り込んで駆け寄る():
