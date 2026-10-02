@@ -296,3 +296,18 @@ func test_よろけ終わるとまた歩き出す():
 	simulate(npc, int(Npc.STAGGER_DURATION / 0.1) + 2, 0.1)
 	assert_ne(npc.velocity, Vector3.ZERO)
 	assert_eq(npc.animation_player.current_animation, "Walk")
+
+
+func _damage_numbers(npc: Npc) -> Array:
+	return npc.get_parent().get_children().filter(func(n: Node) -> bool: return n is DamageNumber)
+
+
+func test_叩かれると頭の上にダメージの数字が出る():
+	var npc := _make_npc()
+	var before := _damage_numbers(npc)
+	npc.take_hit(30.0)
+	var added := _damage_numbers(npc).filter(func(n: Node) -> bool: return not before.has(n))
+	assert_eq(added.size(), 1)
+	assert_eq(added[0].text, "30")
+	assert_gt(added[0].global_position.y, npc.head.global_position.y)
+	added[0].free()

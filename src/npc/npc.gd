@@ -30,6 +30,8 @@ const ANIMATION_BLEND := 0.2
 const MAX_HEALTH := 100.0
 ## 叩かれてよろけ、立ち止まっている秒数。
 const STAGGER_DURATION := 0.5
+## ダメージの数字を、頭のこれだけ上に出す(メートル)。
+const DAMAGE_NUMBER_HEIGHT := 0.4
 
 ## 歩く速さ(メートル/秒)。
 @export var speed := 1.4
@@ -73,10 +75,21 @@ func take_hit(amount: float) -> void:
 	if is_dead():
 		return
 	health.damage(amount)
+	_show_damage_number(amount)
 	if is_dead():
 		_die()
 	else:
 		_stagger_left = STAGGER_DURATION
+
+
+## 頭の上にダメージの数字を出す。数字は NPC に付いて回らず、その場で浮かんで消える。
+func _show_damage_number(amount: float) -> void:
+	if not get_parent():
+		return
+	var number := DamageNumber.create(amount)
+	get_parent().add_child(number)
+	var top := head.global_position if head else eye_position()
+	number.global_position = top + Vector3.UP * DAMAGE_NUMBER_HEIGHT
 
 
 func is_dead() -> bool:
