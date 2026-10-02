@@ -7,6 +7,11 @@ extends CharacterBody3D
 ## 目的地に着いた時に発火する。
 signal arrived
 
+## NPC が入るグループ。背後へ跳ぶ相手の候補を探す時に使う。
+const GROUP := &"npc"
+## 背後へ跳べる相手であることを示すため、体全体に重ねる色。
+const HIGHLIGHT_MATERIAL := preload("res://src/npc/blink_highlight.tres")
+
 const EYE_HEIGHT := 1.6
 ## 相手が見える距離(メートル)。
 const SIGHT_RANGE := 15.0
@@ -35,6 +40,22 @@ var _destination: Variant = null
 var _gaze_target: Variant = null
 ## 往復する2点。往復していなければ空。
 var _patrol_points: Array[Vector3] = []
+var _highlighted := false
+
+
+func _init() -> void:
+	add_to_group(GROUP)
+
+
+## 背後へ跳べる相手であることを示すハイライトを付ける、または外す。
+func set_highlighted(highlighted: bool) -> void:
+	_highlighted = highlighted
+	for mesh: MeshInstance3D in find_children("*", "MeshInstance3D", true, false):
+		mesh.material_overlay = HIGHLIGHT_MATERIAL if highlighted else null
+
+
+func is_highlighted() -> bool:
+	return _highlighted
 
 
 ## 目的地へ歩き始める。
