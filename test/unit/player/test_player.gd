@@ -530,3 +530,92 @@ func test_駆け寄り終わると当たり判定が元に戻る():
 	player.blink()
 	await _finish_dash(player)
 	assert_eq([player.collision_layer, player.collision_mask], [layer, mask])
+
+
+## 正面(-Z)から右へ degrees 度ずれた方向の distance 先に、プレイヤーの方を向いて立つ NPC を置く。
+func _add_npc_off_aim(degrees: float, distance: float) -> Npc:
+	var npc := _add_npc_ahead(distance)
+	var direction := Vector3.FORWARD.rotated(Vector3.UP, -deg_to_rad(degrees))
+	npc.position = direction * distance
+	npc.look_at(Vector3.ZERO, Vector3.UP)
+	return npc
+
+
+func test_照準から少しずれたNPCも狙える():
+	_add_floor()
+	var npc := _add_npc_off_aim(Player.BLINK_AIM_ANGLE - 2.0, 20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_eq(player.blink_target(), npc)
+
+
+func test_照準から大きくずれたNPCは狙えない():
+	_add_floor()
+	_add_npc_off_aim(Player.BLINK_AIM_ANGLE + 5.0, 20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_null(player.blink_target())
+
+
+func test_間に壁があるNPCは狙えない():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var wall := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(10, 4, 0.5)
+	shape.shape = box
+	wall.add_child(shape)
+	wall.position = Vector3(0, 2, -10)
+	add_child_autofree(wall)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_null(player.blink_target())
+
+
+func test_今跳べる相手はハイライトされる():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	_add_blinker()
+	await wait_physics_frames(5)
+	assert_true(npc.is_highlighted())
+
+
+func test_狙いが外れるとハイライトが消える():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.rotate_y(PI / 2)
+	await wait_physics_frames(3)
+	assert_false(npc.is_highlighted())
+
+
+func test_待ち時間の間はハイライトされない():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var other := _add_npc_off_aim(180.0, 20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	await _finish_dash(player)
+	# 駆け寄った後は npc の方を向いているが、待ち時間の間はハイライトしない。
+	await wait_physics_frames(2)
+	assert_false(npc.is_highlighted())
+	assert_false(other.is_highlighted())
+
+
+func test_背後に立てない相手はハイライトされない():
+	_add_floor()
+	var npc := _add_npc_ahead(20.0)
+	var wall := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(10, 4, 1)
+	shape.shape = box
+	wall.add_child(shape)
+	wall.position = npc.global_position + npc.global_basis.z * Player.BLINK_BEHIND_DISTANCE + Vector3.UP * 2
+	add_child_autofree(wall)
+	_add_blinker()
+	await wait_physics_frames(5)
+	assert_false(npc.is_highlighted())

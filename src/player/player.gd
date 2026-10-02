@@ -19,6 +19,10 @@ const STEP_CLEARANCE := 0.01
 const BLINK_RANGE := 50.0
 const BLINK_BEHIND_DISTANCE := 1.2
 const BLINK_COOLDOWN := 2.0
+## 照準をぴったり合わせなくても狙えるよう、視線からこの角度(度)以内にいる相手を狙える。
+const BLINK_AIM_ANGLE := 5.0
+## 相手のどこを狙うか(足元からの高さ)。胸のあたり。
+const BLINK_AIM_HEIGHT := 1.2
 ## 背後へ駆け寄る速さ(メートル/秒)。瞬間移動ではなく、ものすごい速さで駆け寄る。
 const DASH_SPEED := 60.0
 const MOUSE_SENSITIVITY := 0.002
@@ -42,8 +46,9 @@ var held_item: PhysicalItem
 var camera: Camera3D
 var _ray: RayCast3D
 var _build_ray: RayCast3D
-var _blink_ray: RayCast3D
 var _blink_cooldown := 0.0
+## 今ハイライトしている、跳べる相手。
+var _highlighted_target: Npc
 ## 駆け寄っている間の、出発点、着く点、狙った相手、経った時間、かかる時間。
 var _dash_from := Vector3.ZERO
 var _dash_to := Vector3.ZERO
@@ -77,10 +82,6 @@ func _init() -> void:
 	_build_ray.target_position = Vector3(0, 0, -BUILD_DISTANCE)
 	camera.add_child(_build_ray)
 
-	_blink_ray = RayCast3D.new()
-	_blink_ray.target_position = Vector3(0, 0, -BLINK_RANGE)
-	camera.add_child(_blink_ray)
-
 	add_child(Crosshair.new())
 
 
@@ -113,6 +114,7 @@ func _physics_process(delta: float) -> void:
 	if is_dashing():
 		_advance_dash(delta)
 		_carry_held_item()
+		_update_blink_highlight()
 		return
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
@@ -129,15 +131,54 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	# 動いた後の位置に合わせる。動く前に合わせると、物が1フレーム遅れて付いてきて震える。
 	_carry_held_item()
+	_update_blink_highlight()
 
 
-## 視線の先の届く範囲にいる、背後へ跳べる相手の NPC。いなければ null。
-## 間に壁などがあれば、視線は壁に当たるので狙えない。
+## 照準の近く(BLINK_AIM_ANGLE 以内)の届く範囲にいて、間に壁などがなく見えている NPC のうち、
+## 照準に一番近い相手。いなければ null。選ぶ判断は BlinkTargeting に任せる。
 func blink_target() -> Npc:
-	if not _blink_ray.is_colliding():
+	var eye := camera.global_position
+	var visible: Array[Npc] = []
+	var aims: Array[Vector3] = []
+	for npc: Npc in get_tree().get_nodes_in_group(Npc.GROUP):
+		var aim := npc.global_position + Vector3.UP * BLINK_AIM_HEIGHT
+		if eye.distance_to(aim) <= BLINK_RANGE and _can_see(npc, aim):
+			visible.append(npc)
+			aims.append(aim)
+	var chosen := BlinkTargeting.choose(eye, -camera.global_basis.z, aims, BLINK_AIM_ANGLE, BLINK_RANGE)
+	return visible[chosen] if chosen >= 0 else null
+
+
+## 目から相手の aim の点まで、間に遮る物がないか。相手自身と、手に持っている物は遮る物に数えない。
+func _can_see(npc: Npc, aim: Vector3) -> bool:
+	var query := PhysicsRayQueryParameters3D.create(camera.global_position, aim)
+	var ignore: Array[RID] = [get_rid(), npc.get_rid()]
+	if held_item:
+		ignore.append(held_item.get_rid())
+	query.exclude = ignore
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+## 今 Q で跳べる相手。待ち時間の間や駆け寄っている途中、背後に立つ場所がない時は null。
+func blinkable_target() -> Npc:
+	if not can_blink() or is_dashing():
 		return null
-	var hit := _blink_ray.get_collider()
-	return hit if hit is Npc else null
+	var target := blink_target()
+	if target == null or _blink_landing(target) == null:
+		return null
+	return target
+
+
+## 今跳べる相手だけをハイライトする。相手が変わったら、前の相手のハイライトを外す。
+func _update_blink_highlight() -> void:
+	var target := blinkable_target()
+	if target == _highlighted_target:
+		return
+	if is_instance_valid(_highlighted_target):
+		_highlighted_target.set_highlighted(false)
+	if target:
+		target.set_highlighted(true)
+	_highlighted_target = target
 
 
 ## 待ち時間が終わっていて、今すぐ背後へ跳べるか。
