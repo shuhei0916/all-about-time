@@ -737,17 +737,21 @@ func test_相手のNPCを止める時間は駆け寄る時間より長い():
 	assert_gt(Player.BLINK_HOLD_DURATION, longest_dash)
 
 
-func test_こちらを向いたNPCの背後へは横へ回り込んで駆け寄る():
+func test_こちらを向いたNPCの背後へは横をかすめて駆け寄る():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(20.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
 	var widest := 0.0
+	var closest := INF
 	while player.is_dashing():
 		widest = maxf(widest, absf(player.global_position.x))
-		await wait_physics_frames(1)
-	assert_gt(widest, 2.0, "NPC の体をすり抜けずに横を回る")
+		var apart := player.global_position - npc.global_position
+		closest = minf(closest, Vector2(apart.x, apart.z).length())
+		await get_tree().physics_frame
+	assert_gt(closest, Player.RADIUS * 2.0, "NPC の体をすり抜けない")
+	assert_lt(widest, 2.0, "大きくは回り込まない")
 
 
 func test_駆け寄る間は向きがなめらかに変わる():

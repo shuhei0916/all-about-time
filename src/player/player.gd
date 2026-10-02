@@ -68,9 +68,13 @@ var _highlighted_target: Npc
 var _dash_path: DashPath
 var _dash_elapsed := 0.0
 var _dash_duration := 0.0
-## 駆け寄り始めた時と、着いた時のカメラの上下の向き(ラジアン)。
+## 駆け寄り始めた時と、着いた時の、体の左右の向きとカメラの上下の向き(ラジアン)。
+var _dash_start_yaw := 0.0
+var _dash_end_yaw := 0.0
 var _dash_start_pitch := 0.0
 var _dash_end_pitch := 0.0
+## 振り返る向き(DashTurn.turn_sign)。
+var _dash_turn_sign := 0
 ## 駆け寄っている間は当たり判定を外すので、元に戻すために覚えておく。
 var _dash_saved_layers := Vector2i.ZERO
 var _attack_cooldown := 0.0
@@ -226,7 +230,10 @@ func blink() -> bool:
 	if landing == null:
 		return false
 	var to_target: Vector3 = target.global_position - landing
-	_dash_path = DashPath.new(global_position, -global_basis.z, landing, to_target)
+	_dash_path = DashPath.new(global_position, landing, target.global_position)
+	_dash_start_yaw = rotation.y
+	_dash_end_yaw = atan2(-to_target.x, -to_target.z)
+	_dash_turn_sign = DashTurn.turn_sign(-global_basis.z, _dash_path.passing_side())
 	# 着く点は今の相手の位置と向きで決めたので、駆け寄っている間とその後しばらくは、相手を止めておく。
 	target.hold_still_for(BLINK_HOLD_DURATION)
 	_dash_elapsed = 0.0
@@ -250,18 +257,15 @@ func is_dashing() -> bool:
 	return _dash_duration > 0.0
 
 
-## 駆け寄る途中を進める。途中の物には当たらず、道筋(DashPath)に沿って同じ速さで進み、
-## 体は進む向きへ向ける。カメラの上下の向きは、着いた時に相手の背中を見るよう少しずつ変える。
-## 道筋は最後に相手の背中へ向かうので、着いた時には相手の方を向いている。
+## 駆け寄る途中を進める。途中の物には当たらず、道筋(DashPath)に沿って同じ速さで進む。
+## 体とカメラの向きは道筋とは切り離し、途中から、着いた時に相手の背中を見る向きへ回す(DashTurn)。
 func _advance_dash(delta: float) -> void:
 	_dash_elapsed += delta
 	var t := minf(_dash_elapsed / _dash_duration, 1.0)
 	global_position = _dash_path.position_at(t)
-	var direction := _dash_path.direction_at(t)
-	if not direction.is_zero_approx():
-		rotation.y = atan2(-direction.x, -direction.z)
-	camera.rotation.x = lerpf(_dash_start_pitch, _dash_end_pitch, smoothstep(0.0, 1.0, t))
-	velocity = direction * DASH_SPEED
+	rotation.y = DashTurn.yaw_at(_dash_start_yaw, _dash_end_yaw, t, _dash_turn_sign)
+	camera.rotation.x = lerpf(_dash_start_pitch, _dash_end_pitch, DashTurn.weight(t))
+	velocity = _dash_path.direction_at(t) * DASH_SPEED
 	if t < 1.0:
 		return
 	_dash_duration = 0.0

@@ -1,55 +1,53 @@
 class_name DashPath
 extends RefCounted
-## 背後へ駆け寄る道筋。出だしは今見ている向きへ進み、最後は相手の背中へ向かって進むように、
-## 弧を描く。カメラを進む向きに合わせれば、向きが途中で飛ばずに、着いた時に相手の方を向いている。
-## 道筋は4次のベジェ曲線。両端の向きは、端の隣の制御点で決まる。真ん中の制御点を横へずらして、
-## 出だしと最後の向きが逆になる(こちらを向いた相手の背後へ回る)時に横へ回り込ませる。
+## 背後へ駆け寄る道筋。基本はまっすぐで、相手の体が途中にある時(こちらを向いた相手の背後へ回る時)だけ、
+## 体に当たらないよう相手の横を CLEARANCE だけ離れてかすめる、浅い弧にする。相手を通り過ぎてから戻ることはない。
+## 体やカメラの向きは道筋とは切り離して、DashTurn で回す。
 
-## 出発点の隣の制御点を、出発点と着く点の間の距離のこの割合だけ、出だしの向きへ離す。
-const START_HANDLE := 0.33
-## 着く点の隣の制御点を、出発点と着く点の間の距離のこの割合だけ、最後の向きと逆へ離す。
-## 出だしより長くして、相手の背中へ回り込む所の曲がり方をゆるやかにする。
-const END_HANDLE := 0.5
-## 出だしと最後の向きが逆の時に、真ん中の制御点を、出発点と着く点の間の距離のこの割合だけ横へずらす。
-## 道筋は、この 3/8 ほど横へふくらむ。
-const SWING := 1.0
-## 真ん中の制御点を、両隣の制御点の間のどこに置くか(0 で出発点の側、1 で着く点の側)。
-## 着く点の側へ寄せて、相手の横を大きく回るようにする。
-const SWING_AT := 0.7
-## 上の4つの値は、180度向きを変える時(こちらを向いた相手の背後へ回る時)に、
-## 曲がり方が一番きつい所が1メートルあたり約16度、道のりがまっすぐの約1.7倍になるよう選んだ。
-## 出発点から着く点まで、点をこれだけ並べて道のりを測る。
-const SAMPLES := 64
+## 相手の横をかすめる時に、相手の中心から離れる距離(メートル)。
+const CLEARANCE := 1.0
+## 道筋の1区間ごとに、点をこれだけ並べて道のりを測る。
+const SAMPLES_PER_SEGMENT := 64
 
-var _points: Array[Vector3] = []
-## 曲線の変数 t を SAMPLES 等分した所までの道のり。道のりの割合から t を求めるのに使う。
+## 3次ベジェ曲線の区間。区間ごとに4つの制御点を持つ。
+var _segments: Array[PackedVector3Array] = []
+## 曲線の変数 u(全区間を通して 0〜1)を等分した所までの道のり。道のりの割合から u を求めるのに使う。
 var _distances: Array[float] = []
+var _passing_side := Vector3.ZERO
 
 
-## from から start_direction を向いて出発し、to に end_direction を向いて着く道筋。向きは水平に直して使う。
-func _init(from: Vector3, start_direction: Vector3, to: Vector3, end_direction: Vector3) -> void:
-	var start := _flat(start_direction)
-	var end := _flat(end_direction)
-	var chord := to - from
-	chord.y = 0.0
-	var span := chord.length()
-	var p1 := from + start * span * START_HANDLE
-	var p3 := to - end * span * END_HANDLE
-	# 向きが同じなら 0、逆なら 1。
-	var opposition := (1.0 - start.dot(end)) / 2.0
-	var p2 := p1.lerp(p3, SWING_AT) + _swing_side(start, end, chord) * span * SWING * opposition
-	_points = [from, p1, p2, p3, to]
+## from から to へ駆け寄る道筋。obstacle は相手の位置で、道筋の途中にあれば横をかすめる。
+func _init(from: Vector3, to: Vector3, obstacle: Vector3) -> void:
+	var chord := _flat(to - from)
+	var along := 0.0
+	if not chord.is_zero_approx():
+		along = clampf(_flat(obstacle - from).dot(chord) / chord.length_squared(), 0.0, 1.0)
+	var closest := from.lerp(to, along)
+	var offset := _flat(closest - obstacle)
+	if chord.is_zero_approx() or offset.length() >= CLEARANCE:
+		_segments = [_segment(from, chord.normalized(), to, chord.normalized())]
+	else:
+		# 相手のちょうど正面にいる時は右をかすめる。少しずれていれば、離れている側をかすめる。
+		_passing_side = chord.normalized().cross(Vector3.UP) if offset.length() < 0.01 else offset.normalized()
+		var waypoint := Vector3(obstacle.x, closest.y, obstacle.z) + _passing_side * CLEARANCE
+		var through := chord.normalized()
+		_segments = [
+			_segment(from, (waypoint - from).normalized(), waypoint, through),
+			_segment(waypoint, through, to, (to - waypoint).normalized()),
+		]
 	_measure()
 
 
 ## 道のりの割合 fraction(0〜1)の所の位置。
 func position_at(fraction: float) -> Vector3:
-	return _point(_parameter_at(fraction))
+	return _position_at_parameter(_parameter_at(fraction))
 
 
 ## 道のりの割合 fraction(0〜1)の所で進む向き。水平で、長さは1。
 func direction_at(fraction: float) -> Vector3:
-	return _flat(_derivative(_parameter_at(fraction)))
+	var u := _parameter_at(fraction)
+	var index := _segment_index(u)
+	return _flat(_derivative(_segments[index], _local(u, index))).normalized()
 
 
 ## 出発点から着く点までの道のり(メートル)。
@@ -57,61 +55,77 @@ func length() -> float:
 	return _distances[-1]
 
 
-## 真ん中の制御点をずらす向き。相手が照準の右にいれば右へ、左にいれば左へ回り込む。
-## 最後に相手の横から背中へ向かう時は、その横の側へ回り込む。
-func _swing_side(start: Vector3, end: Vector3, chord: Vector3) -> Vector3:
-	if chord.is_zero_approx():
-		return Vector3.ZERO
-	var side := chord.normalized().cross(Vector3.UP)
-	var approach := -end.dot(side)
-	if absf(approach) > 0.3:
-		return side * signf(approach)
-	var right_of_view := start.cross(Vector3.UP)
-	var offset := chord.dot(right_of_view)
-	if absf(offset) > 0.01:
-		return side * signf(offset) * signf(side.dot(right_of_view))
-	return side
+## 相手から見て、かすめる側の向き(水平で長さ1)。まっすぐ駆け寄るなら 0。
+func passing_side() -> Vector3:
+	return _passing_side
+
+
+## from を start_direction の向きで出て、to に end_direction の向きで着く区間。
+## 両端の向きが同じで from から to への向きと等しければ、まっすぐな区間になる。
+static func _segment(from: Vector3, start_direction: Vector3, to: Vector3, end_direction: Vector3) -> PackedVector3Array:
+	var handle := _flat(to - from).length() / 3.0
+	var rise := (to.y - from.y) / 3.0
+	return PackedVector3Array([
+		from,
+		from + start_direction * handle + Vector3.UP * rise,
+		to - end_direction * handle - Vector3.UP * rise,
+		to,
+	])
 
 
 func _measure() -> void:
+	var count := SAMPLES_PER_SEGMENT * _segments.size()
 	_distances = [0.0]
-	var previous := _point(0.0)
-	for i in range(1, SAMPLES + 1):
-		var current := _point(float(i) / SAMPLES)
+	var previous := _position_at_parameter(0.0)
+	for i in range(1, count + 1):
+		var current := _position_at_parameter(float(i) / count)
 		_distances.append(_distances[-1] + previous.distance_to(current))
 		previous = current
 
 
-## 道のりの割合から、曲線の変数 t を求める。間は直線で補う。
+func _position_at_parameter(u: float) -> Vector3:
+	var index := _segment_index(u)
+	return _point(_segments[index], _local(u, index))
+
+
+## 全区間を通した変数 u が、何番目の区間にあるか。
+func _segment_index(u: float) -> int:
+	return mini(int(u * _segments.size()), _segments.size() - 1)
+
+
+## 全区間を通した変数 u を、index 番目の区間の中での変数(0〜1)に直す。
+func _local(u: float, index: int) -> float:
+	return u * _segments.size() - index
+
+
+## 道のりの割合から、曲線の変数 u を求める。間は直線で補う。
 func _parameter_at(fraction: float) -> float:
-	var target := clampf(fraction, 0.0, 1.0) * length()
+	var clamped := clampf(fraction, 0.0, 1.0)
 	if is_zero_approx(length()):
-		return clampf(fraction, 0.0, 1.0)
+		return clamped
+	var target := clamped * length()
+	var count := _distances.size() - 1
 	var index := _distances.bsearch(target)
 	if index <= 0:
 		return 0.0
-	if index > SAMPLES:
+	if index > count:
 		return 1.0
 	var before := _distances[index - 1]
 	var after := _distances[index]
 	var within := 0.0 if is_equal_approx(after, before) else (target - before) / (after - before)
-	return (index - 1 + within) / SAMPLES
+	return (index - 1 + within) / count
 
 
-func _point(t: float) -> Vector3:
+static func _point(p: PackedVector3Array, t: float) -> Vector3:
 	var u := 1.0 - t
-	var p := _points
-	return (p[0] * u * u * u * u + p[1] * 4.0 * u * u * u * t + p[2] * 6.0 * u * u * t * t
-		+ p[3] * 4.0 * u * t * t * t + p[4] * t * t * t * t)
+	return p[0] * u * u * u + p[1] * 3.0 * u * u * t + p[2] * 3.0 * u * t * t + p[3] * t * t * t
 
 
-func _derivative(t: float) -> Vector3:
+static func _derivative(p: PackedVector3Array, t: float) -> Vector3:
 	var u := 1.0 - t
-	var p := _points
-	return 4.0 * ((p[1] - p[0]) * u * u * u + (p[2] - p[1]) * 3.0 * u * u * t
-		+ (p[3] - p[2]) * 3.0 * u * t * t + (p[4] - p[3]) * t * t * t)
+	return 3.0 * ((p[1] - p[0]) * u * u + (p[2] - p[1]) * 2.0 * u * t + (p[3] - p[2]) * t * t)
 
 
-static func _flat(direction: Vector3) -> Vector3:
-	direction.y = 0.0
-	return direction.normalized()
+static func _flat(v: Vector3) -> Vector3:
+	v.y = 0.0
+	return v
