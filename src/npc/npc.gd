@@ -171,11 +171,13 @@ func can_see(point: Vector3, ignore: Array[RID] = []) -> bool:
 func _physics_process(delta: float) -> void:
 	if is_dead():
 		return
+	# よろけは止められている間も時間が進み、少しの間で終わる。
+	var staggering := _stagger_left > 0.0
+	_stagger_left = maxf(_stagger_left - delta, 0.0)
 	if _hold_left > 0.0:
 		_hold_left -= delta
 		velocity = Vector3.ZERO
-	elif _stagger_left > 0.0:
-		_stagger_left -= delta
+	elif staggering:
 		velocity = Vector3.ZERO
 	elif attention.stage() == Attention.Stage.STARE and _gaze_target != null:
 		velocity = Vector3.ZERO

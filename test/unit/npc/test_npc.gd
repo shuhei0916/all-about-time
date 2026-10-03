@@ -348,3 +348,12 @@ func test_止めている間にまた止めると長い方の時間だけ止ま�
 	npc.hold_still_for(0.2)
 	simulate(npc, 5, 0.1)
 	assert_true(npc.is_held_still())
+
+
+func test_止められている間に叩かれても_よろけは少しの間で終わる():
+	var npc := _make_animated_npc()
+	npc.hold_still_for(10.0)
+	npc.take_hit(10.0)
+	simulate(npc, int(Npc.STAGGER_DURATION / 0.1) + 2, 0.1)
+	assert_true(npc.is_held_still())
+	assert_eq(npc.animation_player.current_animation, "Idle")
