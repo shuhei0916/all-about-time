@@ -32,7 +32,7 @@ fog_sky_affect = 0.0
 script = ExtResource("1_walk")
 pause_menu = NodePath("PauseMenu")
 npc_scene = ExtResource("5_npc")
-patrols = Array[Vector3]([Vector3(12, 0, 7.5), Vector3(48, 0, 7.5), Vector3(48, 0, -7.5), Vector3(12, 0, -7.5), Vector3(7.5, 0, 12), Vector3(7.5, 0, 48), Vector3(-7.5, 0, 48), Vector3(-7.5, 0, 12), Vector3(-12, 0, 7.5), Vector3(-48, 0, 7.5), Vector3(-48, 0, -7.5), Vector3(-12, 0, -7.5), Vector3(7.5, 0, -12), Vector3(7.5, 0, -48), Vector3(-7.5, 0, -48), Vector3(-7.5, 0, -12)])
+patrols = Array[Vector3]([Vector3(-90, 0, 64.5), Vector3(-18, 0, 64.5), Vector3(-18, 0, 79.5), Vector3(-90, 0, 79.5), Vector3(12, 0, -64.5), Vector3(42, 0, -64.5), Vector3(-7.5, 0, -58), Vector3(-7.5, 0, -38), Vector3(61.5, 0, -11), Vector3(61.5, 0, 11), Vector3(100.5, 0, -11), Vector3(100.5, 0, 58), Vector3(-140, 0, -112.5), Vector3(-20, 0, -112.5), Vector3(-100.5, 0, -58), Vector3(-100.5, 0, 11)])
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=23493983]
 environment = SubResource("day")
@@ -47,7 +47,7 @@ directional_shadow_max_distance = 150.0
 [node name="City" parent="." unique_id=1761802381 instance=ExtResource("2_city")]
 
 [node name="Player" parent="." unique_id=1881366445 instance=ExtResource("3_player_scene")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 20, 0.1, 7.5)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -60, 0.1, 64.5)
 
 [node name="PauseMenu" type="CanvasLayer" parent="." unique_id=2013006802]
 script = ExtResource("4_pause_menu")
