@@ -5,7 +5,7 @@ extends RefCounted
 ## 回り始めと回り終わりはゆっくりにする。
 
 ## 道のりのこの割合まで進んだら、回り始める。
-const TURN_START := 0.3
+const TURN_START := 0.8
 
 
 ## 道のりの割合 fraction(0〜1)の所での、回り終えた割合(0〜1)。上下の向きにも使う。
