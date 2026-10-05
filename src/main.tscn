@@ -91,7 +91,7 @@ door = NodePath("Prison/Door")
 hud = NodePath("Hud")
 pause_menu = NodePath("PauseMenu")
 player = NodePath("Player")
-crowd = NodePath("Lot/Crowd")
+crowd = NodePath("Crowd")
 pickups = [NodePath("Yard/Cigarette"), NodePath("Yard/Rope"), NodePath("Lot/Blueprint"), NodePath("Lot/Pistol")]
 later_spawn_position = Vector3(-24, 0.1, 0)
 skip_tutorial = true
@@ -243,12 +243,12 @@ shape = SubResource("shape_pistol")
 mesh = SubResource("mesh_pistol")
 surface_material_override/0 = SubResource("mat_pistol")
 
-[node name="Crowd" type="Node3D" parent="Lot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 0, 0)
+[node name="Crowd" type="Node3D" parent="." node_paths=PackedStringArray("city")]
 script = ExtResource("10_crowd")
 npc_scene = ExtResource("11_npc")
-area_size = Vector2(36, 36)
-population = 6
+city = NodePath("../City")
+map = "res://src/world/city/city_map.txt"
+population = 24
 
 [node name="Stash" type="Node3D" parent="Lot"]
 

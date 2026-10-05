@@ -355,6 +355,13 @@ func _make_watched_game() -> Game:
 	var crowd := Crowd.new()
 	crowd.npc_scene = scene
 	crowd.population = 1
+	# 人は住所のドアから現れるので、外周の道路の中に区画が1つだけある小さな町とドア2つを渡す。
+	var town := CityPlan.new("#######
+#.....#
+#.....#
+#.....#
+#######")
+	crowd.set_town([Vector3(-3, 0, 4.5), Vector3(3, 0, 4.5)] as Array[Vector3], SidewalkGraph.new(town))
 	game.crowd = add_child_autofree(crowd)
 	var someone := crowd.npcs[0]
 	someone.global_position = Vector3(0, 0, -5)

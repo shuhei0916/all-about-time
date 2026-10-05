@@ -129,3 +129,15 @@ func test_外周の道路から街の外へは出られない():
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(top, top + Vector3(0, 0, -30)))
 	assert_false(hit.is_empty(), "見えない壁に当たること")
 	assert_true(not hit.is_empty() and city.get_node("Boundary").is_ancestor_of(hit.collider))
+
+
+func test_どの区画の歩道からもほかのどの区画の歩道へも歩いて行ける():
+	var sidewalks := SidewalkGraph.new(plan)
+	var loops := sidewalks.loops()
+	var start := Vector3(loops[0].position.x, 0, loops[0].position.y)
+	var unreachable := []
+	for loop in loops:
+		var corner := Vector3(loop.end.x, 0, loop.end.y)
+		if sidewalks.path(start, corner).is_empty():
+			unreachable.append(loop)
+	assert_eq(unreachable, [], "歩いて行けない区画の歩道")

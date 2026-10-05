@@ -1,6 +1,7 @@
 class_name Crowd
 extends Node3D
-## 決まった範囲を横切って歩く人々。端から現れて反対側の端へ歩き、着くと消えて補充される。
+## 町を歩く人々。人はそれぞれ住所(建物のドア)を持ち、そのドアの前から現れて、歩道をたどって
+## 別の建物のドアへ歩く。着くと中へ入って消え、別の人が自分のドアから現れて補充される。
 ## プレイヤーが目立つ物を持っていると、見えた人から気にし始め、
 ## 立ち止まって見ている人がいると、その人を見た周りの人も釣られて目で追う。
 
@@ -13,8 +14,10 @@ const CONTAGION_RADIUS := 12.0
 
 ## 歩く人のシーン。ルートは Npc。
 @export var npc_scene: PackedScene
-## 人が横切る範囲(メートル、X と Z)。この Crowd の位置を中心とする。
-@export var area_size := Vector2(36, 36)
+## 人々が歩く街。中の建物(グループ building)のドアが住所になる。街の地図 map と組で使う。
+@export var city: Node3D
+## 街の文字の地図。歩道の道のりを求めるのに使う。
+@export_file("*.txt") var map := ""
 ## 同時に歩いている人数。
 @export var population := 6
 ## 出現位置の乱数の種。0 なら毎回変わる。
@@ -23,13 +26,48 @@ const CONTAGION_RADIUS := 12.0
 ## 今歩いている人々。
 var npcs: Array[Npc] = []
 var _rng := RandomNumberGenerator.new()
+## 住所にできるドアの前の、歩道の上の点。
+var _doors: Array[Vector3] = []
+var _sidewalks: SidewalkGraph
+var _homes := {}
+var _destinations := {}
 
 
 func _ready() -> void:
 	if random_seed != 0:
 		_rng.seed = random_seed
+	if city and map and _doors.is_empty():
+		_read_town()
+	if _doors.size() < 2:
+		return
 	for i in population:
 		_spawn()
+
+
+## 住所にできるドアと、歩道の道のり。シーンに入る前に呼ぶ。
+func set_town(doors: Array[Vector3], sidewalks: SidewalkGraph) -> void:
+	_doors = doors
+	_sidewalks = sidewalks
+
+
+## 街の地図から歩道の道のりを作り、建物ごとに、その前の歩道の上の点をドアにする。
+func _read_town() -> void:
+	_sidewalks = SidewalkGraph.new(CityPlan.new(FileAccess.get_file_as_string(map)))
+	var doors: Array[Vector3] = []
+	for building in get_tree().get_nodes_in_group("building"):
+		if city.is_ancestor_of(building):
+			doors.append(_sidewalks.nearest_on_sidewalk((building as Node3D).global_position))
+	_doors = doors
+
+
+## npc の住所(出てきたドアの前)。
+func home_of(npc: Npc) -> Vector3:
+	return _homes.get(npc, Vector3.ZERO)
+
+
+## npc が向かっているドアの前。
+func destination_of(npc: Npc) -> Vector3:
+	return _destinations.get(npc, Vector3.ZERO)
 
 
 ## プレイヤーを見せる。毎フレーム呼ぶ。
@@ -55,31 +93,27 @@ func _sees_someone_staring(npc: Npc) -> bool:
 	return false
 
 
-## 範囲のどこかの辺から現れ、反対側の辺のどこかへ歩く人を1人出す。
+## 誰かの住所のドアの前から、別のドアへ歩道をたどって歩く人を1人出す。
 func _spawn() -> void:
+	var home := _doors[_rng.randi_range(0, _doors.size() - 1)]
+	var destination := home
+	while destination.is_equal_approx(home):
+		destination = _doors[_rng.randi_range(0, _doors.size() - 1)]
 	var npc: Npc = npc_scene.instantiate()
 	add_child(npc)
-	var side := _rng.randi_range(0, 3)
-	npc.global_position = _point_on_side(side)
-	npc.walk_to(_point_on_side((side + 2) % 4))
+	npc.global_position = home
+	var route := _sidewalks.path(home, destination)
+	route.pop_front()
+	npc.follow(route if not route.is_empty() else [destination] as Array[Vector3])
 	npc.arrived.connect(_on_arrived.bind(npc))
 	npcs.append(npc)
-
-
-## 辺の番号(0: 北, 1: 東, 2: 南, 3: 西)に沿ったどこかの点。
-func _point_on_side(side: int) -> Vector3:
-	var half := area_size / 2.0
-	var along := _rng.randf_range(-1.0, 1.0)
-	var local: Vector3
-	match side:
-		0: local = Vector3(along * half.x, 0, -half.y)
-		1: local = Vector3(half.x, 0, along * half.y)
-		2: local = Vector3(along * half.x, 0, half.y)
-		_: local = Vector3(-half.x, 0, along * half.y)
-	return global_position + local
+	_homes[npc] = home
+	_destinations[npc] = destination
 
 
 func _on_arrived(npc: Npc) -> void:
 	npcs.erase(npc)
+	_homes.erase(npc)
+	_destinations.erase(npc)
 	npc.queue_free()
 	_spawn()

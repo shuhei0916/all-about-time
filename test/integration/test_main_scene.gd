@@ -149,14 +149,22 @@ func test_拳銃は2世代目の開始位置のすぐ近くにある():
 	assert_lt(game.pickups[3].global_position.distance_to(game.later_spawn_position), 5.0)
 
 
-func test_空き地には人々が歩いている():
+func test_街には人々が歩いている():
 	var game := _load_game(true)
 	assert_not_null(game.crowd)
-	assert_gt(game.crowd.npcs.size(), 0)
-	assert_lt(game.crowd.global_position.distance_to(game.later_spawn_position), 20.0)
+	assert_gt(game.crowd.npcs.size(), 10)
 
 
-func test_空き地の人々は頭を持つ():
+func test_人々は街の建物のドアの前から現れる():
+	var game := _load_game(true)
+	var doors := game.get_tree().get_nodes_in_group("building").map(func(b: Node3D) -> Vector2: return Vector2(b.global_position.x, b.global_position.z))
+	for npc: Npc in game.crowd.npcs:
+		var home := game.crowd.home_of(npc)
+		var nearest: float = doors.map(func(d: Vector2) -> float: return d.distance_to(Vector2(home.x, home.z))).min()
+		assert_lt(nearest, 6.0, "%s の近くに建物の入口がある" % home)
+
+
+func test_街の人々は頭を持つ():
 	var game := _load_game(true)
 	assert_not_null(game.crowd.npcs[0].head)
 
@@ -200,7 +208,7 @@ func test_札束をバッグに入れて閉じると中身になる():
 	assert_true(bag.contents.has(cash))
 
 
-func test_空き地の人々は歩くアニメーションを流す():
+func test_街の人々は歩くアニメーションを流す():
 	var game := _load_game(true)
 	await wait_physics_frames(3)
 	var npc: Npc = game.crowd.npcs[0]

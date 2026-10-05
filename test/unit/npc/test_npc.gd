@@ -357,3 +357,20 @@ func test_止められている間に叩かれても_よろけは少しの間で
 	simulate(npc, int(Npc.STAGGER_DURATION / 0.1) + 2, 0.1)
 	assert_true(npc.is_held_still())
 	assert_eq(npc.animation_player.current_animation, "Idle")
+
+
+func test_道のりの曲がり角を順にたどって歩く():
+	var npc := _make_npc()
+	# move_and_slide は物理フレームの長さで進むので、速く歩かせて短く済ませる。
+	npc.speed = 10.0
+	npc.follow([Vector3(2, 0, 0), Vector3(2, 0, -2)] as Array[Vector3])
+	var arrivals := [0]
+	npc.arrived.connect(func() -> void: arrivals[0] += 1)
+	var passed_corner := false
+	for i in 100:
+		simulate(npc, 1, 0.05)
+		if npc.global_position.distance_to(Vector3(2, 0, 0)) < 0.3:
+			passed_corner = true
+	assert_true(passed_corner, "曲がり角を通る")
+	assert_almost_eq(npc.global_position, Vector3(2, 0, -2), Vector3.ONE * 0.3)
+	assert_eq(arrivals[0], 1, "着いたと知らせるのは最後の所だけ")

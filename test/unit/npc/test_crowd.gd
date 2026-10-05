@@ -17,12 +17,24 @@ func _npc_scene() -> PackedScene:
 	return scene
 
 
+## 外周の道路の中に、縦の道で分かれた2つの区画がある町。ドアは区画のまわりの歩道の上に3つ。
+const MAP := """
+###########
+#....#....#
+#....#....#
+#....#....#
+#....#....#
+###########
+"""
+const DOORS: Array[Vector3] = [Vector3(-15, 0, 7.5), Vector3(-15, 0, -7.5), Vector3(15, 0, 7.5)]
+
+
 func _make_crowd(population: int) -> Crowd:
 	var crowd := Crowd.new()
 	crowd.npc_scene = _npc_scene()
 	crowd.population = population
-	crowd.area_size = Vector2(20, 20)
 	crowd.random_seed = 1
+	crowd.set_town(DOORS, SidewalkGraph.new(CityPlan.new(MAP)))
 	return add_child_autofree(crowd)
 
 
@@ -38,12 +50,40 @@ func test_指定した人数のNPCが歩いている():
 	assert_eq(crowd.npcs.size(), 4)
 
 
-func test_NPCは範囲の端から現れる():
+func test_NPCは住所のドアの前から現れる():
 	var crowd := _make_crowd(4)
 	for npc in crowd.npcs:
-		var p := npc.global_position
-		var on_edge := is_equal_approx(absf(p.x), 10.0) or is_equal_approx(absf(p.z), 10.0)
-		assert_true(on_edge, "%s が範囲の端にあること" % p)
+		assert_true(DOORS.has(crowd.home_of(npc)), "住所はどれかのドア")
+		assert_almost_eq(npc.global_position, crowd.home_of(npc), Vector3.ONE * 0.01)
+
+
+func test_NPCは住所とは別のドアへ向かう():
+	var crowd := _make_crowd(4)
+	for npc in crowd.npcs:
+		assert_true(DOORS.has(crowd.destination_of(npc)))
+		assert_ne(crowd.destination_of(npc), crowd.home_of(npc))
+
+
+func test_NPCは歩道をたどって向かうドアに着く():
+	var crowd := _make_crowd(1)
+	var npc := crowd.npcs[0]
+	# 1回の物理フレーム(1/60秒)で進む距離が、着いたとみなす距離(0.3m)より短い速さ。
+	npc.speed = 15.0
+	var destination := crowd.destination_of(npc)
+	var arrived := [false]
+	npc.arrived.connect(func() -> void: arrived[0] = npc.global_position.distance_to(destination) < 0.5)
+	for i in 300:
+		if arrived[0]:
+			break
+		await get_tree().physics_frame
+	assert_true(arrived[0])
+
+
+func test_ドアがないと誰も現れない():
+	var crowd := Crowd.new()
+	crowd.npc_scene = _npc_scene()
+	add_child_autofree(crowd)
+	assert_eq(crowd.npcs.size(), 0)
 
 
 func test_目的地に着いたNPCは消え_代わりが現れる():

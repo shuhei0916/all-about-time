@@ -50,6 +50,8 @@ var _destination: Variant = null
 var _gaze_target: Variant = null
 ## 往復する2点。往復していなければ空。
 var _patrol_points: Array[Vector3] = []
+## follow でたどっている道のりの、まだ着いていない曲がる所。
+var _route: Array[Vector3] = []
 var _highlighted := false
 ## よろけて立ち止まっている残りの秒数。
 var _stagger_left := 0.0
@@ -125,6 +127,13 @@ func walk_to(destination: Vector3) -> void:
 	_destination = destination
 
 
+## 道のりの曲がる所 points を順にたどって歩く。最後の所に着いた時だけ arrived を知らせる。
+func follow(points: Array[Vector3]) -> void:
+	_patrol_points.clear()
+	_route = points.duplicate()
+	walk_to(_route.pop_front())
+
+
 ## 2点の間を往復する。まず first へ向かい、着いたら second へ、と繰り返す。
 func patrol(first: Vector3, second: Vector3) -> void:
 	_patrol_points = [first, second]
@@ -134,6 +143,7 @@ func patrol(first: Vector3, second: Vector3) -> void:
 ## 目的地へ向かうのをやめ、その場に立ち止まる。往復もやめる。
 func stop() -> void:
 	_destination = null
+	_route.clear()
 	_patrol_points.clear()
 
 
@@ -210,6 +220,9 @@ func _walk() -> void:
 	to_destination.y = 0.0
 	if to_destination.length() < ARRIVE_DISTANCE:
 		_destination = null
+		if not _route.is_empty():
+			walk_to(_route.pop_front())
+			return
 		_continue_patrol()
 		arrived.emit()
 		return
