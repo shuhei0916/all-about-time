@@ -6,6 +6,8 @@ extends RefCounted
 ##   . 区画(建物が建つ)
 ##   P 広場(建物を建てず、入れる)
 ##   : 路地(歩く人だけが通る細い道)
+##   P 以外の大文字 印を付けた空き区画(建物を建てない)。刑務所や役所など、決まった物を置く所。
+##     同じ文字のまとまりは、地図に1つだけ書く
 ##   空白 街の外
 ## 道路に覆われたマスは、書いてある文字によらず道路の一部になる。
 
@@ -28,14 +30,17 @@ var _rows: PackedStringArray = []
 
 ## 道路に覆われない、同じ文字のマスのまとまり。
 class Area:
-	enum Kind { BLOCK, PLAZA, ALLEY }
+	enum Kind { BLOCK, PLAZA, ALLEY, SITE }
 	var kind: Kind
 	## まとまりのマスの範囲。
 	var cells: Rect2i
+	## 地図に書いた文字。空き区画では印になる。
+	var mark: String
 
-	func _init(area_kind: Kind, area_cells: Rect2i) -> void:
+	func _init(area_kind: Kind, area_cells: Rect2i, area_mark: String) -> void:
 		kind = area_kind
 		cells = area_cells
+		mark = area_mark
 
 
 func _init(map: String) -> void:
@@ -107,8 +112,16 @@ func is_covered_by_road(at: Vector2i) -> bool:
 func areas() -> Array[Area]:
 	var found: Array[Area] = []
 	for flood in _floods():
-		found.append(Area.new(flood.kind, flood.cells))
+		found.append(Area.new(flood.kind, flood.cells, cell(flood.cells.position)))
 	return found
+
+
+## 印 mark を付けた空き区画。なければ null。
+func site(mark: String) -> Area:
+	for area in areas():
+		if area.kind == Area.Kind.SITE and area.mark == mark:
+			return area
+	return null
 
 
 ## 同じ種類で上下左右につながるマスのまとまりを、左上から行ごとに集める。
@@ -119,7 +132,7 @@ func _floods() -> Array[Dictionary]:
 	for z in size.y:
 		for x in size.x:
 			var start := Vector2i(x, z)
-			if seen.has(start) or not _kind_at(start) in KINDS.values():
+			if seen.has(start) or _kind_at(start) < 0:
 				continue
 			var flood := _flood(start, seen)
 			found.append({kind = _kind_at(start), cells = flood[0], count = flood[1]})
@@ -130,7 +143,10 @@ func _floods() -> Array[Dictionary]:
 func _kind_at(at: Vector2i) -> int:
 	if is_covered_by_road(at):
 		return -1
-	return KINDS.get(cell(at), -1)
+	var letter := cell(at)
+	if letter != letter.to_lower() and not KINDS.has(letter):
+		return Area.Kind.SITE
+	return KINDS.get(letter, -1)
 
 
 ## start と同じ種類で上下左右につながるマスを集め、それを囲む範囲とマスの数を返す。
@@ -146,7 +162,7 @@ func _flood(start: Vector2i, seen: Dictionary) -> Array:
 		bounds = bounds.merge(Rect2i(current, Vector2i.ONE))
 		for direction in DIRECTIONS:
 			var next := current + direction
-			if not seen.has(next) and _kind_at(next) == kind:
+			if not seen.has(next) and _kind_at(next) == kind and cell(next) == cell(start):
 				seen[next] = true
 				queue.append(next)
 	return [bounds, count]

@@ -206,3 +206,25 @@ func test_空き地の人々は歩くアニメーションを流す():
 	var npc: Npc = game.crowd.npcs[0]
 	assert_not_null(npc.animation_player)
 	assert_eq(npc.animation_player.current_animation, "Walk")
+
+
+func _site_rect(mark: String) -> Rect2:
+	var plan := CityPlan.new(FileAccess.get_file_as_string("res://src/world/city/city_map.txt"))
+	return plan.rect_of(plan.site(mark).cells)
+
+
+func _flat(point: Vector3) -> Vector2:
+	return Vector2(point.x, point.z)
+
+
+func test_牢屋は街の地図の刑務所の区画Jにある():
+	var game := _load_game()
+	var jail := _site_rect("J")
+	assert_true(jail.has_point(_flat(game.bed.global_position)), "ベッド")
+	assert_true(jail.has_point(_flat(game.door.global_position)), "ドア")
+	assert_true(jail.has_point(_flat(game.player.global_position)), "1世代目の開始位置")
+
+
+func test_2世代目は街の地図の空き区画Lから始まる():
+	var game := _load_game()
+	assert_true(_site_rect("L").has_point(_flat(game.later_spawn_position)))

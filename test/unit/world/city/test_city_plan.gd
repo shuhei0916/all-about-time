@@ -196,3 +196,40 @@ func test_四角でない区画は問題():
 ###########
 """)
 	assert_false(plan.problems().is_empty())
+
+
+const WITH_SITES := """
+###########
+#....#....#
+#.JJ.#.LL.#
+#.JJ.#.LL.#
+#....#....#
+###########
+"""
+
+
+func test_P以外の大文字は印を付けた空き区画():
+	var plan := CityPlan.new(WITH_SITES)
+	var jail := plan.site("J")
+	assert_not_null(jail)
+	assert_eq(jail.kind, CityPlan.Area.Kind.SITE)
+	assert_eq(jail.mark, "J")
+	assert_eq(jail.cells, Rect2i(2, 2, 2, 2))
+	assert_eq(plan.site("L").cells, Rect2i(7, 2, 2, 2))
+
+
+func test_ない印の空き区画はnull():
+	assert_null(CityPlan.new(WITH_SITES).site("Q"))
+
+
+func test_空き区画の印は道路に覆われたマスに書いても無視される():
+	# 道路の両隣のマスは道路の一部なので、まとまりは道路に覆われないマスだけで作る。
+	var plan := CityPlan.new("""
+###########
+#JJJJ#....#
+#JJJJ#....#
+#JJJJ#....#
+#JJJJ#....#
+###########
+""")
+	assert_eq(plan.site("J").cells, Rect2i(2, 2, 2, 2))
