@@ -11,8 +11,6 @@ signal died
 
 ## NPC が入るグループ。背後へ跳ぶ相手の候補を探す時に使う。
 const GROUP := &"npc"
-## 背後へ跳べる相手であることを示すため、体全体に重ねる色。
-const HIGHLIGHT_MATERIAL := preload("res://src/npc/blink_highlight.tres")
 
 const EYE_HEIGHT := 1.6
 ## 相手が見える距離(メートル)。
@@ -52,7 +50,6 @@ var _gaze_target: Variant = null
 var _patrol_points: Array[Vector3] = []
 ## follow でたどっている道のりの、まだ着いていない曲がる所。
 var _route: Array[Vector3] = []
-var _highlighted := false
 ## よろけて立ち止まっている残りの秒数。
 var _stagger_left := 0.0
 ## 止められている残りの秒数。止められている間は、その場で動かず向きも変えない。
@@ -61,17 +58,6 @@ var _hold_left := 0.0
 
 func _init() -> void:
 	add_to_group(GROUP)
-
-
-## 背後へ跳べる相手であることを示すハイライトを付ける、または外す。
-func set_highlighted(highlighted: bool) -> void:
-	_highlighted = highlighted
-	for mesh: MeshInstance3D in find_children("*", "MeshInstance3D", true, false):
-		mesh.material_overlay = HIGHLIGHT_MATERIAL if highlighted else null
-
-
-func is_highlighted() -> bool:
-	return _highlighted
 
 
 ## amount だけのダメージを受ける。体力が残っていればよろけ、尽きれば倒れる。
@@ -102,7 +88,6 @@ func is_dead() -> bool:
 
 ## 倒れる。その場に残るが、狙える候補から外れ、他の物に当たらなくなる。
 func _die() -> void:
-	set_highlighted(false)
 	remove_from_group(GROUP)
 	collision_layer = 0
 	velocity = Vector3.ZERO

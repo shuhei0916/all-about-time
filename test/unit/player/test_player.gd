@@ -575,25 +575,25 @@ func test_間に壁があるNPCは狙えない():
 	assert_null(player.blink_target())
 
 
-func test_今跳べる相手はハイライトされる():
+func test_今跳べる相手は照準の枠で囲まれる():
 	_add_floor()
 	var npc := _add_npc_ahead(20.0)
-	_add_blinker()
+	var player := _add_blinker()
 	await wait_physics_frames(5)
-	assert_true(npc.is_highlighted())
+	assert_eq(player.blink_marker.marked(), npc)
 
 
-func test_狙いが外れるとハイライトが消える():
+func test_狙いが外れると枠が消える():
 	_add_floor()
 	var npc := _add_npc_ahead(20.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.rotate_y(PI / 2)
 	await wait_physics_frames(3)
-	assert_false(npc.is_highlighted())
+	assert_null(player.blink_marker.marked())
 
 
-func test_待ち時間の間はハイライトされない():
+func test_待ち時間の間は枠で囲まない():
 	_add_floor()
 	var npc := _add_npc_ahead(20.0)
 	var other := _add_npc_off_aim(180.0, 20.0)
@@ -601,13 +601,12 @@ func test_待ち時間の間はハイライトされない():
 	await wait_physics_frames(5)
 	player.blink()
 	await _finish_dash(player)
-	# 駆け寄った後は npc の方を向いているが、待ち時間の間はハイライトしない。
+	# 駆け寄った後は npc の方を向いているが、待ち時間の間は囲まない。
 	await wait_physics_frames(2)
-	assert_false(npc.is_highlighted())
-	assert_false(other.is_highlighted())
+	assert_null(player.blink_marker.marked())
 
 
-func test_背後に立てない相手はハイライトされない():
+func test_背後に立てない相手は枠で囲まない():
 	_add_floor()
 	var npc := _add_npc_ahead(20.0)
 	var wall := StaticBody3D.new()
@@ -618,16 +617,16 @@ func test_背後に立てない相手はハイライトされない():
 	wall.add_child(shape)
 	wall.position = npc.global_position + npc.global_basis.z * Player.BLINK_BEHIND_DISTANCE + Vector3.UP * 2
 	add_child_autofree(wall)
-	_add_blinker()
+	var player := _add_blinker()
 	await wait_physics_frames(5)
-	assert_false(npc.is_highlighted())
+	assert_null(player.blink_marker.marked())
 
 
 func test_プレイヤーは体の部品をシーンに置かれた子ノードとして持つ():
 	# シーンに置かれた子ノードは、持ち主(owner)がプレイヤーになる。
 	# スクリプトで作った子ノードは持ち主を持たず、エディタに「シェイプがない」と警告される。
 	var player: Player = add_child_autofree(Player.create())
-	for path in ["CollisionShape3D", "Camera3D", "Camera3D/InteractRay", "Camera3D/BuildRay", "Crosshair"]:
+	for path in ["CollisionShape3D", "Camera3D", "Camera3D/InteractRay", "Camera3D/BuildRay", "Crosshair", "BlinkMarker"]:
 		var part := player.get_node_or_null(path)
 		assert_not_null(part, path)
 		if part:

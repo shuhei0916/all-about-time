@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dnb2hj7bgnavo" path="res://src/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://src/ui/crosshair.gd" id="2_crosshair"]
+[ext_resource type="Script" path="res://src/ui/blink_marker.gd" id="3_blink_marker"]
 
 [sub_resource type="CapsuleShape3D" id="shape_body"]
 radius = 0.3
@@ -25,3 +26,6 @@ target_position = Vector3(0, 0, -15)
 
 [node name="Crosshair" type="CanvasLayer" parent="."]
 script = ExtResource("2_crosshair")
+
+[node name="BlinkMarker" type="CanvasLayer" parent="."]
+script = ExtResource("3_blink_marker")

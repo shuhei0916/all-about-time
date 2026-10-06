@@ -192,43 +192,9 @@ func test_往復の途中で止まると往復をやめる():
 	assert_almost_eq(npc.global_position, Vector3.ZERO, Vector3.ONE * 0.01)
 
 
-## 見た目のメッシュを2つ持つ NPC を作る。
-func _make_visible_npc() -> Npc:
-	var npc := _make_npc()
-	for i in 2:
-		var mesh := MeshInstance3D.new()
-		mesh.mesh = BoxMesh.new()
-		npc.add_child(mesh)
-	return npc
-
-
-func _overlays(npc: Npc) -> Array:
-	return npc.find_children("*", "MeshInstance3D", true, false).map(func(m: MeshInstance3D) -> Material: return m.material_overlay)
-
-
 func test_NPCは狙える候補として見つけられる():
 	var npc := _make_npc()
 	assert_true(npc.is_in_group(Npc.GROUP))
-
-
-func test_最初はハイライトされていない():
-	var npc := _make_visible_npc()
-	assert_false(npc.is_highlighted())
-	assert_true(_overlays(npc).all(func(m: Material) -> bool: return m == null), "どのメッシュにも色が重なっていないこと")
-
-
-func test_ハイライトすると体全体に色が重なる():
-	var npc := _make_visible_npc()
-	npc.set_highlighted(true)
-	assert_true(npc.is_highlighted())
-	assert_eq(_overlays(npc), [Npc.HIGHLIGHT_MATERIAL, Npc.HIGHLIGHT_MATERIAL])
-
-
-func test_ハイライトをやめると色が消える():
-	var npc := _make_visible_npc()
-	npc.set_highlighted(true)
-	npc.set_highlighted(false)
-	assert_true(_overlays(npc).all(func(m: Material) -> bool: return m == null), "どのメッシュにも色が重なっていないこと")
 
 
 func test_叩かれると体力が減る():
@@ -252,11 +218,9 @@ func test_体力が尽きると倒れる():
 
 
 func test_倒れると狙える候補から外れる():
-	var npc := _make_visible_npc()
-	npc.set_highlighted(true)
+	var npc := _make_npc()
 	npc.take_hit(Npc.MAX_HEALTH)
 	assert_false(npc.is_in_group(Npc.GROUP))
-	assert_false(npc.is_highlighted())
 
 
 func test_倒れると他の物に当たらなくなる():

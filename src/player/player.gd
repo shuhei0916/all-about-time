@@ -61,9 +61,9 @@ var attacks_enabled := true
 @onready var camera: Camera3D = $Camera3D
 @onready var _ray: RayCast3D = $Camera3D/InteractRay
 @onready var _build_ray: RayCast3D = $Camera3D/BuildRay
+## 今跳べる相手を、画面の上で囲む枠。
+@onready var blink_marker: BlinkMarker = $BlinkMarker
 var _blink_cooldown := 0.0
-## 今ハイライトしている、跳べる相手。
-var _highlighted_target: Npc
 ## 駆け寄っている間の、道筋、経った時間、かかる時間。
 var _dash_path: DashPath
 var _dash_elapsed := 0.0
@@ -93,6 +93,7 @@ func _ready() -> void:
 	# 視線のレイの長さは判断に使う値なので、シーンではなく定数で決める。
 	_ray.target_position = Vector3(0, 0, -INTERACT_DISTANCE)
 	_build_ray.target_position = Vector3(0, 0, -BUILD_DISTANCE)
+	blink_marker.camera = camera
 	if DisplayServer.get_name() != "headless":
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -126,7 +127,7 @@ func _physics_process(delta: float) -> void:
 	if is_dashing():
 		_advance_dash(delta)
 		_carry_held_item()
-		_update_blink_highlight()
+		_update_blink_marker()
 		return
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
@@ -143,7 +144,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	# 動いた後の位置に合わせる。動く前に合わせると、物が1フレーム遅れて付いてきて震える。
 	_carry_held_item()
-	_update_blink_highlight()
+	_update_blink_marker()
 
 
 ## 照準の近く(BLINK_AIM_ANGLE 以内)の届く範囲にいて、間に壁などがなく見えている NPC のうち、
@@ -201,16 +202,9 @@ func blinkable_target() -> Npc:
 	return target
 
 
-## 今跳べる相手だけをハイライトする。相手が変わったら、前の相手のハイライトを外す。
-func _update_blink_highlight() -> void:
-	var target := blinkable_target()
-	if target == _highlighted_target:
-		return
-	if is_instance_valid(_highlighted_target):
-		_highlighted_target.set_highlighted(false)
-	if target:
-		target.set_highlighted(true)
-	_highlighted_target = target
+## 今跳べる相手だけを、画面の上で枠で囲む。
+func _update_blink_marker() -> void:
+	blink_marker.mark(blinkable_target())
 
 
 ## 待ち時間が終わっていて、今すぐ背後へ跳べるか。
