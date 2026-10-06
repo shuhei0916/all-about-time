@@ -68,3 +68,12 @@ func test_ゲームを閉じるを押すと終了を要求する():
 func test_ボタンの文言():
 	var menu := _make_menu()
 	assert_eq([menu.resume_button.text, menu.quit_button.text], ["ゲームに戻る", "ゲームを閉じる"])
+
+
+func test_開くと開く音が鳴り_閉じると閉じる音が鳴る():
+	var menu := _make_menu()
+	watch_signals(Sfx)
+	menu.open()
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"menu_open"])
+	menu.close()
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"menu_close"])

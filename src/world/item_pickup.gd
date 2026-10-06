@@ -20,6 +20,10 @@ signal picked_up(item: Item)
 var _taken := false
 
 
+func _init() -> void:
+	interact_sound = &"pick_up"
+
+
 func interact() -> void:
 	if _taken:
 		return

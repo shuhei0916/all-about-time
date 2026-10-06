@@ -79,3 +79,7 @@ func test_拾った道具には落ちていた時の目立ち度が付く():
 	pickup.interact()
 	var item: Item = get_signal_parameters(pickup, "picked_up")[0]
 	assert_eq(item.conspicuousness, 1.0)
+
+
+func test_拾う時は拾う音を鳴らす():
+	assert_eq(_make_pickup("タバコ", 60.0).interact_sound, &"pick_up")

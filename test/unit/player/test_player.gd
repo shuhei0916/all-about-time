@@ -113,6 +113,23 @@ func test_手を離すと持っていない状態に戻る():
 	assert_false(item.is_held())
 
 
+func test_物を持つと持つ音が鳴り_離すと離す音が鳴る():
+	var player: Player = add_child_autofree(Player.create())
+	var item := _add_item_in_front(1.5)
+	watch_signals(Sfx)
+	player.grab(item)
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"grab"])
+	player.release_held()
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"drop"])
+
+
+func test_何も持っていない時に離しても音は鳴らない():
+	var player: Player = add_child_autofree(Player.create())
+	watch_signals(Sfx)
+	player.release_held()
+	assert_signal_not_emitted(Sfx, "played")
+
+
 func test_持っている物越しに別の物を見られる():
 	var player: Player = add_child_autofree(Player.create())
 	var held := _add_item_in_front(1.5)
@@ -154,6 +171,41 @@ func test_Fで見ているバッグを開け閉めする():
 	press.pressed = true
 	InputSender.new(player).send_event(press)
 	assert_true(bag.is_open())
+
+
+func test_バッグを開けると開ける音が鳴り_閉じると閉じる音が鳴る():
+	var player: Player = add_child_autofree(Player.create())
+	var bag := DuffelBag.new()
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	bag.add_child(shape)
+	bag.gravity_scale = 0.0
+	bag.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
+	add_child_autofree(bag)
+	await wait_physics_frames(3)
+	var press := InputEventKey.new()
+	press.physical_keycode = KEY_F
+	press.pressed = true
+	watch_signals(Sfx)
+	InputSender.new(player).send_event(press)
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"open"])
+	InputSender.new(player).send_event(press)
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"close"])
+
+
+func test_Eで働きかけると_その物の音が鳴る():
+	var player: Player = add_child_autofree(Player.create())
+	var thing := Interactable.new()
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	thing.add_child(shape)
+	thing.interact_sound = &"pick_up"
+	thing.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
+	add_child_autofree(thing)
+	await wait_physics_frames(3)
+	watch_signals(Sfx)
+	_press_e(player)
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"pick_up"])
 
 
 func test_持った物はプレイヤーが動いた後の位置に付いてくる():
@@ -392,6 +444,28 @@ func test_背後へ駆け寄り終わるとNPCの方を向く():
 	var to_npc := npc.global_position - player.global_position
 	to_npc.y = 0
 	assert_almost_eq(-player.global_basis.z, to_npc.normalized(), Vector3.ONE * 0.01)
+
+
+func test_背後へ跳ぶと跳ぶ音が鳴る():
+	_add_floor()
+	_add_npc_ahead(20.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	watch_signals(Sfx)
+	player.blink()
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"blink"])
+
+
+func test_跳べない時にQを押すと跳べない音が鳴る():
+	_add_floor()
+	var player := _add_blinker()
+	await wait_physics_frames(3)
+	var q := InputEventKey.new()
+	q.physical_keycode = KEY_Q
+	q.pressed = true
+	watch_signals(Sfx)
+	InputSender.new(player).send_event(q)
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"denied"])
 
 
 func test_NPCの背後に壁があって立てなければ跳ばない():

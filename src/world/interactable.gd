@@ -9,6 +9,8 @@ const INTERACT_KEY := "E"
 
 ## プレイヤーに見せる操作説明。
 @export var prompt := "調べる"
+## 働きかけた時に鳴らす効果音の名前(Sfx.SOUNDS)。
+@export var interact_sound := &"interact"
 
 var _prompt_label: PromptLabel
 

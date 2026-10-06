@@ -111,7 +111,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("toggle_container"):
 		_try_toggle_container()
 	elif event.is_action_pressed("blink"):
-		blink()
+		if not blink():
+			Sfx.play(&"denied")
 
 
 ## 持った物は、描画のたびに視点の向きへ合わせる。
@@ -237,6 +238,7 @@ func blink() -> bool:
 	var eye_drop: float = target.global_position.y + BLINK_AIM_HEIGHT - (landing.y + EYE_HEIGHT)
 	_dash_end_pitch = atan2(eye_drop, Vector2(to_target.x, to_target.z).length())
 	velocity = _dash_path.direction_at(0.0) * DASH_SPEED
+	Sfx.play(&"blink")
 	# 途中の物(狙った相手も含む)を押しのけないよう、駆け寄っている間は当たり判定を外す。
 	# 着く点に体が収まることは、駆け寄り始める前に確かめてある。
 	_dash_saved_layers = Vector2i(collision_layer, collision_mask)
@@ -351,6 +353,7 @@ func _try_interact() -> void:
 		return
 	var target := looking_at()
 	if target:
+		Sfx.play(target.interact_sound)
 		target.interact()
 
 
@@ -358,6 +361,7 @@ func _try_toggle_container() -> void:
 	var bag := looking_at_item() as DuffelBag
 	if bag:
 		bag.toggle()
+		Sfx.play(&"open" if bag.is_open() else &"close")
 
 
 ## 物を手に持つ。既に何か持っていれば持たない。
@@ -367,6 +371,7 @@ func grab(item: PhysicalItem) -> void:
 		return
 	held_item = item
 	item.hold()
+	Sfx.play(&"grab")
 	_ray.add_exception(item)
 	_build_ray.add_exception(item)
 	# 手元の物に自分がぶつかって押し出されないようにする。
@@ -383,6 +388,7 @@ func release_held() -> void:
 	remove_collision_exception_with(held_item)
 	held_item.release(velocity)
 	held_item = null
+	Sfx.play(&"drop")
 
 
 ## 手に持った物を置く位置。目の前の少し下。

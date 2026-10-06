@@ -55,3 +55,8 @@ func test_案内は見た目のてっぺんの上に出る():
 	thing.add_child(mesh)
 	thing.show_prompt()
 	assert_almost_eq(thing.get_prompt_label().global_position.y, 0.3 + PromptLabel.MARGIN, 0.001)
+
+
+func test_働きかけた時の音は既定では調べる音():
+	var thing: Interactable = add_child_autofree(Interactable.new())
+	assert_eq(thing.interact_sound, &"interact")
