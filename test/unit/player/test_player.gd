@@ -725,6 +725,49 @@ func test_目の前のNPCを叩くと体力が減る():
 	assert_almost_eq(npc.health.current, _full_health() - Player.ATTACK_DAMAGE, 0.01, "立ったまま叩くと基本のダメージ")
 
 
+func test_何も狙っていない時の照準はふだんの見た目():
+	_add_floor()
+	var player := _add_blinker()
+	await wait_physics_frames(3)
+	assert_eq(player.crosshair.get_look(), Crosshair.Look.NORMAL)
+
+
+func test_目の前に叩けるNPCがいると照準が叩く見た目になる():
+	_add_floor()
+	_add_npc_ahead(1.5)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_eq(player.crosshair.get_look(), Crosshair.Look.ATTACK)
+
+
+func test_叩けない時は叩けるNPCがいても照準はふだんの見た目():
+	_add_floor()
+	_add_npc_ahead(1.5)
+	var player := _add_blinker()
+	player.attacks_enabled = false
+	await wait_physics_frames(5)
+	assert_eq(player.crosshair.get_look(), Crosshair.Look.NORMAL)
+
+
+func test_手に持てる物を見ていると照準が働きかける見た目になる():
+	var player: Player = add_child_autofree(Player.create())
+	_add_item_in_front(1.5)
+	await wait_physics_frames(3)
+	assert_eq(player.crosshair.get_look(), Crosshair.Look.INTERACT)
+
+
+func test_Eで働きかけられる物を見ていると照準が働きかける見た目になる():
+	var player: Player = add_child_autofree(Player.create())
+	var thing := Interactable.new()
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	thing.add_child(shape)
+	thing.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
+	add_child_autofree(thing)
+	await wait_physics_frames(3)
+	assert_eq(player.crosshair.get_look(), Crosshair.Look.INTERACT)
+
+
 func test_届かない所のNPCは叩けない():
 	_add_floor()
 	var npc := _add_npc_ahead(Player.ATTACK_RANGE + 1.0)

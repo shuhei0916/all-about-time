@@ -1,32 +1,49 @@
 class_name Crosshair
 extends CanvasLayer
-## 画面の中央に出す照準。白い小さな丸に、背景に紛れないよう暗い縁を付ける。
+## 画面の中央に出す照準。今狙っている物でできることに合わせて、絵を替える。
+## 絵は暗い縁取り付きで、背景に紛れない。
 
-## 丸の半径と線の太さ(ピクセル)。
-const RADIUS := 5.0
-const WIDTH := 1.5
-const COLOR := Color(1, 1, 1, 0.9)
-const OUTLINE_COLOR := Color(0, 0, 0, 0.6)
+## 照準の見た目。
+enum Look {
+	## 何も狙っていない。
+	NORMAL,
+	## E で働きかけられる物、手に持てる物を見ている。
+	INTERACT,
+	## 叩ける NPC が目の前にいる。
+	ATTACK,
+}
 
-## 丸を描く部品。画面の中央に置く。
-var mark: Control
+const TEXTURES := {
+	Look.NORMAL: preload("res://assets/ui/crosshairs/normal.png"),
+	Look.INTERACT: preload("res://assets/ui/crosshairs/interact.png"),
+	Look.ATTACK: preload("res://assets/ui/crosshairs/attack.png"),
+}
+## 画面に出す大きさ(ピクセル)。絵は2倍の大きさで描かれているので、半分に縮めて出す。
+const SIZE := 74.0
+
+## 照準の絵。画面の中央に置く。
+var mark: TextureRect
+var _look := Look.NORMAL
 
 
 func _init() -> void:
-	mark = Control.new()
+	mark = TextureRect.new()
 	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var size := Vector2.ONE * (RADIUS + WIDTH) * 2
-	mark.custom_minimum_size = size
+	mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	mark.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	mark.offset_left = -size.x / 2
-	mark.offset_top = -size.y / 2
-	mark.offset_right = size.x / 2
-	mark.offset_bottom = size.y / 2
-	mark.draw.connect(_draw_mark)
+	mark.offset_left = -SIZE / 2
+	mark.offset_top = -SIZE / 2
+	mark.offset_right = SIZE / 2
+	mark.offset_bottom = SIZE / 2
+	mark.texture = TEXTURES[_look]
 	add_child(mark)
 
 
-func _draw_mark() -> void:
-	var center := mark.size / 2
-	mark.draw_arc(center, RADIUS, 0, TAU, 32, OUTLINE_COLOR, WIDTH + 2.0, true)
-	mark.draw_arc(center, RADIUS, 0, TAU, 32, COLOR, WIDTH, true)
+func set_look(look: Look) -> void:
+	_look = look
+	mark.texture = TEXTURES[look]
+
+
+func get_look() -> Look:
+	return _look

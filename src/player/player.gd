@@ -63,6 +63,7 @@ var attacks_enabled := true
 @onready var _build_ray: RayCast3D = $Camera3D/BuildRay
 ## 今跳べる相手を、画面の上で囲む枠。
 @onready var blink_marker: BlinkMarker = $BlinkMarker
+@onready var crosshair: Crosshair = $Crosshair
 var _blink_cooldown := 0.0
 ## 駆け寄っている間の、道筋、経った時間、かかる時間。
 var _dash_path: DashPath
@@ -128,7 +129,7 @@ func _physics_process(delta: float) -> void:
 	if is_dashing():
 		_advance_dash(delta)
 		_carry_held_item()
-		_update_blink_marker()
+		_update_aim_marks()
 		return
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
@@ -145,7 +146,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	# 動いた後の位置に合わせる。動く前に合わせると、物が1フレーム遅れて付いてきて震える。
 	_carry_held_item()
-	_update_blink_marker()
+	_update_aim_marks()
 
 
 ## 照準の近く(BLINK_AIM_ANGLE 以内)の届く範囲にいて、間に壁などがなく見えている NPC のうち、
@@ -203,9 +204,19 @@ func blinkable_target() -> Npc:
 	return target
 
 
-## 今跳べる相手だけを、画面の上で枠で囲む。
-func _update_blink_marker() -> void:
+## 今跳べる相手だけを、画面の上で枠で囲む。照準も、今狙っている物でできることに合わせる。
+func _update_aim_marks() -> void:
 	blink_marker.mark(blinkable_target())
+	crosshair.set_look(_crosshair_look())
+
+
+## 今狙っている物でできることに合う照準の見た目。働きかけられる物を見ていれば、叩くより優先する。
+func _crosshair_look() -> Crosshair.Look:
+	if looking_at_item() or looking_at():
+		return Crosshair.Look.INTERACT
+	if attacks_enabled and _aimed_npc(ATTACK_RANGE, ATTACK_AIM_ANGLE):
+		return Crosshair.Look.ATTACK
+	return Crosshair.Look.NORMAL
 
 
 ## 待ち時間が終わっていて、今すぐ背後へ跳べるか。
