@@ -400,10 +400,18 @@ func _add_blinker() -> Player:
 
 func test_視線の先の届く範囲にいるNPCを狙える():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	assert_eq(player.blink_target(), npc)
+
+
+func test_背後へ跳べるのは20m先まで():
+	_add_floor()
+	_add_npc_ahead(25.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	assert_null(player.blink_target())
 
 
 func test_届く範囲より遠いNPCは狙えない():
@@ -424,7 +432,7 @@ func _finish_dash(player: Player) -> void:
 
 func test_背後へ跳ぶと駆け寄り終わった時にNPCの背後に立つ():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	assert_true(player.blink())
@@ -436,7 +444,7 @@ func test_背後へ跳ぶと駆け寄り終わった時にNPCの背後に立つ(
 
 func test_背後へ駆け寄り終わるとNPCの方を向く():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
@@ -448,7 +456,7 @@ func test_背後へ駆け寄り終わるとNPCの方を向く():
 
 func test_背後へ跳ぶと跳ぶ音が鳴る():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	watch_signals(Sfx)
@@ -470,7 +478,7 @@ func test_跳べない時にQを押すと跳べない音が鳴る():
 
 func test_NPCの背後に壁があって立てなければ跳ばない():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var wall := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -492,12 +500,12 @@ func test_NPCの背後に床がなければ跳ばない():
 	var ground := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = Vector3(10, 0.2, 20.3)
+	box.size = Vector3(10, 0.2, 10.3)
 	shape.shape = box
 	ground.add_child(shape)
-	ground.position = Vector3(0, -0.1, -10.0)
+	ground.position = Vector3(0, -0.1, -5.0)
 	add_child_autofree(ground)
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	assert_false(player.blink())
@@ -505,7 +513,7 @@ func test_NPCの背後に床がなければ跳ばない():
 
 func test_跳んだ直後は待ち時間が終わるまで続けて跳べない():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
@@ -516,7 +524,7 @@ func test_跳んだ直後は待ち時間が終わるまで続けて跳べない(
 
 func test_待ち時間が終わるとまた跳べる():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
@@ -537,18 +545,18 @@ func test_プレイヤーは画面の中央に照準を持つ():
 
 func test_跳んだ瞬間はまだ背後に着いておらず_駆け寄っている途中():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
 	assert_true(player.is_dashing())
 	await wait_physics_frames(5)
-	assert_between(player.global_position.z, -20.0, -1.0, "スタートと背後の間にいること")
+	assert_between(player.global_position.z, -10.0, -1.0, "スタートと背後の間にいること")
 
 
 func test_駆け寄る速さで背後までの距離を進む():
 	_add_floor()
-	_add_npc_ahead(30.0)
+	_add_npc_ahead(15.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	var start := player.global_position
@@ -562,7 +570,7 @@ func test_駆け寄る速さで背後までの距離を進む():
 
 func test_駆け寄っている間はキー入力で動かない():
 	_add_floor()
-	var npc := _add_npc_ahead(40.0)
+	var npc := _add_npc_ahead(18.0)
 	# 向こうを向いた相手の背後へは、まっすぐ駆け寄る。
 	npc.look_at(Vector3(0, 0, -80), Vector3.UP)
 	var player := _add_blinker()
@@ -576,7 +584,7 @@ func test_駆け寄っている間はキー入力で動かない():
 
 func test_駆け寄り終わると止まる():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
@@ -586,7 +594,7 @@ func test_駆け寄り終わると止まる():
 
 func test_駆け寄っても狙った相手を押しのけない():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	var start := npc.global_position
@@ -598,7 +606,7 @@ func test_駆け寄っても狙った相手を押しのけない():
 
 func test_駆け寄り終わると当たり判定が元に戻る():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	var layer := player.collision_layer
@@ -619,7 +627,7 @@ func _add_npc_off_aim(degrees: float, distance: float) -> Npc:
 
 func test_照準から少しずれたNPCも狙える():
 	_add_floor()
-	var npc := _add_npc_off_aim(Player.BLINK_AIM_ANGLE - 2.0, 20.0)
+	var npc := _add_npc_off_aim(Player.BLINK_AIM_ANGLE - 2.0, 10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	assert_eq(player.blink_target(), npc)
@@ -627,7 +635,7 @@ func test_照準から少しずれたNPCも狙える():
 
 func test_照準から大きくずれたNPCは狙えない():
 	_add_floor()
-	_add_npc_off_aim(Player.BLINK_AIM_ANGLE + 5.0, 20.0)
+	_add_npc_off_aim(Player.BLINK_AIM_ANGLE + 5.0, 10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	assert_null(player.blink_target())
@@ -635,7 +643,7 @@ func test_照準から大きくずれたNPCは狙えない():
 
 func test_間に壁があるNPCは狙えない():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(10.0)
 	var wall := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -651,7 +659,7 @@ func test_間に壁があるNPCは狙えない():
 
 func test_今跳べる相手は照準の枠で囲まれる():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	assert_eq(player.blink_marker.marked(), npc)
@@ -659,7 +667,7 @@ func test_今跳べる相手は照準の枠で囲まれる():
 
 func test_狙いが外れると枠が消える():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.rotate_y(PI / 2)
@@ -669,8 +677,8 @@ func test_狙いが外れると枠が消える():
 
 func test_待ち時間の間は枠で囲まない():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
-	var other := _add_npc_off_aim(180.0, 20.0)
+	var npc := _add_npc_ahead(10.0)
+	var other := _add_npc_off_aim(180.0, 10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
@@ -682,7 +690,7 @@ func test_待ち時間の間は枠で囲まない():
 
 func test_背後に立てない相手は枠で囲まない():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var wall := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -807,7 +815,7 @@ func test_待ち時間が過ぎるとまた叩ける():
 
 func test_背後へ駆け寄った直後に叩くと大きなダメージになる():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
@@ -825,10 +833,10 @@ func test_叩くには左クリックが割り当てられている():
 
 func test_背後へ駆け寄っている間は相手のNPCが立ち止まる():
 	_add_floor()
-	var npc := _add_npc_ahead(40.0)
+	var npc := _add_npc_ahead(18.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
-	npc.walk_to(Vector3(10, 0, -40))
+	npc.walk_to(Vector3(10, 0, -18))
 	player.blink()
 	var start := npc.global_position
 	var farthest := 0.0
@@ -840,7 +848,7 @@ func test_背後へ駆け寄っている間は相手のNPCが立ち止まる():
 
 func test_駆け寄り終わっても相手のNPCは止まったまま():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
@@ -855,7 +863,7 @@ func test_相手のNPCを止める時間は駆け寄る時間より長い():
 
 func test_こちらを向いたNPCの背後へは横をかすめて駆け寄る():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
@@ -872,7 +880,7 @@ func test_こちらを向いたNPCの背後へは横をかすめて駆け寄る(
 
 func test_駆け寄る間は向きがなめらかに変わる():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(18.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	var previous := -player.global_basis.z
@@ -890,7 +898,7 @@ func test_駆け寄る間は向きがなめらかに変わる():
 
 func test_駆け寄り終わるとNPCの背中を見ている():
 	_add_floor()
-	var npc := _add_npc_ahead(20.0)
+	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	# 照準から狙える範囲(BLINK_AIM_ANGLE)の内側で、少し見上げておく。
 	player.camera.rotation.x = deg_to_rad(5.0)
@@ -903,7 +911,7 @@ func test_駆け寄り終わるとNPCの背中を見ている():
 
 func test_駆け寄る間はマウスで向きを変えられない():
 	_add_floor()
-	_add_npc_ahead(20.0)
+	_add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()

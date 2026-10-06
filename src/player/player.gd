@@ -16,7 +16,7 @@ const STEP_HEIGHT := 0.35
 ## 段に乗った後、段の縁の角に引っかからないよう少しだけ余分に持ち上げる高さ。
 const STEP_CLEARANCE := 0.01
 ## 背後へ跳ぶ能力(Q)。狙える距離、相手の背後のどれだけ後ろに立つか、続けて使えない待ち時間。
-const BLINK_RANGE := 50.0
+const BLINK_RANGE := 20.0
 const BLINK_BEHIND_DISTANCE := 1.2
 const BLINK_COOLDOWN := 2.0
 ## 照準をぴったり合わせなくても狙えるよう、視線からこの角度(度)以内にいる相手を狙える。

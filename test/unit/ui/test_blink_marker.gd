@@ -98,3 +98,8 @@ func test_枠はマウスの操作を邪魔しない():
 	var marker := _make_marker()
 	assert_eq(marker.frame.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 	assert_eq(marker.key.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+
+
+func test_Qキーの絵は一番小さい枠の半分より小さく_遠くの相手を隠さない():
+	var marker := _make_marker()
+	assert_lt(marker.key.size.x, BlinkMarker.MIN_SIZE / 2.0)

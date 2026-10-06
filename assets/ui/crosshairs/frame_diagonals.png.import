@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b0jl6xhxr5u1a"
-path="res://.godot/imported/frame_corners.png-eebc8330ac44d196c1aa6d2b9ee234bb.ctex"
+uid="uid://cttpcoir8b8wh"
+path="res://.godot/imported/frame_diagonals.png-78c201c136a3d5a0801a797c08b48a86.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/crosshairs/frame_corners.png"
-dest_files=["res://.godot/imported/frame_corners.png-eebc8330ac44d196c1aa6d2b9ee234bb.ctex"]
+source_file="res://assets/ui/crosshairs/frame_diagonals.png"
+dest_files=["res://.godot/imported/frame_diagonals.png-78c201c136a3d5a0801a797c08b48a86.ctex"]
 
 [params]
 

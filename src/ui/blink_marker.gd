@@ -1,11 +1,11 @@
 class_name BlinkMarker
 extends CanvasLayer
-## Q で背後へ跳べる相手を、画面の上で四隅のかっこの枠で囲み、枠の中心に Q キーの絵を出す。
+## Q で背後へ跳べる相手を、画面の上で四隅から中心へ向かう斜めの線の枠で囲み、枠の中心に Q キーの絵を出す。
 ## 相手の体を囲む箱を画面に写し、その外側を囲む。囲む相手は mark で決める。
 
-## 枠の絵。四隅のかっこで、辺の真ん中は空いている。
-const FRAME_TEXTURE := preload("res://assets/ui/crosshairs/frame_corners.png")
-## 枠の絵の、伸ばさずに残す縁の幅(絵のピクセル)。四隅のかっこがこの中に収まる。
+## 枠の絵。四隅から中心へ向かう斜めの線で、辺の真ん中は空いている。
+const FRAME_TEXTURE := preload("res://assets/ui/crosshairs/frame_diagonals.png")
+## 枠の絵の、伸ばさずに残す縁の幅(絵のピクセル)。四隅の斜めの線がこの中に収まる。
 const FRAME_MARGIN := 64
 ## 枠の絵は2倍の大きさで描かれているので、半分に縮めて出す。
 ## 縁は伸ばさないので、縮めないと枠が縁の幅の2倍(128ピクセル)より小さくならない。
@@ -14,10 +14,11 @@ const FRAME_SCALE := 0.5
 const BODY_HEIGHT := 1.8
 const BODY_HALF_WIDTH := 0.35
 ## 体の箱から枠までの余白と、枠の一番小さい大きさ(ピクセル)。
+## 斜めの線は四隅から 26 ピクセルずつ伸びるので、小さすぎると線がつながって×に見える。
 const PADDING := 6.0
-const MIN_SIZE := 64.0
-## Q キーの絵の大きさ(ピクセル)。
-const KEY_SIZE := 40.0
+const MIN_SIZE := 96.0
+## Q キーの絵の大きさ(ピクセル)。枠が一番小さい時も、相手の体を隠さないよう小さくする。
+const KEY_SIZE := 24.0
 
 ## 相手を写すカメラ。
 var camera: Camera3D
