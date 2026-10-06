@@ -225,6 +225,15 @@ func _flat(point: Vector3) -> Vector2:
 	return Vector2(point.x, point.z)
 
 
+func test_空には夜空の絵が貼ってある():
+	var game := _load_game()
+	var environment: Environment = game.get_node("WorldEnvironment").environment
+	assert_eq(environment.background_mode, Environment.BG_SKY)
+	var material := environment.sky.sky_material as PanoramaSkyMaterial
+	assert_not_null(material, "全天の絵の空")
+	assert_eq(material.panorama.resource_path, "res://assets/sky/skybox-night.png")
+
+
 func test_牢屋は街の地図の刑務所の区画Jにある():
 	var game := _load_game()
 	var jail := _site_rect("J")

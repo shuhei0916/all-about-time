@@ -1,3 +1,7 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Kenney の素材パックの元のフォルダ。使うファイルだけを assets/ の下の別の場所へ写して使う。
+# 元のフォルダには .gdignore を置き、Godot にも取り込ませない。
+/assets/kenney_*/

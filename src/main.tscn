@@ -14,10 +14,17 @@
 [ext_resource type="PackedScene" path="res://src/world/duffel_bag.tscn" id="12_duffel_bag"]
 [ext_resource type="PackedScene" path="res://src/world/cash.tscn" id="13_cash"]
 [ext_resource type="PackedScene" path="res://src/world/city/city.tscn" id="14_city"]
+[ext_resource type="Texture2D" path="res://assets/sky/skybox-night.png" id="15_night_sky"]
+
+[sub_resource type="PanoramaSkyMaterial" id="night_sky_material"]
+panorama = ExtResource("15_night_sky")
+
+[sub_resource type="Sky" id="night_sky"]
+sky_material = SubResource("night_sky_material")
 
 [sub_resource type="Environment" id="env"]
-background_mode = 1
-background_color = Color(0.05, 0.05, 0.08, 1)
+background_mode = 2
+sky = SubResource("night_sky")
 ambient_light_source = 2
 ambient_light_color = Color(0.6, 0.6, 0.7, 1)
 ambient_light_energy = 0.6
