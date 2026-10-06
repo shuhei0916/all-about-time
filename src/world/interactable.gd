@@ -10,13 +10,13 @@ const INTERACT_KEY := "E"
 ## プレイヤーに見せる操作説明。
 @export var prompt := "調べる"
 
-var _prompt_label: Label3D
+var _prompt_label: PromptLabel
 
 
 ## 案内ラベルを返す。初回の呼び出しで作る。
 ## _init() で作ると、継承先が _init() を定義して super() を書き忘れただけで
 ## ラベルが作られなくなり、実行時まで気づけない。それを避けるため遅延して作る。
-func get_prompt_label() -> Label3D:
+func get_prompt_label() -> PromptLabel:
 	if _prompt_label == null:
 		_prompt_label = PromptLabel.new()
 		add_child(_prompt_label)
@@ -26,7 +26,7 @@ func get_prompt_label() -> Label3D:
 ## 案内を出す。プレイヤーが見ている間だけ呼ばれる。
 func show_prompt() -> void:
 	var label := get_prompt_label()
-	label.text = "%s: %s" % [INTERACT_KEY, prompt]
+	label.set_entries([[INTERACT_KEY, prompt]])
 	label.place_above(self)
 	label.show()
 

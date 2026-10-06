@@ -63,11 +63,9 @@ func hold() -> void:
 	super()
 
 
-func prompt_text() -> String:
-	var text := "%s　F: " % super()
-	if _open:
-		return text + "閉じる"
-	return text + "開ける（中身 %d）" % contents.size()
+func prompt_entries() -> Array:
+	var action := "閉じる" if _open else "開ける（中身 %d）" % contents.size()
+	return super() + [["F", action]]
 
 
 func _stow(item: PhysicalItem) -> void:

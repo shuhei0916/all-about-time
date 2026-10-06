@@ -20,7 +20,7 @@ func get_prompt_label() -> PromptLabel:
 ## 案内を出す。プレイヤーが見ている間だけ呼ばれる。
 func show_prompt() -> void:
 	var label := get_prompt_label()
-	label.text = prompt_text()
+	label.set_entries(prompt_entries())
 	label.place_above(self)
 	label.show()
 
@@ -35,9 +35,9 @@ func is_prompt_visible() -> bool:
 	return get_prompt_label().visible
 
 
-## 案内の文言。継承先で操作を足せる。
-func prompt_text() -> String:
-	return "E: %sを持つ" % item_name
+## 案内に出す、キーと操作の文言の組 [キー, 文言] の並び。継承先で操作を足せる。
+func prompt_entries() -> Array:
+	return [[Interactable.INTERACT_KEY, "%sを持つ" % item_name]]
 
 
 ## 手に持つ。持っている間は物理では動かず、持ち主が位置を動かす。

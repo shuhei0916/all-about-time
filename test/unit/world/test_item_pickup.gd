@@ -58,7 +58,7 @@ func test_拾われた後は二度拾えない():
 func test_案内には道具の名前が出る():
 	var pickup := _make_pickup("タバコ", 60.0)
 	pickup.show_prompt()
-	assert_eq(pickup.get_prompt_label().text, "E: タバコを拾う")
+	assert_eq(pickup.get_prompt_label().get_entries(), [["E", "タバコを拾う"]])
 
 
 func test_設計図を拾うと建てる建物を持った設計図が手に入る():

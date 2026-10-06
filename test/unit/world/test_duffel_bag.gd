@@ -140,13 +140,13 @@ func test_閉じたバッグの案内には開ける操作と中身の数が出�
 	bag.open()
 	_make_cash(INSIDE)
 	await _close_after_settling(bag)
-	assert_eq(bag.prompt_text(), "E: ダッフルバッグを持つ　F: 開ける（中身 1）")
+	assert_eq(bag.prompt_entries(), [["E", "ダッフルバッグを持つ"], ["F", "開ける（中身 1）"]])
 
 
 func test_開いたバッグの案内には閉じる操作が出る():
 	var bag := _make_bag()
 	bag.open()
-	assert_eq(bag.prompt_text(), "E: ダッフルバッグを持つ　F: 閉じる")
+	assert_eq(bag.prompt_entries(), [["E", "ダッフルバッグを持つ"], ["F", "閉じる"]])
 
 
 func test_開け閉めを切り替えられる():

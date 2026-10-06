@@ -23,13 +23,13 @@ func test_案内にはキーと文言が並ぶ():
 	var thing: Interactable = add_child_autofree(Interactable.new())
 	thing.prompt = "調べる"
 	thing.show_prompt()
-	assert_eq(thing.get_prompt_label().text, "E: 調べる")
+	assert_eq(thing.get_prompt_label().get_entries(), [["E", "調べる"]])
 
 
 func test_継承先で設定した文言が案内に出る():
 	var bed: Bed = add_child_autofree(Bed.new())
 	bed.show_prompt()
-	assert_eq(bed.get_prompt_label().text, "E: 刑期を全うする")
+	assert_eq(bed.get_prompt_label().get_entries(), [["E", "刑期を全うする"]])
 
 
 func test_案内は対象の上に浮かぶ():
@@ -39,7 +39,11 @@ func test_案内は対象の上に浮かぶ():
 
 func test_案内は常にカメラを向く():
 	var thing: Interactable = add_child_autofree(Interactable.new())
-	assert_ne(thing.get_prompt_label().billboard, BaseMaterial3D.BILLBOARD_DISABLED)
+	thing.show_prompt()
+	var parts := thing.get_prompt_label().get_children()
+	assert_false(parts.is_empty())
+	for part in parts:
+		assert_ne(part.billboard, BaseMaterial3D.BILLBOARD_DISABLED, part.name)
 
 
 func test_案内は見た目のてっぺんの上に出る():

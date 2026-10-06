@@ -15,7 +15,7 @@ func test_案内には手に持つ操作が出る():
 	var item := _make_item()
 	item.show_prompt()
 	assert_true(item.is_prompt_visible())
-	assert_eq(item.get_prompt_label().text, "E: 札束を持つ")
+	assert_eq(item.get_prompt_label().get_entries(), [["E", "札束を持つ"]])
 
 
 func test_案内を消せる():
