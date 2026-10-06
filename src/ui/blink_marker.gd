@@ -7,16 +7,16 @@ extends CanvasLayer
 const FRAME_TEXTURE := preload("res://assets/ui/crosshairs/frame_diagonals.png")
 ## 枠の絵の、伸ばさずに残す縁の幅(絵のピクセル)。四隅の斜めの線がこの中に収まる。
 const FRAME_MARGIN := 64
-## 枠の絵は2倍の大きさで描かれているので、半分に縮めて出す。
+## 枠の絵は2倍の大きさで描かれているので、縮めて出す。
 ## 縁は伸ばさないので、縮めないと枠が縁の幅の2倍(128ピクセル)より小さくならない。
-const FRAME_SCALE := 0.5
+const FRAME_SCALE := 0.375
 ## 相手の体を囲む箱。足元から上へ BODY_HEIGHT、左右と前後へ BODY_HALF_WIDTH(メートル)。
 const BODY_HEIGHT := 1.8
 const BODY_HALF_WIDTH := 0.35
 ## 体の箱から枠までの余白と、枠の一番小さい大きさ(ピクセル)。
-## 斜めの線は四隅から 26 ピクセルずつ伸びるので、小さすぎると線がつながって×に見える。
+## 斜めの線は四隅から 21 ピクセルの所まで伸びるので、小さすぎると線がつながって×に見える。
 const PADDING := 6.0
-const MIN_SIZE := 96.0
+const MIN_SIZE := 72.0
 ## Q キーの絵の大きさ(ピクセル)。枠が一番小さい時も、相手の体を隠さないよう小さくする。
 const KEY_SIZE := 24.0
 
