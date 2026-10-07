@@ -65,8 +65,9 @@ var attacks_enabled := true
 @onready var blink_marker: BlinkMarker = $BlinkMarker
 @onready var crosshair: Crosshair = $Crosshair
 var _blink_cooldown := 0.0
-## 駆け寄っている間の、道筋、経った時間、かかる時間。
-var _dash_path: DashPath
+## 駆け寄っている間の、駆け寄り始めた位置と着く位置、経った時間、かかる時間。
+var _dash_start := Vector3.ZERO
+var _dash_end := Vector3.ZERO
 var _dash_elapsed := 0.0
 var _dash_duration := 0.0
 ## 駆け寄り始めた時と、着いた時の、体の左右の向きとカメラの上下の向き(ラジアン)。
@@ -74,8 +75,6 @@ var _dash_start_yaw := 0.0
 var _dash_end_yaw := 0.0
 var _dash_start_pitch := 0.0
 var _dash_end_pitch := 0.0
-## 振り返る向き(DashTurn.turn_sign)。
-var _dash_turn_sign := 0
 ## 駆け寄っている間は当たり判定を外すので、元に戻すために覚えておく。
 var _dash_saved_layers := Vector2i.ZERO
 var _attack_cooldown := 0.0
@@ -225,6 +224,7 @@ func can_blink() -> bool:
 
 
 ## 狙っている NPC の背後へ、ものすごい速さでまっすぐ駆け寄り始める。跳べたかを返す。
+## 相手はご都合主義的に、その場でこちらに背を向ける。背後はこちらと相手を結ぶ線の上の、相手の手前になる。
 ## 待ち時間の間、狙う相手がいない時、背後に立つ場所がない時は跳ばない。
 func blink() -> bool:
 	if not can_blink() or is_dashing():
@@ -235,20 +235,22 @@ func blink() -> bool:
 	var landing: Variant = _blink_landing(target)
 	if landing == null:
 		return false
+	target.turn_back_to(global_position)
+	# 着く点は今の相手の位置で決めたので、駆け寄っている間とその後しばらくは、相手を止めておく。
+	# 止めている間は向きも変わらないので、背を向けたままになる。
+	target.hold_still_for(BLINK_HOLD_DURATION)
 	var to_target: Vector3 = target.global_position - landing
-	_dash_path = DashPath.new(global_position, landing, target.global_position)
+	_dash_start = global_position
+	_dash_end = landing
 	_dash_start_yaw = rotation.y
 	_dash_end_yaw = atan2(-to_target.x, -to_target.z)
-	_dash_turn_sign = DashTurn.turn_sign(-global_basis.z, _dash_path.passing_side())
-	# 着く点は今の相手の位置と向きで決めたので、駆け寄っている間とその後しばらくは、相手を止めておく。
-	target.hold_still_for(BLINK_HOLD_DURATION)
 	_dash_elapsed = 0.0
-	_dash_duration = maxf(_dash_path.length() / DASH_SPEED, 0.001)
+	_dash_duration = maxf(_dash_start.distance_to(_dash_end) / DASH_SPEED, 0.001)
 	_dash_start_pitch = camera.rotation.x
 	# 着いた時に、相手の背中(狙う高さ)を見る向き。
 	var eye_drop: float = target.global_position.y + BLINK_AIM_HEIGHT - (landing.y + EYE_HEIGHT)
 	_dash_end_pitch = atan2(eye_drop, Vector2(to_target.x, to_target.z).length())
-	velocity = _dash_path.direction_at(0.0) * DASH_SPEED
+	velocity = _dash_start.direction_to(_dash_end) * DASH_SPEED
 	Sfx.play(&"blink")
 	# 途中の物(狙った相手も含む)を押しのけないよう、駆け寄っている間は当たり判定を外す。
 	# 着く点に体が収まることは、駆け寄り始める前に確かめてある。
@@ -264,15 +266,16 @@ func is_dashing() -> bool:
 	return _dash_duration > 0.0
 
 
-## 駆け寄る途中を進める。途中の物には当たらず、道筋(DashPath)に沿って同じ速さで進む。
-## 体とカメラの向きは道筋とは切り離し、途中から、着いた時に相手の背中を見る向きへ回す(DashTurn)。
+## 駆け寄る途中を進める。途中の物には当たらず、着く点へまっすぐ同じ速さで進む。
+## 体とカメラの向きは、着いた時に相手の背中を見る向きへ少しずつ合わせる。
+## 相手はこちらに背を向けているので、向きはほとんど変わらない(照準のずれの分だけ)。
 func _advance_dash(delta: float) -> void:
 	_dash_elapsed += delta
 	var t := minf(_dash_elapsed / _dash_duration, 1.0)
-	global_position = _dash_path.position_at(t)
-	rotation.y = DashTurn.yaw_at(_dash_start_yaw, _dash_end_yaw, t, _dash_turn_sign)
-	camera.rotation.x = lerpf(_dash_start_pitch, _dash_end_pitch, DashTurn.weight(t))
-	velocity = _dash_path.direction_at(t) * DASH_SPEED
+	global_position = _dash_start.lerp(_dash_end, t)
+	rotation.y = lerp_angle(_dash_start_yaw, _dash_end_yaw, t)
+	camera.rotation.x = lerpf(_dash_start_pitch, _dash_end_pitch, t)
+	velocity = _dash_start.direction_to(_dash_end) * DASH_SPEED
 	if t < 1.0:
 		return
 	_dash_duration = 0.0
@@ -280,13 +283,16 @@ func _advance_dash(delta: float) -> void:
 	velocity = Vector3.ZERO
 	collision_layer = _dash_saved_layers.x
 	collision_mask = _dash_saved_layers.y
-	_dash_path = null
 
 
-## 相手の背後の立つ位置。床があり、体が収まる隙間がなければ null。
+## 相手の背後の立つ位置。相手はこちらに背を向けるので、相手からこちらへ向かう線の上の、
+## 相手から BLINK_BEHIND_DISTANCE の所。床があり、体が収まる隙間がなければ null。
 func _blink_landing(target: Npc) -> Variant:
-	# 相手の正面は -Z なので、背後は +Z の側。
-	var behind := target.global_position + target.global_basis.z * BLINK_BEHIND_DISTANCE
+	var toward_me := global_position - target.global_position
+	toward_me.y = 0.0
+	if toward_me.is_zero_approx():
+		toward_me = target.global_basis.z
+	var behind := target.global_position + toward_me.normalized() * BLINK_BEHIND_DISTANCE
 	var space := get_world_3d().direct_space_state
 	var down := PhysicsRayQueryParameters3D.create(behind + Vector3.UP * STEP_HEIGHT * 2, behind + Vector3.DOWN * STEP_HEIGHT * 2)
 	down.exclude = [get_rid(), target.get_rid()]

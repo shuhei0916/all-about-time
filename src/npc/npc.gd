@@ -125,6 +125,15 @@ func patrol(first: Vector3, second: Vector3) -> void:
 	walk_to(first)
 
 
+## その場で、point に背を向ける。高さの違いは向きに入れない。
+func turn_back_to(point: Vector3) -> void:
+	var away := global_position - point
+	away.y = 0.0
+	if away.is_zero_approx():
+		return
+	look_at(global_position + away, Vector3.UP)
+
+
 ## 目的地へ向かうのをやめ、その場に立ち止まる。往復もやめる。
 func stop() -> void:
 	_destination = null

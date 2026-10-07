@@ -338,3 +338,10 @@ func test_道のりの曲がり角を順にたどって歩く():
 	assert_true(passed_corner, "曲がり角を通る")
 	assert_almost_eq(npc.global_position, Vector3(2, 0, -2), Vector3.ONE * 0.3)
 	assert_eq(arrivals[0], 1, "着いたと知らせるのは最後の所だけ")
+
+
+func test_点に背を向けると_正面がその点と反対を向く():
+	var npc := _make_npc()
+	npc.global_position = Vector3(1, 0, 1)
+	npc.turn_back_to(Vector3(1, 5, 4))
+	assert_almost_eq(-npc.global_basis.z, Vector3(0, 0, -1), Vector3.ONE * 0.001, "高さの違いは向きに入れない")

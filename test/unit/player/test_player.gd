@@ -476,18 +476,44 @@ func test_跳べない時にQを押すと跳べない音が鳴る():
 	assert_signal_emitted_with_parameters(Sfx, "played", [&"denied"])
 
 
+## Q で背を向けた NPC の背後(こちら側)に立つ所へ、低い箱を置く。低いので、目から相手の胸への視線はさえぎらない。
+func _block_landing(npc: Npc) -> void:
+	var block := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(10, 1, 1)
+	shape.shape = box
+	block.add_child(shape)
+	var toward_player := -npc.global_position.normalized()
+	block.position = npc.global_position + toward_player * Player.BLINK_BEHIND_DISTANCE + Vector3.UP * 0.5
+	add_child_autofree(block)
+
+
+func test_Qで跳ぶと狙った相手がこちらに背を向ける():
+	_add_floor()
+	var npc := _add_npc_ahead(10.0)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	var away := npc.global_position - player.global_position
+	away.y = 0
+	assert_almost_eq(-npc.global_basis.z, away.normalized(), Vector3.ONE * 0.01, "相手の正面がこちらと反対を向く")
+
+
+func test_横を向いていた相手もQで跳ぶとこちらに背を向ける():
+	_add_floor()
+	var npc := _add_npc_ahead(10.0)
+	npc.look_at(npc.global_position + Vector3.RIGHT, Vector3.UP)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	assert_almost_eq(-npc.global_basis.z, Vector3.FORWARD, Vector3.ONE * 0.01)
+
+
 func test_NPCの背後に壁があって立てなければ跳ばない():
 	_add_floor()
 	var npc := _add_npc_ahead(10.0)
-	var wall := StaticBody3D.new()
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(10, 4, 1)
-	shape.shape = box
-	wall.add_child(shape)
-	# NPC の背後(+Z の側)に壁を置く。
-	wall.position = npc.global_position + npc.global_basis.z * Player.BLINK_BEHIND_DISTANCE + Vector3.UP * 2
-	add_child_autofree(wall)
+	_block_landing(npc)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	var start := player.global_position
@@ -496,14 +522,14 @@ func test_NPCの背後に壁があって立てなければ跳ばない():
 
 
 func test_NPCの背後に床がなければ跳ばない():
-	# 床は NPC の足元までしかない。
+	# 床はプレイヤーの足元から、背を向けた NPC の背後(こちら側)に立つ所の手前までしかない。
 	var ground := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = Vector3(10, 0.2, 10.3)
+	box.size = Vector3(10, 0.2, 8.5)
 	shape.shape = box
 	ground.add_child(shape)
-	ground.position = Vector3(0, -0.1, -5.0)
+	ground.position = Vector3(0, -0.1, -3.75)
 	add_child_autofree(ground)
 	_add_npc_ahead(10.0)
 	var player := _add_blinker()
@@ -691,14 +717,7 @@ func test_待ち時間の間は枠で囲まない():
 func test_背後に立てない相手は枠で囲まない():
 	_add_floor()
 	var npc := _add_npc_ahead(10.0)
-	var wall := StaticBody3D.new()
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(10, 4, 1)
-	shape.shape = box
-	wall.add_child(shape)
-	wall.position = npc.global_position + npc.global_basis.z * Player.BLINK_BEHIND_DISTANCE + Vector3.UP * 2
-	add_child_autofree(wall)
+	_block_landing(npc)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	assert_null(player.blink_marker.marked())
@@ -861,7 +880,7 @@ func test_相手のNPCを止める時間は駆け寄る時間より長い():
 	assert_gt(Player.BLINK_HOLD_DURATION, longest_dash)
 
 
-func test_こちらを向いたNPCの背後へは横をかすめて駆け寄る():
+func test_駆け寄る道筋はまっすぐで_相手の体をすり抜けない():
 	_add_floor()
 	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
@@ -874,26 +893,24 @@ func test_こちらを向いたNPCの背後へは横をかすめて駆け寄る(
 		var apart := player.global_position - npc.global_position
 		closest = minf(closest, Vector2(apart.x, apart.z).length())
 		await get_tree().physics_frame
-	assert_gt(closest, Player.RADIUS * 2.0, "NPC の体をすり抜けない")
-	assert_lt(widest, 2.0, "大きくは回り込まない")
+	assert_lt(widest, 0.01, "横にそれない")
+	assert_gt(closest, Player.BLINK_BEHIND_DISTANCE - 0.05, "相手の手前で止まる")
 
 
-func test_駆け寄る間は向きがなめらかに変わる():
+func test_駆け寄る間に向きはほとんど変わらない():
 	_add_floor()
-	_add_npc_ahead(18.0)
+	_add_npc_ahead(10.0)
 	var player := _add_blinker()
+	# 照準から狙える範囲(BLINK_AIM_ANGLE)の内側で、少し横を向いておく。
+	player.rotate_y(deg_to_rad(5.0))
 	await wait_physics_frames(5)
-	var previous := -player.global_basis.z
+	var start := -player.global_basis.z
 	player.blink()
 	var largest := 0.0
 	while player.is_dashing():
-		# wait_physics_frames(1) は2フレーム待つので、1フレームずつ待つ。
 		await get_tree().physics_frame
-		var facing := -player.global_basis.z
-		largest = maxf(largest, rad_to_deg(previous.angle_to(facing)))
-		previous = facing
-	# 振り返りは道のりの最後の2割(DashTurn.TURN_START = 0.8)にまとめているので、1フレームで60度ほど回る。
-	assert_lt(largest, 70.0, "1フレームで変わる向き(度)")
+		largest = maxf(largest, rad_to_deg(start.angle_to(-player.global_basis.z)))
+	assert_lt(largest, Player.BLINK_AIM_ANGLE, "向きの変わる大きさ(度)")
 
 
 func test_駆け寄り終わるとNPCの背中を見ている():
