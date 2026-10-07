@@ -494,10 +494,12 @@ func test_Qで跳ぶと狙った相手がこちらに背を向ける():
 	var npc := _add_npc_ahead(10.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
-	player.blink()
 	var away := npc.global_position - player.global_position
 	away.y = 0
-	assert_almost_eq(-npc.global_basis.z, away.normalized(), Vector3.ONE * 0.01, "相手の正面がこちらと反対を向く")
+	player.blink()
+	assert_gt(rad_to_deg((-npc.global_basis.z).angle_to(away)), 90.0, "Q を押した瞬間は、まだ回り始めたところ")
+	await _finish_dash(player)
+	assert_almost_eq(-npc.global_basis.z, away.normalized(), Vector3.ONE * 0.01, "着いた時には、相手の正面がこちらと反対を向いている")
 
 
 func test_横を向いていた相手もQで跳ぶとこちらに背を向ける():
@@ -507,6 +509,7 @@ func test_横を向いていた相手もQで跳ぶとこちらに背を向ける
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	player.blink()
+	await _finish_dash(player)
 	assert_almost_eq(-npc.global_basis.z, Vector3.FORWARD, Vector3.ONE * 0.01)
 
 
@@ -576,22 +579,47 @@ func test_跳んだ瞬間はまだ背後に着いておらず_駆け寄ってい
 	await wait_physics_frames(5)
 	player.blink()
 	assert_true(player.is_dashing())
-	await wait_physics_frames(5)
+	# wait_physics_frames(1) は2フレーム待つので、1フレームずつ待つ。
+	for i in 2:
+		await get_tree().physics_frame
+	assert_true(player.is_dashing())
 	assert_between(player.global_position.z, -10.0, -1.0, "スタートと背後の間にいること")
 
 
-func test_駆け寄る速さで背後までの距離を進む():
+## 相手まで distance の所から跳び、着くまでにかかった物理フレームの数。
+func _frames_to_arrive(distance: float) -> int:
+	var floor_body := _add_floor()
+	var npc := _add_npc_ahead(distance)
+	var player := _add_blinker()
+	await wait_physics_frames(5)
+	player.blink()
+	var frames := 0
+	while player.is_dashing():
+		await get_tree().physics_frame
+		frames += 1
+	# 次に測る時に、視線や足場の邪魔にならないよう片付ける。
+	for body: Node in [floor_body, npc, player]:
+		body.free()
+	return frames
+
+
+func test_着くまでの時間は相手との距離によらず一定():
+	var expected := roundi(Player.DASH_DURATION * Engine.physics_ticks_per_second)
+	var near: int = await _frames_to_arrive(4.0)
+	var far: int = await _frames_to_arrive(18.0)
+	assert_almost_eq(near, expected, 1)
+	assert_almost_eq(far, expected, 1)
+
+
+func test_遠い相手ほど速く駆け寄る():
 	_add_floor()
 	_add_npc_ahead(15.0)
 	var player := _add_blinker()
 	await wait_physics_frames(5)
 	var start := player.global_position
 	player.blink()
-	await wait_physics_frames(6)
-	var expected: float = Player.DASH_SPEED * 6.0 / Engine.physics_ticks_per_second
-	# 待った物理フレームの数は1つ前後することがあるので、1フレームぶんの誤差を許す。
-	var per_frame: float = Player.DASH_SPEED / Engine.physics_ticks_per_second
-	assert_almost_eq(start.distance_to(player.global_position), expected, per_frame * 1.5)
+	var distance := start.distance_to(player._dash_end)
+	assert_almost_eq(player.velocity.length(), distance / Player.DASH_DURATION, 0.01)
 
 
 func test_駆け寄っている間はキー入力で動かない():
@@ -876,8 +904,7 @@ func test_駆け寄り終わっても相手のNPCは止まったまま():
 
 
 func test_相手のNPCを止める時間は駆け寄る時間より長い():
-	var longest_dash := Player.BLINK_RANGE * 2.0 / Player.DASH_SPEED
-	assert_gt(Player.BLINK_HOLD_DURATION, longest_dash)
+	assert_gt(Player.BLINK_HOLD_DURATION, Player.DASH_DURATION)
 
 
 func test_駆け寄る道筋はまっすぐで_相手の体をすり抜けない():

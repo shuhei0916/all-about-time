@@ -345,3 +345,24 @@ func test_点に背を向けると_正面がその点と反対を向く():
 	npc.global_position = Vector3(1, 0, 1)
 	npc.turn_back_to(Vector3(1, 5, 4))
 	assert_almost_eq(-npc.global_basis.z, Vector3(0, 0, -1), Vector3.ONE * 0.001, "高さの違いは向きに入れない")
+
+
+func test_時間をかけて点に背を向けると_その時間をかけて少しずつ回る():
+	var npc := _make_npc()
+	# 正面(-Z)の先の点に背を向けるので、半回転する。
+	npc.turn_back_to(Vector3(0, 0, -5), 0.5)
+	assert_true(npc.is_turning())
+	simulate(npc, 15, 1.0 / 60.0)
+	var turned := rad_to_deg(Vector3.FORWARD.angle_to(-npc.global_basis.z))
+	assert_almost_eq(turned, 90.0, 10.0, "半分の時間で半分ほど回る")
+	simulate(npc, 20, 1.0 / 60.0)
+	assert_false(npc.is_turning())
+	assert_almost_eq(-npc.global_basis.z, Vector3.BACK, Vector3.ONE * 0.001)
+
+
+func test_止められていても回り続ける():
+	var npc := _make_npc()
+	npc.hold_still_for(10.0)
+	npc.turn_back_to(Vector3(0, 0, -5), 0.1)
+	simulate(npc, 10, 1.0 / 60.0)
+	assert_almost_eq(-npc.global_basis.z, Vector3.BACK, Vector3.ONE * 0.001)

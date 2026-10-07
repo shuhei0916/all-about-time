@@ -23,8 +23,9 @@ const BLINK_COOLDOWN := 2.0
 const BLINK_AIM_ANGLE := 10.0
 ## 相手のどこを狙うか(足元からの高さ)。胸のあたり。
 const BLINK_AIM_HEIGHT := 1.2
-## 背後へ駆け寄る速さ(メートル/秒)。瞬間移動ではなく、ものすごい速さで駆け寄る。
-const DASH_SPEED := 60.0
+## 背後へ駆け寄るのにかける秒数。相手との距離によらず同じで、遠いほど速く駆け寄る。
+## 瞬間移動ではなく、ものすごい速さで駆け寄る。相手もこの間に回って背中を見せる。
+const DASH_DURATION := 0.1
 ## Q を押してから、相手の NPC をその場に止めておく秒数。駆け寄っている間に着く点がずれないよう、
 ## 駆け寄る時間より長くする。
 const BLINK_HOLD_DURATION := 10.0
@@ -69,6 +70,8 @@ var _blink_cooldown := 0.0
 var _dash_start := Vector3.ZERO
 var _dash_end := Vector3.ZERO
 var _dash_elapsed := 0.0
+## 駆け寄る速さ(メートル/秒)。距離を DASH_DURATION で割ったもの。
+var _dash_speed := 0.0
 var _dash_duration := 0.0
 ## 駆け寄り始めた時と、着いた時の、体の左右の向きとカメラの上下の向き(ラジアン)。
 var _dash_start_yaw := 0.0
@@ -178,7 +181,7 @@ func attack() -> Npc:
 	var target := _aimed_npc(ATTACK_RANGE, ATTACK_AIM_ANGLE)
 	if target == null:
 		return null
-	var speed := maxf(Vector2(velocity.x, velocity.z).length(), MeleeDamage.momentum(DASH_SPEED, _since_dash))
+	var speed := maxf(Vector2(velocity.x, velocity.z).length(), MeleeDamage.momentum(_dash_speed, _since_dash))
 	target.take_hit(MeleeDamage.compute(ATTACK_DAMAGE, speed))
 	return target
 
@@ -224,7 +227,7 @@ func can_blink() -> bool:
 
 
 ## 狙っている NPC の背後へ、ものすごい速さでまっすぐ駆け寄り始める。跳べたかを返す。
-## 相手はご都合主義的に、その場でこちらに背を向ける。背後はこちらと相手を結ぶ線の上の、相手の手前になる。
+## 相手はご都合主義的に、駆け寄っている間にその場で回り、こちらに背を向ける。背後はこちらと相手を結ぶ線の上の、相手の手前になる。
 ## 待ち時間の間、狙う相手がいない時、背後に立つ場所がない時は跳ばない。
 func blink() -> bool:
 	if not can_blink() or is_dashing():
@@ -235,7 +238,7 @@ func blink() -> bool:
 	var landing: Variant = _blink_landing(target)
 	if landing == null:
 		return false
-	target.turn_back_to(global_position)
+	target.turn_back_to(global_position, DASH_DURATION)
 	# 着く点は今の相手の位置で決めたので、駆け寄っている間とその後しばらくは、相手を止めておく。
 	# 止めている間は向きも変わらないので、背を向けたままになる。
 	target.hold_still_for(BLINK_HOLD_DURATION)
@@ -245,12 +248,13 @@ func blink() -> bool:
 	_dash_start_yaw = rotation.y
 	_dash_end_yaw = atan2(-to_target.x, -to_target.z)
 	_dash_elapsed = 0.0
-	_dash_duration = maxf(_dash_start.distance_to(_dash_end) / DASH_SPEED, 0.001)
+	_dash_duration = DASH_DURATION
+	_dash_speed = _dash_start.distance_to(_dash_end) / DASH_DURATION
 	_dash_start_pitch = camera.rotation.x
 	# 着いた時に、相手の背中(狙う高さ)を見る向き。
 	var eye_drop: float = target.global_position.y + BLINK_AIM_HEIGHT - (landing.y + EYE_HEIGHT)
 	_dash_end_pitch = atan2(eye_drop, Vector2(to_target.x, to_target.z).length())
-	velocity = _dash_start.direction_to(_dash_end) * DASH_SPEED
+	velocity = _dash_start.direction_to(_dash_end) * _dash_speed
 	Sfx.play(&"blink")
 	# 途中の物(狙った相手も含む)を押しのけないよう、駆け寄っている間は当たり判定を外す。
 	# 着く点に体が収まることは、駆け寄り始める前に確かめてある。
@@ -275,7 +279,7 @@ func _advance_dash(delta: float) -> void:
 	global_position = _dash_start.lerp(_dash_end, t)
 	rotation.y = lerp_angle(_dash_start_yaw, _dash_end_yaw, t)
 	camera.rotation.x = lerpf(_dash_start_pitch, _dash_end_pitch, t)
-	velocity = _dash_start.direction_to(_dash_end) * DASH_SPEED
+	velocity = _dash_start.direction_to(_dash_end) * _dash_speed
 	if t < 1.0:
 		return
 	_dash_duration = 0.0

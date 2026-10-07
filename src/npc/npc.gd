@@ -54,6 +54,11 @@ var _route: Array[Vector3] = []
 var _stagger_left := 0.0
 ## 止められている残りの秒数。止められている間は、その場で動かず向きも変えない。
 var _hold_left := 0.0
+## turn_back_to で回っている間の、回り始めと回り終わりの向き(ラジアン)、経った時間、かかる時間。
+var _turn_from := 0.0
+var _turn_to := 0.0
+var _turn_elapsed := 0.0
+var _turn_duration := 0.0
 
 
 func _init() -> void:
@@ -125,13 +130,27 @@ func patrol(first: Vector3, second: Vector3) -> void:
 	walk_to(first)
 
 
-## その場で、point に背を向ける。高さの違いは向きに入れない。
-func turn_back_to(point: Vector3) -> void:
+## その場で、point に背を向ける。seconds をかけて少しずつ回り、0 ならすぐに向く。
+## 回っている間は、止められていても回り続ける。高さの違いは向きに入れない。
+func turn_back_to(point: Vector3, seconds := 0.0) -> void:
 	var away := global_position - point
 	away.y = 0.0
 	if away.is_zero_approx():
 		return
-	look_at(global_position + away, Vector3.UP)
+	var yaw := atan2(-away.x, -away.z)
+	if seconds <= 0.0:
+		rotation.y = yaw
+		_turn_duration = 0.0
+		return
+	_turn_from = rotation.y
+	_turn_to = yaw
+	_turn_elapsed = 0.0
+	_turn_duration = seconds
+
+
+## turn_back_to で回っている途中か。
+func is_turning() -> bool:
+	return _turn_duration > 0.0
 
 
 ## 目的地へ向かうのをやめ、その場に立ち止まる。往復もやめる。
@@ -175,6 +194,7 @@ func can_see(point: Vector3, ignore: Array[RID] = []) -> bool:
 func _physics_process(delta: float) -> void:
 	if is_dead():
 		return
+	_advance_turn(delta)
 	# よろけは止められている間も時間が進み、少しの間で終わる。
 	var staggering := _stagger_left > 0.0
 	_stagger_left = maxf(_stagger_left - delta, 0.0)
@@ -223,6 +243,17 @@ func _walk() -> void:
 	var direction := to_destination.normalized()
 	velocity = direction * speed
 	look_at(global_position + direction, Vector3.UP)
+
+
+## turn_back_to で回っている途中なら、回り終わりの向きへ進める。
+func _advance_turn(delta: float) -> void:
+	if not is_turning():
+		return
+	_turn_elapsed += delta
+	var t := minf(_turn_elapsed / _turn_duration, 1.0)
+	rotation.y = lerp_angle(_turn_from, _turn_to, t)
+	if t >= 1.0:
+		_turn_duration = 0.0
 
 
 ## 往復していれば、着いた所と反対の点へ向かう。
