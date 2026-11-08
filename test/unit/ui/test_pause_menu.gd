@@ -70,10 +70,10 @@ func test_ボタンの文言():
 	assert_eq([menu.resume_button.text, menu.quit_button.text], ["ゲームに戻る", "ゲームを閉じる"])
 
 
-func test_開くと開く音が鳴り_閉じると閉じる音が鳴る():
+## 開け閉めの音は、他の音と比べて違和感が大きかったので鳴らさない(ユーザーの判断)。
+func test_開け閉めしても音は鳴らない():
 	var menu := _make_menu()
 	watch_signals(Sfx)
 	menu.open()
-	assert_signal_emitted_with_parameters(Sfx, "played", [&"menu_open"])
 	menu.close()
-	assert_signal_emitted_with_parameters(Sfx, "played", [&"menu_close"])
+	assert_signal_not_emitted(Sfx, "played")

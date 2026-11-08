@@ -64,7 +64,6 @@ func _unhandled_input(event: InputEvent) -> void:
 func open() -> void:
 	_open = true
 	visible = true
-	Sfx.play(&"menu_open")
 	get_tree().paused = true
 	_set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	resume_button.grab_focus()
@@ -74,7 +73,6 @@ func open() -> void:
 func close() -> void:
 	_open = false
 	visible = false
-	Sfx.play(&"menu_close")
 	get_tree().paused = false
 	_set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 

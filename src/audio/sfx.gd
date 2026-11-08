@@ -22,9 +22,6 @@ const SOUNDS := {
 	&"blink": preload("res://assets/sounds/ui/glitch_001.ogg"),
 	## Q を押したが跳べない。
 	&"denied": preload("res://assets/sounds/ui/error_004.ogg"),
-	## Esc メニューを開く、閉じる。
-	&"menu_open": preload("res://assets/sounds/ui/maximize_002.ogg"),
-	&"menu_close": preload("res://assets/sounds/ui/minimize_002.ogg"),
 }
 ## 同時に重ねて鳴らせる音の数。
 const VOICES := 8
