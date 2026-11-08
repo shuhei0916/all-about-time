@@ -968,3 +968,8 @@ func test_マウスを動かすと上下を向く():
 	var player: Player = add_child_autofree(Player.create())
 	player.look(Vector2(0, 100))
 	assert_lt(player.camera.rotation.x, 0.0, "マウスを下へ動かすと下を向く")
+
+
+func test_プレイヤーは対になるドアを通り抜けられる():
+	var player: Player = add_child_autofree(Player.create())
+	assert_true(player.is_in_group(PassageDoor.TRAVELER_GROUP))
