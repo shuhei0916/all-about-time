@@ -245,3 +245,30 @@ func test_牢屋は街の地図の刑務所の区画Jにある():
 func test_2世代目は街の地図の空き区画Lから始まる():
 	var game := _load_game()
 	assert_true(_site_rect("L").has_point(_flat(game.later_spawn_position)))
+
+
+func _pocket_room(game: Game) -> Node3D:
+	return game.get_node("PocketRoom")
+
+
+func test_空き区画Lには外から見えるより広い部屋の小屋がある():
+	var game := _load_game(true)
+	var shed: Node3D = _pocket_room(game).get_node("Shed")
+	assert_true(_site_rect("L").has_point(_flat(shed.global_position)))
+
+
+func test_小屋のドアをくぐると地下の広い部屋に出て_くぐり直すと街へ戻る():
+	var game := _load_game(true)
+	var entrance: PassageDoor = _pocket_room(game).get_node("EntranceDoor")
+	var player := game.player
+	var inward := -entrance.global_transform.basis.z
+	player.global_position = entrance.global_position + Vector3(0, 0.2, 0) - inward * 0.2
+	await wait_physics_frames(2)
+	player.global_position += inward * 0.4
+	await wait_physics_frames(2)
+	assert_lt(player.global_position.y, -100.0, "地下の広い部屋にいる")
+	var hall_door: PassageDoor = entrance.destination
+	player.global_position -= hall_door.global_transform.basis.z * 0.4
+	await wait_physics_frames(2)
+	assert_gt(player.global_position.y, -1.0, "街に戻った")
+	assert_lt(player.global_position.distance_to(entrance.global_position), 1.0, "小屋の前にいる")
