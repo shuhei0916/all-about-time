@@ -272,3 +272,11 @@ func test_小屋のドアをくぐると地下の広い部屋に出て_くぐり
 	await wait_physics_frames(2)
 	assert_gt(player.global_position.y, -1.0, "街に戻った")
 	assert_lt(player.global_position.distance_to(entrance.global_position), 1.0, "小屋の前にいる")
+
+
+func test_小屋と広間の戸口の壁は覗いた景色を遮らないよう覗くカメラに映さない():
+	var game := _load_game(true)
+	for path in ["Shed", "Hall/SouthWall"]:
+		var wall: CSGCombiner3D = _pocket_room(game).get_node(path)
+		assert_true(wall.get_layer_mask_value(PassageDoor.HIDDEN_LAYER), path)
+		assert_false(wall.get_layer_mask_value(1), path)

@@ -75,3 +75,61 @@ func test_通り抜ける側の印がない物は移らない():
 	body.global_position = Vector3(0, 0, -0.1)
 	await wait_physics_frames(2)
 	assert_almost_eq(body.global_position, Vector3(0, 0, -0.1), Vector3.ONE * 0.001)
+
+
+## こちらの世界を見ているカメラ(プレイヤーの目の代わり)。
+func _add_viewer(at: Vector3) -> Camera3D:
+	var camera := Camera3D.new()
+	add_child_autofree(camera)
+	camera.global_position = at
+	camera.make_current()
+	return camera
+
+
+func test_戸口には戸口と同じ大きさの覗き窓がある():
+	var doors := _add_pair()
+	var quad := doors[0].window.mesh as QuadMesh
+	assert_eq(quad.size, doors[0].size)
+
+
+func test_手前から見ると覗くカメラはこちらのカメラを対のドアの裏へ写した所にある():
+	var doors := _add_pair()
+	_add_viewer(Vector3(0, 1.6, 3))
+	await wait_process_frames(2)
+	assert_almost_eq(doors[0].view_camera.global_position, Vector3(-3, -98.4, 0), Vector3.ONE * 0.001)
+
+
+func test_覗くカメラはドアの裏に隠す層を映さない():
+	var doors := _add_pair()
+	_add_viewer(Vector3(0, 1.6, 3))
+	await wait_process_frames(2)
+	assert_false(doors[0].view_camera.get_cull_mask_value(PassageDoor.HIDDEN_LAYER))
+	assert_true(doors[0].view_camera.get_cull_mask_value(1), "ふつうの物は映す")
+
+
+func test_手前から見ている時は戸口の向こうを描く():
+	var doors := _add_pair()
+	_add_viewer(Vector3(0, 1.6, 3))
+	await wait_process_frames(2)
+	assert_eq(doors[0].view_port.render_target_update_mode, SubViewport.UPDATE_ALWAYS)
+	assert_true(doors[0].window.visible)
+
+
+func test_裏から見ている時は戸口の向こうを描かない():
+	var doors := _add_pair()
+	_add_viewer(Vector3(0, 1.6, -3))
+	await wait_process_frames(2)
+	assert_eq(doors[0].view_port.render_target_update_mode, SubViewport.UPDATE_DISABLED)
+	assert_false(doors[0].window.visible)
+
+
+func test_遠すぎる時は戸口の向こうを描かない():
+	var doors := _add_pair()
+	_add_viewer(Vector3(0, 1.6, PassageDoor.MAX_VIEW_DISTANCE + 1.0))
+	await wait_process_frames(2)
+	assert_eq(doors[0].view_port.render_target_update_mode, SubViewport.UPDATE_DISABLED)
+
+
+func test_ドアは通り抜ける物が動いた後に通り抜けを調べる():
+	var doors := _add_pair()
+	assert_gt(doors[0].process_physics_priority, 0, "同じ物理フレームのうちに移し、くぐりかけの絵を出さない")

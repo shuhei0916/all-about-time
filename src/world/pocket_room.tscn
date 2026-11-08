@@ -17,6 +17,7 @@ roughness = 0.6
 [node name="PocketRoom" type="Node3D"]
 
 [node name="Shed" type="CSGCombiner3D" parent="."]
+layers = 1024
 use_collision = true
 
 [node name="Outer" type="CSGBox3D" parent="Shed"]
@@ -49,20 +50,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -200, 0)
 use_collision = true
 
 [node name="Outer" type="CSGBox3D" parent="Hall/Shell"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -29.5)
-size = Vector3(32, 12, 63)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -30.5)
+size = Vector3(32, 12, 61)
 material = SubResource("mat_hall")
 
 [node name="Inner" type="CSGBox3D" parent="Hall/Shell"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -30)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -29.75)
 operation = 2
-size = Vector3(30, 10, 60)
-material = SubResource("mat_hall")
-
-[node name="Doorway" type="CSGBox3D" parent="Hall/Shell"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.6)
-operation = 2
-size = Vector3(1, 2.1, 1.2)
+size = Vector3(30, 10, 60.5)
 material = SubResource("mat_hall")
 
 [node name="PillarW1" type="CSGCylinder3D" parent="Hall/Shell"]
@@ -120,6 +115,21 @@ radius = 0.6
 height = 10.0
 sides = 16
 material = SubResource("mat_pillar")
+
+[node name="SouthWall" type="CSGCombiner3D" parent="Hall"]
+layers = 1024
+use_collision = true
+
+[node name="Wall" type="CSGBox3D" parent="Hall/SouthWall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 1)
+size = Vector3(32, 12, 2)
+material = SubResource("mat_hall")
+
+[node name="Doorway" type="CSGBox3D" parent="Hall/SouthWall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0.6)
+operation = 2
+size = Vector3(1, 2.1, 1.2)
+material = SubResource("mat_hall")
 
 [node name="HallDoor" type="Node3D" parent="Hall" node_paths=PackedStringArray("destination")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, -0.2, 0)
