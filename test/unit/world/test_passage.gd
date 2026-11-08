@@ -71,3 +71,38 @@ func test_斜めに越える時は面を越えた点が戸口の中かで決ま�
 
 func test_瞬間移動のように一度に大きく動いた時はくぐったことにならない():
 	assert_false(_doorway().has_crossed(Vector3(10, 0, 50), Vector3(10, 0, -50)))
+
+
+func test_戸口の手前にいる人からは戸口の向こうが見える():
+	var passage := _doorway()
+	assert_true(passage.is_seen_from(Vector3(10, 1.6, 3)))
+
+
+func test_戸口の裏にいる人からは戸口の向こうは見えない():
+	var passage := _doorway()
+	assert_false(passage.is_seen_from(Vector3(10, 1.6, -3)))
+
+
+## x=10 の戸口を、正面 z=3 の目の高さから -Z へ向いて見る視点。
+func _viewer_in_front() -> Transform3D:
+	return Transform3D(Basis.IDENTITY, Vector3(10, 1.6, 3))
+
+
+func test_覗く時の近クリップは戸口の一番近い角の少し手前にする():
+	var near := _doorway().near_clip(_viewer_in_front())
+	assert_lt(near, 3.0, "戸口の面(奥行き3m)より手前")
+	assert_gt(near, 2.8, "戸口の面のすぐ手前")
+
+
+func test_戸口のすぐそばでは近クリップは下限より短くならない():
+	var viewer := Transform3D(Basis.IDENTITY, Vector3(10, 1.6, 0.01))
+	assert_eq(_doorway().near_clip(viewer), Passage.MIN_NEAR_CLIP)
+
+
+func test_斜めから見ると近クリップは近い方の角に合わせる():
+	var viewer := Transform3D(Basis(Vector3.UP, deg_to_rad(30)), Vector3(12, 1.6, 3))
+	var nearest := INF
+	for corner: Vector3 in [Vector3(9.5, 0, 0), Vector3(10.5, 0, 0), Vector3(9.5, 2, 0), Vector3(10.5, 2, 0)]:
+		nearest = minf(nearest, -(viewer.affine_inverse() * corner).z)
+	assert_lt(_doorway().near_clip(viewer), nearest)
+	assert_gt(_doorway().near_clip(viewer), nearest - 0.2)

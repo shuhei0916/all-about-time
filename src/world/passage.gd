@@ -9,6 +9,10 @@ const DEFAULT_SIZE := Vector2(1.0, 2.1)
 ## 1回の動きでこれより遠くへ動いたら、歩いたのではなく瞬間移動したとみなす(メートル)。
 ## 出口へ移した直後に、出口側のドアが移る前の位置からの動きをくぐったと取り違えないため。
 const MAX_STEP := 5.0
+## 戸口の向こうを覗くカメラの近クリップの下限(メートル)。
+const MIN_NEAR_CLIP := 0.05
+## 覗くカメラの近クリップを、戸口の一番近い角からどれだけ手前にするか(メートル)。
+const NEAR_CLIP_MARGIN := 0.1
 
 var entry: Transform3D
 var exit: Transform3D
@@ -43,3 +47,27 @@ func has_crossed(from: Vector3, to: Vector3) -> bool:
 		return false
 	var hit := a.lerp(b, a.z / (a.z - b.z))
 	return absf(hit.x) <= size.x / 2.0 and hit.y >= 0.0 and hit.y <= size.y
+
+
+## point にいる人から、入口の戸口の向こうが見えるか(戸口の手前にいるか)。
+func is_seen_from(point: Vector3) -> bool:
+	return (entry.affine_inverse() * point).z > 0.0
+
+
+## viewer から戸口を覗く時の近クリップ。戸口の一番近い角の少し手前にする。
+## 覗くカメラは出口の裏に置かれるので、出口の裏にある物が戸口の向こうの景色を遮らないよう、
+## 近クリップでできるだけ切り落とす。Godot のカメラには斜めの近クリップ面がないための近似。
+func near_clip(viewer: Transform3D) -> float:
+	var nearest := INF
+	for corner in _corners():
+		nearest = minf(nearest, -(viewer.affine_inverse() * corner).z)
+	return maxf(nearest - NEAR_CLIP_MARGIN, MIN_NEAR_CLIP)
+
+
+## 入口の戸口の四隅(世界の座標)。
+func _corners() -> Array[Vector3]:
+	var half := size.x / 2.0
+	var corners: Array[Vector3] = []
+	for local in [Vector3(-half, 0, 0), Vector3(half, 0, 0), Vector3(-half, size.y, 0), Vector3(half, size.y, 0)]:
+		corners.append(entry * local)
+	return corners
