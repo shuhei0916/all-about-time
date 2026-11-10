@@ -19,6 +19,8 @@ var objectives: Objectives
 ## 刑期。刑務所から始まらない人生では null。
 var sentence: PrisonSentence
 var inventory := Inventory.new()
+## 口座。相続の仕組みができるまでは、持ち物と同じく死ぬと失う。
+var account := BankAccount.new()
 
 
 ## 人生は first_life() か later_life() で作る。

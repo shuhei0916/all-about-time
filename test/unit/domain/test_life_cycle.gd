@@ -51,3 +51,39 @@ func test_チュートリアルを飛ばすと最初から2世代目以降の人
 	assert_eq(cycle.generation, 2)
 	assert_eq(cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
 	assert_null(cycle.life.sentence)
+
+
+func test_時間を進めると世界の時計も進む():
+	var cycle := LifeCycle.new()
+	cycle.tick(10.0)
+	assert_eq(cycle.clock.elapsed, 10.0)
+	assert_eq(cycle.life.lifespan.remaining, Life.INITIAL_LIFESPAN - 10.0)
+
+
+func test_刑期を全うすると世界の時計が刑期分進む():
+	var cycle := LifeCycle.new()
+	cycle.life.serve_sentence()
+	assert_eq(cycle.clock.elapsed, Life.SENTENCE_DURATION)
+
+
+func test_二度目に刑期を全うしても世界の時計は進まない():
+	var cycle := LifeCycle.new()
+	cycle.life.serve_sentence()
+	cycle.life.serve_sentence()
+	assert_eq(cycle.clock.elapsed, Life.SENTENCE_DURATION)
+
+
+func test_世界の時計は世代をまたいで続く():
+	var cycle := LifeCycle.new(true)
+	cycle.tick(Life.LATER_LIFESPAN)
+	cycle.tick(5.0)
+	assert_eq(cycle.generation, 3)
+	assert_eq(cycle.clock.elapsed, Life.LATER_LIFESPAN + 5.0)
+
+
+## 相続の仕組みができるまでは、死ぬとすべて失う(企画書の未決事項)。
+func test_次の人生では口座の残高を失っている():
+	var cycle := LifeCycle.new(true)
+	cycle.life.account.deposit(100_000, cycle.clock.week())
+	cycle.tick(Life.LATER_LIFESPAN)
+	assert_eq(cycle.life.account.balance, 0)

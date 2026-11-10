@@ -8,6 +8,8 @@ signal life_started(generation: int)
 
 var generation := 1
 var life: Life
+## 世界の時計。世代をまたいで進み、刑期を全うして飛ばした分も進む。
+var clock := WorldClock.new()
 
 
 ## skip_tutorial なら、チュートリアルの人生を飛ばして2世代目以降の人生から始める。
@@ -19,9 +21,18 @@ func _init(skip_tutorial := false) -> void:
 		_start_life(Life.first_life())
 
 
+## 時間を進める。世界の時計が進み、今の人生の寿命が減る。
+func tick(delta: float) -> void:
+	clock.advance(delta)
+	life.tick(delta)
+
+
 func _start_life(new_life: Life) -> void:
 	life = new_life
 	life.ended.connect(_on_life_ended)
+	if life.sentence:
+		var duration := life.sentence.duration
+		life.sentence.served.connect(func() -> void: clock.advance(duration))
 
 
 func _on_life_ended() -> void:

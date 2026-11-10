@@ -90,3 +90,8 @@ func test_2世代目以降の人生も寿命が尽きると終わる():
 	watch_signals(life)
 	life.tick(Life.LATER_LIFESPAN)
 	assert_signal_emitted(life, "ended")
+
+
+func test_口座の残高は0円から始まる():
+	var life := Life.later_life()
+	assert_eq(life.account.balance, 0)

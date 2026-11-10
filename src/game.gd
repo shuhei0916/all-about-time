@@ -49,7 +49,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	cycle.life.tick(delta)
+	cycle.tick(delta)
 	if hud:
 		hud.update_from(cycle.life)
 		hud.show_placement_hint(is_placing())
