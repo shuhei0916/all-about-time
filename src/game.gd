@@ -56,6 +56,8 @@ func _process(delta: float) -> void:
 	if hud:
 		hud.update_from(cycle.life)
 		hud.show_placement_hint(is_placing())
+		var held := player.held_item if player else null
+		hud.show_held_hint(held.item_name if held else "")
 
 
 ## 案内は視線のレイと同じ物理フレームで更新する。

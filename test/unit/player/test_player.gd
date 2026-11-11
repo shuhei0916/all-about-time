@@ -146,14 +146,54 @@ func _press_e(player: Player) -> void:
 	InputSender.new(player).send_event(press)
 
 
-func test_Eで見ている物を持ち_もう一度Eで離す():
+func _press_g(player: Player) -> void:
+	var press := InputEventKey.new()
+	press.physical_keycode = KEY_G
+	press.pressed = true
+	InputSender.new(player).send_event(press)
+
+
+func test_Eで見ている物を持ち_Gで離す():
 	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	await wait_physics_frames(3)
 	_press_e(player)
 	assert_eq(player.held_item, item)
-	_press_e(player)
+	_press_g(player)
 	assert_null(player.held_item)
+	assert_false(item.is_held())
+
+
+func test_物を持って何も見ていない時にEを押しても_手を離さず音も鳴らない():
+	var player: Player = add_child_autofree(Player.create())
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	await wait_physics_frames(3)
+	watch_signals(Sfx)
+	_press_e(player)
+	assert_eq(player.held_item, item)
+	assert_signal_not_emitted(Sfx, "played")
+
+
+func test_物を持って受け取らない物を見てEを押しても_手を離さない():
+	var player: Player = add_child_autofree(Player.create())
+	var thing := Interactable.new()
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	thing.add_child(shape)
+	thing.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
+	add_child_autofree(thing)
+	var item := _add_item_in_front(5.0)
+	player.grab(item)
+	await wait_physics_frames(3)
+	_press_e(player)
+	assert_eq(player.held_item, item)
+
+
+func test_手を離すにはGキーが割り当てられている():
+	var g := InputEventKey.new()
+	g.physical_keycode = KEY_G
+	assert_true(InputMap.event_is_action(g, "drop"))
 
 
 ## 当たり判定を持つバッグを、プレイヤーの目の高さの正面に置く。

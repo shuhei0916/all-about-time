@@ -114,6 +114,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_try_interact()
 	elif event.is_action_pressed("take_out"):
 		_try_take_out()
+	elif event.is_action_pressed("drop"):
+		release_held()
 	elif event.is_action_pressed("blink"):
 		if not blink():
 			Sfx.play(&"denied")
@@ -378,11 +380,10 @@ func _try_interact() -> void:
 			seen_bag.store(_let_go())
 			Sfx.play(&"stash")
 			return
+		# 手を離すのは G だけ。狙いが外れても、持っている物を落とさない。
 		var receiver := looking_at()
 		if receiver and receiver.accepts(held_item):
 			_hand_over(receiver)
-		else:
-			release_held()
 		return
 	var item := looking_at_item()
 	if item:

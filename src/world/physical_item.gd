@@ -1,6 +1,6 @@
 class_name PhysicalItem
 extends RigidBody3D
-## 世界に置かれ、物理で転がる物。E で手に持ち、もう一度 E で手を離す。
+## 世界に置かれ、物理で転がる物。E で手に持ち、G で手を離す。
 ## 見た目と当たり判定は子ノードとしてシーンに置く。
 
 @export var item_name := "物"
@@ -45,7 +45,7 @@ func is_prompt_visible() -> bool:
 
 ## 案内に出す、キーと操作の文言の組 [キー, 文言] の並び。継承先で操作を足せる。
 ## held はプレイヤーが手に持っている物。バッグを持っていれば E でバッグに入れられる。
-## それ以外の物を持っていれば、E は手を離すだけなので案内を出さない。
+## それ以外の物を持っていれば、E では何もできないので案内を出さない。
 func prompt_entries(held: PhysicalItem = null) -> Array:
 	if held is DuffelBag and held.can_store(self):
 		return [[Interactable.INTERACT_KEY, "バッグに入れる"]]

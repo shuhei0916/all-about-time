@@ -330,6 +330,20 @@ func test_配置モードの間はHUDに操作の案内が出る():
 	assert_false(game.hud.placement_label.visible)
 
 
+func test_物を手に持っている間はHUDに置き方の案内が出る():
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.create())
+	game.hud = add_child_autofree(Hud.new())
+	var bag := _make_bag_in_front(5.0)
+	game.player.grab(bag)
+	simulate(game, 1, 0.0)
+	assert_true(game.hud.held_label.visible)
+	assert_eq(game.hud.held_label.text, "G: ダッフルバッグを置く")
+	game.player.release_held()
+	simulate(game, 1, 0.0)
+	assert_false(game.hud.held_label.visible)
+
+
 func test_チュートリアルを飛ばすと最初から2世代目以降の開始位置で始まる():
 	var game := Game.new()
 	game.skip_tutorial = true

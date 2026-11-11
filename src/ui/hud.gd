@@ -1,6 +1,6 @@
 class_name Hud
 extends CanvasLayer
-## 画面左上に現在の目標、右上に残り寿命、左下に持ち物、右下に口座の残高、下中央に設計図の配置の案内を表示する。
+## 画面左上に現在の目標、右上に残り寿命、左下に持ち物、右下に口座の残高、下中央に設計図の配置の案内と、手に持った物の置き方の案内を表示する。
 ## 現金は物(札束)として持つので、数字では出さない。
 ## 操作案内は画面ではなく対象物の側に出すため、ここでは扱わない。
 ## 死亡時は画面を黒で覆い、次の人生の開始とともに明けていく。
@@ -19,6 +19,7 @@ var lifespan_label: Label
 var inventory_label: Label
 var placement_label: Label
 var balance_label: Label
+var held_label: Label
 var _delta_container: VBoxContainer
 
 
@@ -41,6 +42,11 @@ func _init() -> void:
 	placement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placement_label.add_theme_font_size_override("font_size", 24)
 	placement_label.visible = false
+	# 置き方の案内は、配置の案内と同じ下中央の、少し上に出す。
+	held_label = _make_label(Control.PRESET_CENTER_BOTTOM)
+	held_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	held_label.position.y -= 40
+	held_label.visible = false
 
 	# 変化量のラベルは寿命ラベルの真下に、新しいものから順に積む。
 	_delta_container = VBoxContainer.new()
@@ -99,6 +105,12 @@ func _update_inventory(inventory: Inventory) -> void:
 ## 設計図の配置モード中の操作の案内を出す、または消す。
 func show_placement_hint(shown: bool) -> void:
 	placement_label.visible = shown
+
+
+## 手に持った物の置き方の案内を出す。item_name が空なら消す。
+func show_held_hint(item_name: String) -> void:
+	held_label.text = "G: %sを置く" % item_name if item_name else ""
+	held_label.visible = not item_name.is_empty()
 
 
 ## 寿命の増減を示すラベルを出す。減少は赤、増加は緑で、流れ落ちながら消える。

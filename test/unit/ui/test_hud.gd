@@ -127,6 +127,25 @@ func test_配置の案内は画面内に収まる():
 	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
 
 
+func test_手に持った物の置き方の案内を出せる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_held_hint("札束")
+	assert_true(hud.held_label.visible)
+	assert_eq(hud.held_label.text, "G: 札束を置く")
+
+
+func test_手に持った物の置き方の案内は_何も持っていなければ消える():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_held_hint("札束")
+	hud.show_held_hint("")
+	assert_false(hud.held_label.visible)
+
+
+func test_置き方の案内は最初は出ていない():
+	var hud: Hud = add_child_autofree(Hud.new())
+	assert_false(hud.held_label.visible)
+
+
 func test_口座の残高が表示される():
 	var hud: Hud = add_child_autofree(Hud.new())
 	var life := Life.later_life()
