@@ -224,7 +224,7 @@ func test_バッグを持ったまま物を見てEを押すと_その物をバ�
 	_press_e(player)
 	assert_eq(bag.contents, [item] as Array[PhysicalItem])
 	assert_eq(player.held_item, bag)
-	assert_signal_emitted_with_parameters(Sfx, "played", [&"stash"])
+	assert_signal_not_emitted(Sfx, "played")
 
 
 func test_物を持って置いてあるバッグを見てEを押すと_バッグに入れる():
@@ -310,7 +310,7 @@ func test_持った物を受け取る物を見てEを押すと手渡す():
 	assert_null(player.held_item)
 
 
-func test_手渡しを断られると持ったままで_断られた音が鳴る():
+func test_手渡しを断られると持ったままで_音は鳴らない():
 	var player: Player = add_child_autofree(Player.create())
 	var receiver := _add_receiver_in_front(2.0)
 	receiver.accepting = false
@@ -320,7 +320,7 @@ func test_手渡しを断られると持ったままで_断られた音が鳴る
 	watch_signals(Sfx)
 	_press_e(player)
 	assert_eq(player.held_item, item)
-	assert_signal_emitted_with_parameters(Sfx, "played", [&"denied"])
+	assert_signal_not_emitted(Sfx, "played")
 
 
 func test_持った物はプレイヤーが動いた後の位置に付いてくる():

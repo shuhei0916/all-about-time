@@ -15,8 +15,6 @@ const SOUNDS := {
 	&"pick_up": preload("res://assets/sounds/ui/confirmation_001.ogg"),
 	## E で物に働きかける(ベッドなど)。
 	&"interact": preload("res://assets/sounds/ui/click_002.ogg"),
-	## 物をバッグに入れる。
-	&"stash": preload("res://assets/sounds/ui/close_001.ogg"),
 	## Q で背後へ跳ぶ。
 	&"blink": preload("res://assets/sounds/ui/glitch_001.ogg"),
 	## Q を押したが跳べない。

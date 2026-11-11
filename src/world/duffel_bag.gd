@@ -31,6 +31,10 @@ func can_store(item: PhysicalItem) -> bool:
 func store(item: PhysicalItem) -> void:
 	if not can_store(item):
 		return
+	if item.is_held():
+		# 手から直接入れた物は、持つ前の当たり判定に戻してから覚える。
+		item.release(Vector3.ZERO)
+	item.wake_neighbors()
 	_saved_layers[item] = [item.collision_layer, item.collision_mask]
 	item.freeze_mode = RigidBody3D.FREEZE_MODE_STATIC
 	item.freeze = true

@@ -373,12 +373,10 @@ func _try_interact() -> void:
 		var held_bag := held_item as DuffelBag
 		if held_bag and held_bag.can_store(seen):
 			held_bag.store(seen)
-			Sfx.play(&"stash")
 			return
 		var seen_bag := seen as DuffelBag
 		if seen_bag and seen_bag.can_store(held_item):
 			seen_bag.store(_let_go())
-			Sfx.play(&"stash")
 			return
 		# 手を離すのは G だけ。狙いが外れても、持っている物を落とさない。
 		var receiver := looking_at()
@@ -433,14 +431,12 @@ func release_held() -> void:
 	Sfx.play(&"drop")
 
 
-## 手に持っている物を receiver に手渡す。断られたら持ったままにする。
+## 手に持っている物を receiver に手渡す。断られたら持ったままにする(音は鳴らさない)。
 ## 受け取った側が物を消す(queue_free)のはフレームの終わりなので、受け取られてから手から外せばよい。
 func _hand_over(receiver: Interactable) -> void:
 	if receiver.receive(held_item):
 		_let_go()
 		Sfx.play(receiver.interact_sound)
-	else:
-		Sfx.play(&"denied")
 
 
 ## 手に持っている物を手から外し、視線と当たり判定の例外を戻す。外した物を返す。

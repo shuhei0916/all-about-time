@@ -20,6 +20,27 @@ func _make_cash(position := Vector3(3, 0, 0)) -> PhysicalItem:
 	return add_child_autofree(cash)
 
 
+func test_物を入れると_その上で眠っていた物が目を覚ます():
+	var bag := _make_bag()
+	var below := _make_cash(Vector3(3, 0, 0))
+	var above := _make_cash(Vector3(3, 1.0, 0))
+	await wait_physics_frames(2)
+	above.sleeping = true
+	bag.store(below)
+	assert_false(above.sleeping)
+
+
+func test_手に持っていた物を入れて取り出すと_元の当たり判定に戻り_持たれていない():
+	var bag := _make_bag()
+	var cash := _make_cash()
+	cash.collision_layer = 5
+	cash.hold()
+	bag.store(cash)
+	var taken := bag.take_out()
+	assert_eq(taken.collision_layer, 5)
+	assert_false(taken.is_held())
+
+
 func test_最初は空():
 	assert_eq(_make_bag().contents.size(), 0)
 
