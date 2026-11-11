@@ -404,21 +404,44 @@ func test_見ている物理の物に案内が出る():
 	assert_true(item.is_prompt_visible())
 
 
-func test_見ているバッグを開けると案内の文言も変わる():
-	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.create())
+func _make_bag_in_front(distance: float) -> DuffelBag:
 	var bag := DuffelBag.new()
 	bag.item_name = "ダッフルバッグ"
 	var shape := CollisionShape3D.new()
 	shape.shape = BoxShape3D.new()
 	bag.add_child(shape)
 	bag.gravity_scale = 0.0
-	bag.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
-	add_child_autofree(bag)
+	bag.position = Vector3(0, Player.EYE_HEIGHT, -distance)
+	return add_child_autofree(bag)
+
+
+func test_見ているバッグに物を入れると案内の文言も変わる():
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.create())
+	var bag := _make_bag_in_front(1.5)
 	await wait_physics_frames(4)
-	bag.open()
+	var cash := PhysicalItem.new()
+	cash.item_name = "札束"
+	bag.store(add_child_autofree(cash))
 	await wait_physics_frames(2)
-	assert_eq(bag.get_prompt_label().get_entries(), [["E", "ダッフルバッグを持つ"], ["F", "閉じる"]])
+	assert_eq(bag.get_prompt_label().get_entries(), [["E", "ダッフルバッグを持つ"], ["F", "札束を取り出す（中身 1）"]])
+
+
+func test_バッグを手に持って物を見ると_バッグに入れる案内が出る():
+	var game: Game = add_child_autofree(Game.new())
+	game.player = add_child_autofree(Player.create())
+	var bag := _make_bag_in_front(5.0)
+	var item := PhysicalItem.new()
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	item.add_child(shape)
+	item.gravity_scale = 0.0
+	item.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
+	add_child_autofree(item)
+	game.player.grab(bag)
+	await wait_physics_frames(4)
+	assert_eq(item.get_prompt_label().get_entries(), [["E", "バッグに入れる"]])
+
 
 ## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:

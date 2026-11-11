@@ -4,6 +4,9 @@ extends RigidBody3D
 ## 見た目と当たり判定は子ノードとしてシーンに置く。
 
 @export var item_name := "物"
+## 手に持った時に、ふつうの持つ位置(目の前)からどれだけずらすか。
+## プレイヤーの向きを基準に、x が右、y が上、z が手前(メートル)。大きな物は視界をふさがない所に持つ。
+var hold_offset := Vector3.ZERO
 
 var _held := false
 var _prompt_label: PromptLabel
@@ -17,10 +20,15 @@ func get_prompt_label() -> PromptLabel:
 	return _prompt_label
 
 
-## 案内を出す。プレイヤーが見ている間だけ呼ばれる。
-func show_prompt() -> void:
+## 案内を出す。プレイヤーが見ている間だけ呼ばれる。held はプレイヤーが手に持っている物(なければ null)。
+## 出す操作がなければ案内を消す。
+func show_prompt(held: PhysicalItem = null) -> void:
 	var label := get_prompt_label()
-	label.set_entries(prompt_entries())
+	var entries := prompt_entries(held)
+	if entries.is_empty():
+		label.hide()
+		return
+	label.set_entries(entries)
 	label.place_above(self)
 	label.show()
 
@@ -36,7 +44,13 @@ func is_prompt_visible() -> bool:
 
 
 ## 案内に出す、キーと操作の文言の組 [キー, 文言] の並び。継承先で操作を足せる。
-func prompt_entries() -> Array:
+## held はプレイヤーが手に持っている物。バッグを持っていれば E でバッグに入れられる。
+## それ以外の物を持っていれば、E は手を離すだけなので案内を出さない。
+func prompt_entries(held: PhysicalItem = null) -> Array:
+	if held is DuffelBag and held.can_store(self):
+		return [[Interactable.INTERACT_KEY, "バッグに入れる"]]
+	if held:
+		return []
 	return [[Interactable.INTERACT_KEY, "%sを持つ" % item_name]]
 
 

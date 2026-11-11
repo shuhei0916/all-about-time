@@ -1,157 +1,105 @@
 extends GutTest
 
-## 中の空間は、バッグの原点から上に 0.2m、幅 0.8m・奥行 0.4m・高さ 0.4m。
-const INSIDE := Vector3(0, 0.2, 0)
-const OUTSIDE := Vector3(3, 0.2, 0)
-
 
 func _make_bag() -> DuffelBag:
 	var bag := DuffelBag.new()
 	bag.item_name = "ダッフルバッグ"
 	bag.gravity_scale = 0.0
-	var cavity := Area3D.new()
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(0.8, 0.4, 0.4)
-	shape.shape = box
-	shape.position = INSIDE
-	cavity.add_child(shape)
-	bag.add_child(cavity)
-	bag.cavity = cavity
-	bag.lid = Node3D.new()
-	bag.add_child(bag.lid)
 	return add_child_autofree(bag)
 
 
-func _make_cash(position: Vector3) -> PhysicalItem:
+func _make_cash(position := Vector3(3, 0, 0)) -> PhysicalItem:
 	var cash := PhysicalItem.new()
 	cash.item_name = "札束"
 	cash.gravity_scale = 0.0
 	cash.mass = 0.1
 	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(0.16, 0.02, 0.07)
-	shape.shape = box
+	shape.shape = BoxShape3D.new()
 	cash.add_child(shape)
 	cash.position = position
 	return add_child_autofree(cash)
 
 
-## 中の空間に何が入っているかを物理に判定させてから閉じる。
-func _close_after_settling(bag: DuffelBag) -> void:
-	await wait_physics_frames(3)
-	bag.close()
+func test_最初は空():
+	assert_eq(_make_bag().contents.size(), 0)
 
 
-func test_最初は閉じていて中身はない():
+func test_入れた物は中身になる():
 	var bag := _make_bag()
-	assert_false(bag.is_open())
-	assert_eq(bag.contents.size(), 0)
-
-
-func test_閉じている間は蓋が見え_開けると蓋が消える():
-	var bag := _make_bag()
-	assert_true(bag.lid.visible)
-	bag.open()
-	assert_false(bag.lid.visible)
-
-
-func test_開けて中に物を入れて閉じると中身になる():
-	var bag := _make_bag()
-	bag.open()
-	var cash := _make_cash(INSIDE)
-	await _close_after_settling(bag)
+	var cash := _make_cash()
+	bag.store(cash)
 	assert_eq(bag.contents, [cash] as Array[PhysicalItem])
 
 
-func test_中身になった物は物理でも当たり判定でも動かない():
+func test_入れた物は見えなくなり_物理でも当たり判定でも動かない():
 	var bag := _make_bag()
-	bag.open()
-	var cash := _make_cash(INSIDE)
-	await _close_after_settling(bag)
+	var cash := _make_cash()
+	bag.store(cash)
+	assert_false(cash.visible)
 	assert_true(cash.freeze)
 	assert_eq(cash.collision_layer, 0)
 	assert_eq(cash.collision_mask, 0)
 
 
-func test_バッグの外にある物は閉じても中身にならない():
+func test_入れた物はバッグと一緒に動く():
 	var bag := _make_bag()
-	bag.open()
-	var cash := _make_cash(OUTSIDE)
-	await _close_after_settling(bag)
-	assert_eq(bag.contents.size(), 0)
-	assert_false(cash.freeze)
-
-
-func test_閉じたバッグを動かすと中身も一緒に動く():
-	var bag := _make_bag()
-	bag.open()
-	var cash := _make_cash(INSIDE)
-	await _close_after_settling(bag)
+	var cash := _make_cash()
+	bag.store(cash)
 	bag.global_position += Vector3(5, 0, 0)
-	assert_almost_eq(cash.global_position, INSIDE + Vector3(5, 0, 0), Vector3.ONE * 0.001)
+	assert_almost_eq(cash.global_position, bag.global_position, Vector3.ONE * 0.001)
 
 
-func test_開けると中身は元の場所で物理に戻る():
-	var bag := _make_bag()
-	bag.open()
-	var cash := _make_cash(INSIDE)
-	var layer := cash.collision_layer
-	await _close_after_settling(bag)
-	bag.global_position += Vector3(5, 0, 0)
-	bag.open()
-	assert_eq(bag.contents.size(), 0)
-	assert_false(cash.freeze)
-	assert_eq(cash.collision_layer, layer)
-	assert_ne(cash.get_parent(), bag)
-	assert_almost_eq(cash.global_position, INSIDE + Vector3(5, 0, 0), Vector3.ONE * 0.001)
-
-
-func test_閉じると中身の重さがバッグに加わり_開けると戻る():
+func test_入れると中身の重さがバッグに加わり_取り出すと戻る():
 	var bag := _make_bag()
 	var empty_mass := bag.mass
-	bag.open()
-	_make_cash(INSIDE)
-	_make_cash(INSIDE + Vector3(0.2, 0, 0))
-	await _close_after_settling(bag)
+	bag.store(_make_cash())
+	bag.store(_make_cash())
 	assert_almost_eq(bag.mass, empty_mass + 0.2, 0.0001)
-	bag.open()
+	bag.take_out()
+	bag.take_out()
 	assert_almost_eq(bag.mass, empty_mass, 0.0001)
 
 
-func test_手に持っている物は閉じても中身にならない():
+func test_バッグそのものや別のバッグは入れられない():
 	var bag := _make_bag()
-	bag.open()
-	var cash := _make_cash(INSIDE)
-	cash.hold()
-	await _close_after_settling(bag)
-	assert_eq(bag.contents.size(), 0)
+	assert_false(bag.can_store(bag))
+	assert_false(bag.can_store(_make_bag()))
+	assert_true(bag.can_store(_make_cash()))
 
 
-func test_開いたバッグを手に持つと閉じる():
+func test_取り出すと最後に入れた物が_元の当たり判定でバッグの上に出てくる():
 	var bag := _make_bag()
-	bag.open()
-	bag.hold()
-	assert_false(bag.is_open())
+	var first := _make_cash()
+	var last := _make_cash()
+	var layer := last.collision_layer
+	bag.store(first)
+	bag.store(last)
+	bag.global_position = Vector3(5, 0, 0)
+	var item := bag.take_out()
+	assert_eq(item, last)
+	assert_eq(bag.contents, [first] as Array[PhysicalItem])
+	assert_true(item.visible)
+	assert_false(item.freeze)
+	assert_eq(item.collision_layer, layer)
+	assert_eq(item.get_parent(), bag.get_parent())
+	assert_almost_eq(item.global_position, bag.global_position + DuffelBag.TAKE_OUT_OFFSET, Vector3.ONE * 0.001)
 
 
-func test_閉じたバッグの案内には開ける操作と中身の数が出る():
+func test_空のバッグからは何も出てこない():
+	assert_null(_make_bag().take_out())
+
+
+func test_空のバッグの案内には持つ操作だけが出る():
+	assert_eq(_make_bag().prompt_entries(), [["E", "ダッフルバッグを持つ"]])
+
+
+func test_中身のあるバッグの案内には取り出す操作と中身の数が出る():
 	var bag := _make_bag()
-	bag.open()
-	_make_cash(INSIDE)
-	await _close_after_settling(bag)
-	assert_eq(bag.prompt_entries(), [["E", "ダッフルバッグを持つ"], ["F", "開ける（中身 1）"]])
+	bag.store(_make_cash())
+	bag.store(_make_cash())
+	assert_eq(bag.prompt_entries(), [["E", "ダッフルバッグを持つ"], ["F", "札束を取り出す（中身 2）"]])
 
 
-func test_開いたバッグの案内には閉じる操作が出る():
+func test_物を手に持って置いてあるバッグを見ている時は_入れる操作が出る():
 	var bag := _make_bag()
-	bag.open()
-	assert_eq(bag.prompt_entries(), [["E", "ダッフルバッグを持つ"], ["F", "閉じる"]])
-
-
-func test_開け閉めを切り替えられる():
-	var bag := _make_bag()
-	bag.toggle()
-	assert_true(bag.is_open())
-	bag.toggle()
-	assert_false(bag.is_open())
+	assert_eq(bag.prompt_entries(_make_cash()), [["E", "札束を入れる"]])

@@ -8,5 +8,7 @@ const VALUE := 100_000
 @export var value := VALUE
 
 
-func prompt_entries() -> Array:
+func prompt_entries(held: PhysicalItem = null) -> Array:
+	if held:
+		return super(held)
 	return [[Interactable.INTERACT_KEY, "%s（%s）を持つ" % [item_name, Money.format(value)]]]

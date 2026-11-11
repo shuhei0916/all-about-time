@@ -196,18 +196,6 @@ func test_札束は積んだまま崩れ落ちない():
 	assert_almost_eq(cash.global_position, start, Vector3.ONE * 0.1)
 
 
-func test_札束をバッグに入れて閉じると中身になる():
-	var game := _load_game(true)
-	var bag := _duffel_bag(game)
-	bag.open()
-	var cash: PhysicalItem = _cash_bundles(game)[0]
-	cash.global_position = bag.cavity.global_position + Vector3(0, 0.05, 0)
-	cash.linear_velocity = Vector3.ZERO
-	await wait_physics_frames(10)
-	bag.close()
-	assert_true(bag.contents.has(cash))
-
-
 func test_街の人々は歩くアニメーションを流す():
 	var game := _load_game(true)
 	await wait_physics_frames(3)
@@ -319,3 +307,26 @@ func test_札束を持ってATMの前でEを押すと入金される():
 	InputSender.new(player).send_event(press)
 	assert_eq(game.cycle.life.account.balance, Cash.VALUE)
 	assert_null(player.held_item)
+
+
+func test_バッグに詰めた札束を取り出して_ATMで入金できる():
+	var game := _load_game(true)
+	var bag := _duffel_bag(game)
+	for cash in _cash_bundles(game):
+		bag.store(cash)
+	assert_eq(bag.contents.size(), 20)
+	var atm := _atm(game)
+	var player := game.player
+	# ATM の正面 1.2m に立ち、画面の方を向く。バッグは足元に置いてある。
+	var front := atm.global_transform * Vector3(0, 0, 1.2)
+	player.global_position = Vector3(front.x, atm.global_position.y + 0.05, front.z)
+	player.look_at(Vector3(atm.global_position.x, player.global_position.y, atm.global_position.z), Vector3.UP)
+	player.camera.rotation.x = 0
+	player.take_out_of(bag)
+	await wait_physics_frames(5)
+	var press := InputEventKey.new()
+	press.physical_keycode = KEY_E
+	press.pressed = true
+	InputSender.new(player).send_event(press)
+	assert_eq(game.cycle.life.account.balance, Cash.VALUE)
+	assert_eq(bag.contents.size(), 19)

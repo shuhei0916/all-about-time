@@ -230,13 +230,14 @@ func _update_prompt() -> void:
 		target = player.looking_at_item()
 		if not target:
 			target = player.looking_at()
+	var held: PhysicalItem = player.held_item if player else null
 	if target == _prompted:
-		# 見たまま開け閉めした時のように、同じ物でも文言が変わることがあるので出し直す。
+		# 見たまま中身を出し入れした時のように、同じ物でも文言が変わることがあるので出し直す。
 		if target:
-			target.show_prompt()
+			target.show_prompt(held)
 		return
 	if is_instance_valid(_prompted):
 		_prompted.hide_prompt()
 	if target:
-		target.show_prompt()
+		target.show_prompt(held)
 	_prompted = target

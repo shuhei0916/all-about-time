@@ -13,9 +13,6 @@ roughness = 0.9
 [sub_resource type="BoxMesh" id="mesh_lid"]
 size = Vector3(0.76, 0.05, 0.41)
 
-[sub_resource type="BoxShape3D" id="shape_cavity"]
-size = Vector3(0.68, 0.34, 0.33)
-
 [sub_resource type="BoxShape3D" id="shape_0"]
 size = Vector3(0.76, 0.03, 0.41)
 
@@ -46,12 +43,10 @@ size = Vector3(0.7, 0.34, 0.03)
 [sub_resource type="BoxMesh" id="mesh_4"]
 size = Vector3(0.7, 0.34, 0.03)
 
-[node name="DuffelBag" type="RigidBody3D" node_paths=PackedStringArray("cavity", "lid")]
+[node name="DuffelBag" type="RigidBody3D"]
 mass = 1.5
 script = ExtResource("1_bag")
 item_name = "ダッフルバッグ"
-cavity = NodePath("Cavity")
-lid = NodePath("Lid")
 
 [node name="BottomShape" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.015, 0)
@@ -102,9 +97,3 @@ surface_material_override/0 = SubResource("mat_bag")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.395, 0)
 mesh = SubResource("mesh_lid")
 surface_material_override/0 = SubResource("mat_lid")
-
-[node name="Cavity" type="Area3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Cavity"]
-shape = SubResource("shape_cavity")

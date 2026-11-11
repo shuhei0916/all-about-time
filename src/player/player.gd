@@ -2,8 +2,9 @@ class_name Player
 extends CharacterBody3D
 ## 一人称視点のプレイヤー。WASD で移動(Shift を押している間は走る)、Space でジャンプ、
 ## マウスで視点、E で正面の物に働きかける。
-## E は、何か手に持っていれば手を離し、持っていなければ見ている物理の物を手に持つ。
-## F で、見ているバッグを開け閉めする。
+## E は、何か手に持っていれば手を離し(手渡せる物やバッグを見ていれば手渡す、入れる)、
+## 持っていなければ見ている物理の物を手に持つ。バッグを手に持っている時は、見ている物をバッグに吸い込む。
+## F で、見ているバッグから中身を1つ取り出して手に持つ。
 ## Esc でのマウスカーソルの解放は PauseMenu が受け持つ。
 
 const SPEED := 4.0
@@ -111,8 +112,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		attack()
 	elif event.is_action_pressed("interact"):
 		_try_interact()
-	elif event.is_action_pressed("toggle_container"):
-		_try_toggle_container()
+	elif event.is_action_pressed("take_out"):
+		_try_take_out()
 	elif event.is_action_pressed("blink"):
 		if not blink():
 			Sfx.play(&"denied")
@@ -366,6 +367,17 @@ func look(relative: Vector2) -> void:
 
 func _try_interact() -> void:
 	if held_item:
+		var seen := looking_at_item()
+		var held_bag := held_item as DuffelBag
+		if held_bag and held_bag.can_store(seen):
+			held_bag.store(seen)
+			Sfx.play(&"stash")
+			return
+		var seen_bag := seen as DuffelBag
+		if seen_bag and seen_bag.can_store(held_item):
+			seen_bag.store(_let_go())
+			Sfx.play(&"stash")
+			return
 		var receiver := looking_at()
 		if receiver and receiver.accepts(held_item):
 			_hand_over(receiver)
@@ -382,11 +394,18 @@ func _try_interact() -> void:
 		target.interact()
 
 
-func _try_toggle_container() -> void:
+## 手が空いていれば、見ているバッグから中身を1つ取り出して手に持つ。
+func _try_take_out() -> void:
 	var bag := looking_at_item() as DuffelBag
-	if bag:
-		bag.toggle()
-		Sfx.play(&"open" if bag.is_open() else &"close")
+	if bag and not held_item:
+		take_out_of(bag)
+
+
+## bag から最後に入れた物を取り出して手に持つ。手がふさがっているか、バッグが空なら何もしない。
+func take_out_of(bag: DuffelBag) -> void:
+	if held_item or bag.contents.is_empty():
+		return
+	grab(bag.take_out())
 
 
 ## 物を手に持つ。既に何か持っていれば持たない。
@@ -441,7 +460,7 @@ func hold_position() -> Vector3:
 func _carry_held_item() -> void:
 	if not held_item:
 		return
-	held_item.global_position = hold_position()
+	held_item.global_position = hold_position() + global_basis * held_item.hold_offset
 	held_item.global_rotation = Vector3(0, rotation.y, 0)
 
 

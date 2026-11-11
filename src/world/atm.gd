@@ -31,9 +31,9 @@ func receive(item: PhysicalItem) -> bool:
 
 
 ## 案内には、今週あといくら入金できるかを出す。
-func show_prompt() -> void:
+func show_prompt(held: PhysicalItem = null) -> void:
 	prompt = _prompt_text()
-	super()
+	super(held)
 
 
 func _prompt_text() -> String:

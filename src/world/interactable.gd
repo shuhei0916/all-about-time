@@ -25,8 +25,8 @@ func get_prompt_label() -> PromptLabel:
 	return _prompt_label
 
 
-## 案内を出す。プレイヤーが見ている間だけ呼ばれる。
-func show_prompt() -> void:
+## 案内を出す。プレイヤーが見ている間だけ呼ばれる。held はプレイヤーが手に持っている物(なければ null)。
+func show_prompt(_held: PhysicalItem = null) -> void:
 	var label := get_prompt_label()
 	label.set_entries([[INTERACT_KEY, prompt]])
 	label.place_above(self)

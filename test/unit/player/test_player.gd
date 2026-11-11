@@ -156,41 +156,70 @@ func test_Eで見ている物を持ち_もう一度Eで離す():
 	assert_null(player.held_item)
 
 
-func test_Fで見ているバッグを開け閉めする():
-	var player: Player = add_child_autofree(Player.create())
+## 当たり判定を持つバッグを、プレイヤーの目の高さの正面に置く。
+func _add_bag_in_front(distance: float) -> DuffelBag:
 	var bag := DuffelBag.new()
 	var shape := CollisionShape3D.new()
 	shape.shape = BoxShape3D.new()
 	bag.add_child(shape)
 	bag.gravity_scale = 0.0
-	bag.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
-	add_child_autofree(bag)
-	await wait_physics_frames(3)
+	bag.position = Vector3(0, Player.EYE_HEIGHT, -distance)
+	return add_child_autofree(bag)
+
+
+func _press_f(player: Player) -> void:
 	var press := InputEventKey.new()
 	press.physical_keycode = KEY_F
 	press.pressed = true
 	InputSender.new(player).send_event(press)
-	assert_true(bag.is_open())
 
 
-func test_バッグを開けると開ける音が鳴り_閉じると閉じる音が鳴る():
+func test_バッグを持ったまま物を見てEを押すと_その物をバッグに吸い込む():
 	var player: Player = add_child_autofree(Player.create())
-	var bag := DuffelBag.new()
-	var shape := CollisionShape3D.new()
-	shape.shape = BoxShape3D.new()
-	bag.add_child(shape)
-	bag.gravity_scale = 0.0
-	bag.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
-	add_child_autofree(bag)
+	var bag := _add_bag_in_front(5.0)
+	var item := _add_item_in_front(1.5)
+	player.grab(bag)
 	await wait_physics_frames(3)
-	var press := InputEventKey.new()
-	press.physical_keycode = KEY_F
-	press.pressed = true
 	watch_signals(Sfx)
-	InputSender.new(player).send_event(press)
-	assert_signal_emitted_with_parameters(Sfx, "played", [&"open"])
-	InputSender.new(player).send_event(press)
-	assert_signal_emitted_with_parameters(Sfx, "played", [&"close"])
+	_press_e(player)
+	assert_eq(bag.contents, [item] as Array[PhysicalItem])
+	assert_eq(player.held_item, bag)
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"stash"])
+
+
+func test_物を持って置いてあるバッグを見てEを押すと_バッグに入れる():
+	var player: Player = add_child_autofree(Player.create())
+	var bag := _add_bag_in_front(1.5)
+	var item := _add_item_in_front(5.0)
+	player.grab(item)
+	await wait_physics_frames(3)
+	_press_e(player)
+	assert_eq(bag.contents, [item] as Array[PhysicalItem])
+	assert_null(player.held_item)
+
+
+func test_置いてあるバッグを見てFを押すと_中身を1つ取り出して手に持つ():
+	var player: Player = add_child_autofree(Player.create())
+	var bag := _add_bag_in_front(1.5)
+	var item := _add_item_in_front(5.0)
+	bag.store(item)
+	await wait_physics_frames(3)
+	_press_f(player)
+	assert_eq(player.held_item, item)
+	assert_eq(bag.contents.size(), 0)
+
+
+func test_何か持っている時はFを押しても取り出さない():
+	var player: Player = add_child_autofree(Player.create())
+	var bag := _add_bag_in_front(1.5)
+	var stored := _add_item_in_front(5.0)
+	var held := _add_item_in_front(6.0)
+	bag.store(stored)
+	player.grab(held)
+	await wait_physics_frames(3)
+	_press_f(player)
+	assert_eq(player.held_item, held)
+	assert_eq(bag.contents, [stored] as Array[PhysicalItem])
 
 
 func test_Eで働きかけると_その物の音が鳴る():
@@ -1019,3 +1048,21 @@ func test_マウスを動かすと上下を向く():
 func test_プレイヤーは対になるドアを通り抜けられる():
 	var player: Player = add_child_autofree(Player.create())
 	assert_true(player.is_in_group(PassageDoor.TRAVELER_GROUP))
+
+
+func test_バッグは手に提げるので_視界をふさがないよう右下に持つ():
+	var player: Player = add_child_autofree(Player.create())
+	var bag := _add_bag_in_front(1.5)
+	player.grab(bag)
+	await wait_physics_frames(2)
+	var local := player.to_local(bag.global_position)
+	assert_gt(local.x, 0.3, "右に寄っている")
+	assert_lt(bag.global_position.y, player.hold_position().y - 0.3, "ふつうの物より低い")
+
+
+func test_ふつうの物は目の前に持つ():
+	var player: Player = add_child_autofree(Player.create())
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	await wait_physics_frames(2)
+	assert_almost_eq(item.global_position, player.hold_position(), Vector3.ONE * 0.01)

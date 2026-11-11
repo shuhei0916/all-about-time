@@ -58,3 +58,16 @@ func test_案内は見た目のてっぺんの上に出る():
 	item.add_child(mesh)
 	item.show_prompt()
 	assert_almost_eq(item.get_prompt_label().global_position.y, 0.4 + PromptLabel.MARGIN, 0.001)
+
+
+func test_バッグを手に持って見ている時は_バッグに入れる操作が出る():
+	var item := _make_item()
+	var bag: DuffelBag = add_child_autofree(DuffelBag.new())
+	assert_eq(item.prompt_entries(bag), [["E", "バッグに入れる"]])
+
+
+func test_バッグでない物を手に持って見ている時は_案内が出ない():
+	var item := _make_item()
+	assert_eq(item.prompt_entries(_make_item()), [])
+	item.show_prompt(_make_item())
+	assert_false(item.is_prompt_visible())

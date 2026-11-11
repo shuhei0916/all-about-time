@@ -1,95 +1,72 @@
 class_name DuffelBag
 extends PhysicalItem
-## 物を詰めて運べるダッフルバッグ。F で開け閉めする。
-## 閉じると、中の空間にある物を中身として固定する。中身は物理と当たり判定を止めてバッグの子になり、
-## バッグと一緒に動く。開けると中身を世界に戻し、閉じた時の位置から物理が続く。
-## 閉じている間は中身同士の衝突を計算しなくて済む。
+## 物を詰めて運べるダッフルバッグ。いつも閉じていて、中身は外から見えない。
+## 入れ方: バッグを手に持って物を見て E(吸い込む)、または物を手に持って置いてあるバッグを見て E。
+## 出し方: 手が空いている時に、置いてあるバッグを見て F で、最後に入れた物を1つ取り出して手に持つ。
+## 中身は物理と当たり判定を止めて見えなくし、バッグの子にしてバッグと一緒に動かす。
+## 中身同士の衝突を計算しなくて済む。
 
-## 中の空間。閉じた時にここに入っている物が中身になる。
-@export var cavity: Area3D
-## 閉じている間だけ見える蓋。
-@export var lid: Node3D
+## 取り出した物を出す位置(バッグの原点から)。バッグの上に出し、そのままプレイヤーが手に持つ。
+const TAKE_OUT_OFFSET := Vector3(0, 0.5, 0)
 
-## 閉じている間の中身。開いている間は空。
+## 手に持った時の、ふつうの持つ位置からのずれ。手に提げるように右下に持ち、視界をふさがない。
+const HOLD_OFFSET := Vector3(0.45, -0.5, 0.3)
+
+## 中身。入れた順に並ぶ。
 var contents: Array[PhysicalItem] = []
-var _open := false
-## 中身にする前の当たり判定。開けた時に戻す。
+## 中身にする前の当たり判定。取り出す時に戻す。
 var _saved_layers := {}
 
 
-func _ready() -> void:
-	_show_lid()
+func _init() -> void:
+	hold_offset = HOLD_OFFSET
 
 
-## 開いているか。
-func is_open() -> bool:
-	return _open
+## item をこのバッグに入れられるか。バッグはバッグに入れない。
+func can_store(item: PhysicalItem) -> bool:
+	return item != null and not (item is DuffelBag) and not contents.has(item)
 
 
-## 開け閉めを切り替える。
-func toggle() -> void:
-	if _open:
-		close()
-	else:
-		open()
-
-
-## 開ける。中身を世界に戻し、物理を再開させる。
-func open() -> void:
-	if _open:
+## item を中身にする。物理と当たり判定を止めて見えなくし、バッグと一緒に動かす。
+func store(item: PhysicalItem) -> void:
+	if not can_store(item):
 		return
-	_open = true
-	for item in contents:
-		_unstow(item)
-	contents.clear()
-	_show_lid()
-
-
-## 閉じる。中の空間にある物を中身として固定する。手に持たれている物は入れない。
-func close() -> void:
-	if not _open:
-		return
-	_open = false
-	if cavity:
-		for body in cavity.get_overlapping_bodies():
-			if body is PhysicalItem and body != self and not body.is_held():
-				_stow(body)
-	_show_lid()
-
-
-## 開いたバッグは、中身がこぼれないよう閉じてから手に持つ。
-func hold() -> void:
-	close()
-	super()
-
-
-func prompt_entries() -> Array:
-	var action := "閉じる" if _open else "開ける（中身 %d）" % contents.size()
-	return super() + [["F", action]]
-
-
-func _stow(item: PhysicalItem) -> void:
 	_saved_layers[item] = [item.collision_layer, item.collision_mask]
 	item.freeze_mode = RigidBody3D.FREEZE_MODE_STATIC
 	item.freeze = true
 	item.collision_layer = 0
 	item.collision_mask = 0
+	item.visible = false
 	item.reparent(self)
+	item.position = Vector3.ZERO
 	mass += item.mass
 	contents.append(item)
 
 
-func _unstow(item: PhysicalItem) -> void:
+## 最後に入れた物を取り出し、バッグの上に物理に戻して返す。空なら null。
+func take_out() -> PhysicalItem:
+	if contents.is_empty():
+		return null
+	var item: PhysicalItem = contents.pop_back()
 	item.reparent(get_parent())
+	item.global_position = global_position + TAKE_OUT_OFFSET
 	var layers: Array = _saved_layers.get(item, [1, 1])
 	_saved_layers.erase(item)
 	item.collision_layer = layers[0]
 	item.collision_mask = layers[1]
+	item.visible = true
 	item.freeze = false
 	item.sleeping = false
 	mass -= item.mass
+	return item
 
 
-func _show_lid() -> void:
-	if lid:
-		lid.visible = not _open
+func prompt_entries(held: PhysicalItem = null) -> Array:
+	if held:
+		if can_store(held):
+			return [[Interactable.INTERACT_KEY, "%sを入れる" % held.item_name]]
+		return []
+	var entries := super()
+	if not contents.is_empty():
+		entries.append(["F", "%sを取り出す（中身 %d）" % [contents.back().item_name, contents.size()]])
+	return entries
