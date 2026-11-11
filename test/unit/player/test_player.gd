@@ -208,6 +208,52 @@ func test_Eで働きかけると_その物の音が鳴る():
 	assert_signal_emitted_with_parameters(Sfx, "played", [&"pick_up"])
 
 
+## 手に持った物を受け取る物の代わり。受け取るかどうかを外から決められる。
+class Receiver extends Interactable:
+	var accepting := true
+	var received: PhysicalItem
+
+	func accepts(_item: PhysicalItem) -> bool:
+		return true
+
+	func receive(item: PhysicalItem) -> bool:
+		received = item
+		return accepting
+
+
+func _add_receiver_in_front(distance: float) -> Receiver:
+	var receiver := Receiver.new()
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	receiver.add_child(shape)
+	receiver.position = Vector3(0, Player.EYE_HEIGHT, -distance)
+	return add_child_autofree(receiver)
+
+
+func test_持った物を受け取る物を見てEを押すと手渡す():
+	var player: Player = add_child_autofree(Player.create())
+	var receiver := _add_receiver_in_front(2.0)
+	var item := _add_item_in_front(5.0)
+	player.grab(item)
+	await wait_physics_frames(3)
+	_press_e(player)
+	assert_eq(receiver.received, item)
+	assert_null(player.held_item)
+
+
+func test_手渡しを断られると持ったままで_断られた音が鳴る():
+	var player: Player = add_child_autofree(Player.create())
+	var receiver := _add_receiver_in_front(2.0)
+	receiver.accepting = false
+	var item := _add_item_in_front(5.0)
+	player.grab(item)
+	await wait_physics_frames(3)
+	watch_signals(Sfx)
+	_press_e(player)
+	assert_eq(player.held_item, item)
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"denied"])
+
+
 func test_持った物はプレイヤーが動いた後の位置に付いてくる():
 	# 床がないのでプレイヤーは落ちる。落ちた後の手元に物があること。
 	var player: Player = add_child_autofree(Player.create())

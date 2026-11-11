@@ -16,6 +16,7 @@
 [ext_resource type="PackedScene" path="res://src/world/city/city.tscn" id="14_city"]
 [ext_resource type="Texture2D" path="res://assets/sky/skybox-night.png" id="15_night_sky"]
 [ext_resource type="PackedScene" path="res://src/world/pocket_room.tscn" id="16_pocket_room"]
+[ext_resource type="PackedScene" path="res://src/world/atm.tscn" id="17_atm"]
 
 [sub_resource type="PanoramaSkyMaterial" id="night_sky_material"]
 panorama = ExtResource("15_night_sky")
@@ -92,7 +93,7 @@ size = Vector3(0.4, 0.2, 0.3)
 [sub_resource type="BoxMesh" id="mesh_pistol"]
 size = Vector3(0.22, 0.05, 0.14)
 
-[node name="Game" type="Node3D" unique_id=125477149 node_paths=PackedStringArray("bed", "door", "hud", "pause_menu", "player", "crowd", "pickups")]
+[node name="Game" type="Node3D" unique_id=125477149 node_paths=PackedStringArray("bed", "door", "hud", "pause_menu", "player", "crowd", "pickups", "atms")]
 script = ExtResource("1_game")
 bed = NodePath("Prison/Bed")
 door = NodePath("Prison/Door")
@@ -101,6 +102,7 @@ pause_menu = NodePath("PauseMenu")
 player = NodePath("Player")
 crowd = NodePath("Crowd")
 pickups = [NodePath("Yard/Cigarette"), NodePath("Yard/Rope"), NodePath("Lot/Blueprint"), NodePath("Lot/Pistol")]
+atms = [NodePath("Lot/Atm")]
 later_spawn_position = Vector3(-24, 0.1, 0)
 skip_tutorial = true
 
@@ -257,6 +259,9 @@ npc_scene = ExtResource("11_npc")
 city = NodePath("../City")
 map = "res://src/world/city/city_map.txt"
 population = 24
+
+[node name="Atm" parent="Lot" instance=ExtResource("17_atm")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 54, 0, 7)
 
 [node name="Stash" type="Node3D" parent="Lot"]
 

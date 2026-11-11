@@ -280,3 +280,42 @@ func test_小屋と広間の戸口の壁は覗いた景色を遮らないよう�
 		var wall: CSGCombiner3D = _pocket_room(game).get_node(path)
 		assert_true(wall.get_layer_mask_value(PassageDoor.HIDDEN_LAYER), path)
 		assert_false(wall.get_layer_mask_value(1), path)
+
+
+func test_空き地の札束は1束10万円の現金():
+	var game := _load_game(true)
+	for cash in _cash_bundles(game):
+		assert_true(cash is Cash)
+		assert_eq(cash.value, Cash.VALUE)
+
+
+func _atm(game: Game) -> Atm:
+	return game.get_node("Lot/Atm")
+
+
+func test_空き区画LにはATMがあり_ゲームにつながっている():
+	var game := _load_game(true)
+	var atm := _atm(game)
+	assert_true(_site_rect("L").has_point(_flat(atm.global_position)))
+	assert_has(game.atms, atm)
+	assert_lt(atm.global_position.distance_to(game.later_spawn_position), 10.0)
+
+
+func test_札束を持ってATMの前でEを押すと入金される():
+	var game := _load_game(true)
+	var atm := _atm(game)
+	var player := game.player
+	# ATM の正面 1.2m に立ち、画面の方を向く。
+	var front := atm.global_transform * Vector3(0, 0, 1.2)
+	player.global_position = Vector3(front.x, atm.global_position.y + 0.05, front.z)
+	player.look_at(Vector3(atm.global_position.x, player.global_position.y, atm.global_position.z), Vector3.UP)
+	player.camera.rotation.x = 0
+	var cash: Cash = _cash_bundles(game)[0]
+	player.grab(cash)
+	await wait_physics_frames(5)
+	var press := InputEventKey.new()
+	press.physical_keycode = KEY_E
+	press.pressed = true
+	InputSender.new(player).send_event(press)
+	assert_eq(game.cycle.life.account.balance, Cash.VALUE)
+	assert_null(player.held_item)

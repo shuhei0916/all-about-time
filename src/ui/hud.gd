@@ -1,6 +1,7 @@
 class_name Hud
 extends CanvasLayer
-## 画面左上に現在の目標、右上に残り寿命、左下に持ち物、下中央に設計図の配置の案内を表示する。
+## 画面左上に現在の目標、右上に残り寿命、左下に持ち物、右下に口座の残高、下中央に設計図の配置の案内を表示する。
+## 現金は物(札束)として持つので、数字では出さない。
 ## 操作案内は画面ではなく対象物の側に出すため、ここでは扱わない。
 ## 死亡時は画面を黒で覆い、次の人生の開始とともに明けていく。
 
@@ -17,6 +18,7 @@ var objective_label: Label
 var lifespan_label: Label
 var inventory_label: Label
 var placement_label: Label
+var balance_label: Label
 var _delta_container: VBoxContainer
 
 
@@ -32,6 +34,8 @@ func _init() -> void:
 	lifespan_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	inventory_label = _make_label(Control.PRESET_BOTTOM_LEFT)
 	inventory_label.add_theme_font_size_override("font_size", 22)
+	balance_label = _make_label(Control.PRESET_BOTTOM_RIGHT)
+	balance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	placement_label = _make_label(Control.PRESET_CENTER_BOTTOM)
 	placement_label.text = "左クリック: 建てる　右クリック: やめる"
 	placement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -79,6 +83,7 @@ func update_from(life: Life) -> void:
 	objective_label.text = life.objectives.current()
 	lifespan_label.text = life.lifespan.to_clock_string()
 	_update_inventory(life.inventory)
+	balance_label.text = "口座 %s" % Money.format(life.account.balance)
 
 
 func _update_inventory(inventory: Inventory) -> void:

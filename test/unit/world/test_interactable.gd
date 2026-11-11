@@ -60,3 +60,10 @@ func test_案内は見た目のてっぺんの上に出る():
 func test_働きかけた時の音は既定では調べる音():
 	var thing: Interactable = add_child_autofree(Interactable.new())
 	assert_eq(thing.interact_sound, &"interact")
+
+
+func test_ふつうは手に持った物を受け取らない():
+	var thing: Interactable = add_child_autofree(Interactable.new())
+	var item: PhysicalItem = add_child_autofree(PhysicalItem.new())
+	assert_false(thing.accepts(item))
+	assert_false(thing.receive(item))

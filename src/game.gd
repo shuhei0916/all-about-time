@@ -13,6 +13,8 @@ extends Node3D
 @export var crowd: Crowd
 ## 拾える道具。拾うと今の人生の持ち物に入り、次の人生で元の場所に戻る。
 @export var pickups: Array[ItemPickup] = []
+## 札束を入金できる ATM。口座は人生ごとのものなので、人生が変わるたびにつなぎ直す。
+@export var atms: Array[Atm] = []
 ## 2世代目以降の人生の開始時にプレイヤーを置く位置。1世代目はシーンに置いた位置から始まる。
 @export var later_spawn_position := Vector3.ZERO
 ## チュートリアルを飛ばし、最初から2世代目以降の人生で、その開始位置から始める。
@@ -40,6 +42,7 @@ func _ready() -> void:
 			player.respawn_at(later_spawn_position)
 	cycle.life_started.connect(_on_life_started)
 	_watch_lifespan()
+	_connect_atms()
 	if bed:
 		bed.interacted.connect(serve_sentence)
 	for pickup in pickups:
@@ -178,6 +181,7 @@ func serve_sentence() -> void:
 
 func _on_life_started(_generation: int) -> void:
 	_watch_lifespan()
+	_connect_atms()
 	# 設計図は前の人生の持ち物なので、配置の途中でも取りやめる。
 	cancel_placement()
 	if door:
@@ -192,6 +196,13 @@ func _on_life_started(_generation: int) -> void:
 
 func _on_item_picked_up(item: Item) -> void:
 	cycle.life.inventory.add(item)
+
+
+## ATM を今の人生の口座と世界の時計につなぐ。
+func _connect_atms() -> void:
+	for atm in atms:
+		atm.account = cycle.life.account
+		atm.clock = cycle.clock
 
 
 ## 今の人生の寿命の増減を HUD の演出につなぐ。人生が変わるたびに繋ぎ直す。

@@ -46,3 +46,14 @@ func is_prompt_visible() -> bool:
 ## プレイヤーから働きかけられた時に呼ばれる。
 func interact() -> void:
 	pass
+
+
+## 手に持った物 item を、この物に手渡せるか。手渡せる物を持って E を押すと、手を離す代わりに手渡す。
+## 継承先(ATM など)が上書きする。
+func accepts(_item: PhysicalItem) -> bool:
+	return false
+
+
+## 手渡された item を受け取る。受け取ったかを返す。断れば、item はプレイヤーの手に残る。
+func receive(_item: PhysicalItem) -> bool:
+	return false

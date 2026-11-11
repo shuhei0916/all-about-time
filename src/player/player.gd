@@ -366,7 +366,11 @@ func look(relative: Vector2) -> void:
 
 func _try_interact() -> void:
 	if held_item:
-		release_held()
+		var receiver := looking_at()
+		if receiver and receiver.accepts(held_item):
+			_hand_over(receiver)
+		else:
+			release_held()
 		return
 	var item := looking_at_item()
 	if item:
@@ -404,12 +408,29 @@ func grab(item: PhysicalItem) -> void:
 func release_held() -> void:
 	if not held_item:
 		return
-	_ray.remove_exception(held_item)
-	_build_ray.remove_exception(held_item)
-	remove_collision_exception_with(held_item)
-	held_item.release(velocity)
-	held_item = null
+	var item := _let_go()
+	item.release(velocity)
 	Sfx.play(&"drop")
+
+
+## 手に持っている物を receiver に手渡す。断られたら持ったままにする。
+## 受け取った側が物を消す(queue_free)のはフレームの終わりなので、受け取られてから手から外せばよい。
+func _hand_over(receiver: Interactable) -> void:
+	if receiver.receive(held_item):
+		_let_go()
+		Sfx.play(receiver.interact_sound)
+	else:
+		Sfx.play(&"denied")
+
+
+## 手に持っている物を手から外し、視線と当たり判定の例外を戻す。外した物を返す。
+func _let_go() -> PhysicalItem:
+	var item := held_item
+	_ray.remove_exception(item)
+	_build_ray.remove_exception(item)
+	remove_collision_exception_with(item)
+	held_item = null
+	return item
 
 
 ## 手に持った物を置く位置。目の前の少し下。

@@ -477,3 +477,23 @@ func test_遠すぎる対象には案内が出ない():
 	var far: Interactable = add_child_autofree(_make_thing(-(Player.INTERACT_DISTANCE + 2.0)))
 	await wait_physics_frames(4)
 	assert_false(far.is_prompt_visible())
+
+
+func test_ATMは今の人生の口座と世界の時計につながる():
+	var game: Game = Game.new()
+	var atm: Atm = add_child_autofree(Atm.new())
+	game.atms.append(atm)
+	add_child_autofree(game)
+	assert_eq(atm.account, game.cycle.life.account)
+	assert_eq(atm.clock, game.cycle.clock)
+
+
+func test_次の人生ではATMが新しい口座につながる():
+	var game: Game = Game.new()
+	var atm: Atm = add_child_autofree(Atm.new())
+	game.atms.append(atm)
+	add_child_autofree(game)
+	game.serve_sentence()
+	simulate(game, 1, Life.INITIAL_LIFESPAN)
+	assert_eq(atm.account, game.cycle.life.account)
+	assert_eq(game.cycle.generation, 2)

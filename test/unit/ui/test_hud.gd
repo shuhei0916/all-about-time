@@ -125,3 +125,22 @@ func test_配置の案内は画面内に収まる():
 	var rect := hud.placement_label.get_global_rect()
 	var screen := hud.placement_label.get_viewport_rect()
 	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
+
+
+func test_口座の残高が表示される():
+	var hud: Hud = add_child_autofree(Hud.new())
+	var life := Life.later_life()
+	life.account.deposit(300_000, 0)
+	hud.update_from(life)
+	assert_eq(hud.balance_label.text, "口座 30万円")
+
+
+func test_口座の残高は画面内に収まる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	var life := Life.later_life()
+	life.account.deposit(1_000_000, 0)
+	hud.update_from(life)
+	await wait_process_frames(2)
+	var rect := hud.balance_label.get_global_rect()
+	var screen := hud.balance_label.get_viewport_rect()
+	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
