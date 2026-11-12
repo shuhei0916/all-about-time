@@ -343,7 +343,7 @@ func test_物を手に持っている間は照準の下に置き方の案内が�
 	var bag := _make_bag_in_front(5.0)
 	game.player.grab(bag)
 	await wait_physics_frames(3)
-	assert_eq(game.hud.get_prompt_entries(), [["G", "ダッフルバッグを置く"]])
+	assert_eq(game.hud.get_prompt_entries(), [["E", "ダッフルバッグを置く"]])
 	game.player.release_held()
 	game.player.rotate_y(PI)
 	await wait_physics_frames(3)

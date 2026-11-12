@@ -146,36 +146,30 @@ func _press_e(player: Player) -> void:
 	InputSender.new(player).send_event(press)
 
 
-func _press_g(player: Player) -> void:
-	var press := InputEventKey.new()
-	press.physical_keycode = KEY_G
-	press.pressed = true
-	InputSender.new(player).send_event(press)
-
-
-func test_Eで見ている物を持ち_Gで離す():
+func test_Eで見ている物を持ち_もう一度Eで置く():
 	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	await wait_physics_frames(3)
 	_press_e(player)
 	assert_eq(player.held_item, item)
-	_press_g(player)
+	await wait_physics_frames(2)
+	_press_e(player)
 	assert_null(player.held_item)
 	assert_false(item.is_held())
 
 
-func test_物を持って何も見ていない時にEを押しても_手を離さず音も鳴らない():
+func test_物を持って入れる先がない時にEを押すと_置く音が鳴る():
 	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	player.grab(item)
 	await wait_physics_frames(3)
 	watch_signals(Sfx)
 	_press_e(player)
-	assert_eq(player.held_item, item)
-	assert_signal_not_emitted(Sfx, "played")
+	assert_null(player.held_item)
+	assert_signal_emitted_with_parameters(Sfx, "played", [&"drop"])
 
 
-func test_物を持って受け取らない物を見てEを押しても_手を離さない():
+func test_物を持って受け取らない物を見てEを押すと_手渡さずに置く():
 	var player: Player = add_child_autofree(Player.create())
 	var thing := Interactable.new()
 	var shape := CollisionShape3D.new()
@@ -187,13 +181,12 @@ func test_物を持って受け取らない物を見てEを押しても_手を�
 	player.grab(item)
 	await wait_physics_frames(3)
 	_press_e(player)
-	assert_eq(player.held_item, item)
+	assert_null(player.held_item)
+	assert_false(item.is_held())
 
 
-func test_手を離すにはGキーが割り当てられている():
-	var g := InputEventKey.new()
-	g.physical_keycode = KEY_G
-	assert_true(InputMap.event_is_action(g, "drop"))
+func test_置くための別のキーはない():
+	assert_false(InputMap.has_action("drop"))
 
 
 ## 当たり判定を持つバッグを、プレイヤーの目の高さの正面に置く。
@@ -1191,4 +1184,4 @@ func test_物を持っていて入れる先がなければ_置き方の案内が
 	var player: Player = add_child_autofree(Player.create())
 	player.grab(_add_item_in_front(1.5))
 	await wait_physics_frames(3)
-	assert_eq(player.prompt_entries(), [["G", "物を置く"]])
+	assert_eq(player.prompt_entries(), [["E", "物を置く"]])

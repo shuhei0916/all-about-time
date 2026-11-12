@@ -114,8 +114,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		_try_interact()
 	elif event.is_action_pressed("take_out"):
 		_try_take_out()
-	elif event.is_action_pressed("drop"):
-		release_held()
 	elif event.is_action_pressed("blink"):
 		if not blink():
 			Sfx.play(&"denied")
@@ -378,10 +376,12 @@ func _try_interact() -> void:
 		if seen_bag and seen_bag.can_store(held_item):
 			seen_bag.store(_let_go())
 			return
-		# 手を離すのは G だけ。狙いが外れても、持っている物を落とさない。
 		var receiver := looking_at()
 		if receiver and receiver.accepts(held_item):
 			_hand_over(receiver)
+			return
+		# 入れる先がなければ置く。照準の下の案内が「置く」に変わるので、押す前に分かる。
+		release_held()
 		return
 	var item := looking_at_item()
 	if item:
@@ -416,14 +416,14 @@ func focus() -> Node3D:
 
 
 ## 照準の下に出す案内。キーと操作の文言の組 [キー, 文言] の並び。
-## 見ている物の案内を出し、物を持っていて入れる先がなければ、置き方を出す。
+## 見ている物の案内を出し、物を持っていて入れる先がなければ、E で置けることを出す。
 func prompt_entries() -> Array:
 	var seen: Node3D = looking_at_item()
 	if seen == null:
 		seen = looking_at()
 	var entries: Array = seen.prompt_entries(held_item) if seen else []
 	if held_item and entries.is_empty():
-		entries = [["G", "%sを置く" % held_item.item_name]]
+		entries = [[Interactable.INTERACT_KEY, "%sを置く" % held_item.item_name]]
 	return entries
 
 
