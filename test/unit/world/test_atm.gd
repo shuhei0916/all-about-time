@@ -75,3 +75,37 @@ func test_上限に達すると案内でそれが分かる():
 		atm.receive(_make_cash())
 	atm.show_prompt()
 	assert_eq(atm.get_prompt_label().get_entries(), [["E", "今週はもう入金できない"]])
+
+
+const ATM_SCENE := "res://src/world/atm.tscn"
+const ATM_MODEL := "res://assets/models/atm/atm.glb"
+
+
+func _model_bounds(root: Node3D) -> AABB:
+	var bounds := AABB()
+	var first := true
+	for mesh: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
+		var box := root.global_transform.affine_inverse() * mesh.global_transform * mesh.get_aabb()
+		bounds = box if first else bounds.merge(box)
+		first = false
+	return bounds
+
+
+func test_見た目はBlenderで作ったモデル():
+	var atm: Atm = add_child_autofree(load(ATM_SCENE).instantiate())
+	var model := atm.get_node_or_null("Model")
+	assert_not_null(model)
+	assert_eq(model.scene_file_path if model else "", ATM_MODEL)
+
+
+func test_モデルの大きさは当たり判定とそろっている():
+	var atm: Atm = add_child_autofree(load(ATM_SCENE).instantiate())
+	var shape: BoxShape3D = atm.get_node("CollisionShape3D").shape
+	var bounds := _model_bounds(atm)
+	# 床から立ち、高さと幅は当たり判定と同じ。正面の操作盤や台座が少しはみ出すのはよい
+	assert_almost_eq(bounds.position.y, 0.0, 0.01)
+	assert_almost_eq(bounds.size.y, shape.size.y, 0.02)
+	assert_almost_eq(bounds.size.x, shape.size.x, 0.06)
+	assert_lt(bounds.size.z, shape.size.z + 0.2)
+	# 正面(+Z)の方へ張り出す
+	assert_gt(bounds.end.z, shape.size.z / 2)
