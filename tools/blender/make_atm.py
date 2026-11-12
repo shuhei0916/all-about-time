@@ -69,11 +69,14 @@ def box(name, size, center, mat, rot_x=0.0, bevel=0.0):
     return obj
 
 
-def cut(target, cutter):
-    """target から cutter の形をくり抜き、cutter は消す。"""
+def cut(target, cutter, transfer=False):
+    """target から cutter の形をくり抜き、cutter は消す。
+    transfer なら、くり抜いてできた面に cutter の材質を付ける(穴の内側を暗くする)。"""
     mod = target.modifiers.new("Cut", "BOOLEAN")
     mod.operation = "DIFFERENCE"
     mod.object = cutter
+    if transfer:
+        mod.material_mode = "TRANSFER"
     # 面取りより先にくり抜く
     target.modifiers.move(len(target.modifiers) - 1, 0)
     bpy.context.view_layer.objects.active = target
@@ -153,13 +156,18 @@ box("CardReader", (0.12, 0.09, 0.03), on_shelf(0.18, 0.04, 0.015), M_TRIM,
 box("CardSlot", (0.09, 0.012, 0.006), on_shelf(0.18, 0.0, 0.031), M_DARK, rot_x=SHELF_TILT)
 box("CardLed", (0.012, 0.012, 0.004), on_shelf(0.18, 0.07, 0.031), M_LED, rot_x=SHELF_TILT)
 
-# 紙幣の出し入れ口(くぼみの下の正面)
-box("CashBezel", (0.44, 0.03, 0.09), (0, FRONT - 0.01, 0.74), M_TRIM, bevel=0.008)
-box("CashSlot", (0.36, 0.02, 0.025), (0, FRONT - 0.021, 0.74), M_DARK)
-text("CashLabel", "CASH", (0, FRONT - 0.026, 0.67), 0.035, M_DARK, depth=0.001)
+# 紙幣の出し入れ口(くぼみの下の正面)。札束(幅0.2m、厚さ0.05m)が入る本物の穴。
+# ゲームでは、この口に触れた物を吸い込む(src/world/atm.tscn の Mouth と、atm.gd の MOUTH_INSIDE)。
+SLOT_Z, SLOT_W, SLOT_H, SLOT_DEPTH = 0.74, 0.28, 0.08, 0.22
+bezel = box("CashBezel", (0.42, 0.03, 0.15), (0, FRONT - 0.01, SLOT_Z), M_TRIM, bevel=0.008)
+cut(bezel, box("BezelCutter", (SLOT_W, 0.1, SLOT_H), (0, FRONT - 0.01, SLOT_Z), M_DARK),
+    transfer=True)
+cut(body, box("SlotCutter", (SLOT_W, SLOT_DEPTH + 0.02, SLOT_H),
+              (0, FRONT + SLOT_DEPTH / 2 - 0.01, SLOT_Z), M_DARK), transfer=True)
+text("CashLabel", "CASH", (0, FRONT - 0.026, 0.64), 0.03, M_DARK, depth=0.001)
 
 # 明細の出口
-box("ReceiptSlot", (0.1, 0.02, 0.012), (0.24, FRONT - 0.008, 0.82), M_DARK)
+box("ReceiptSlot", (0.1, 0.02, 0.012), (0.27, FRONT - 0.008, 0.845), M_DARK)
 
 # 下の金庫の扉(線と鍵)
 box("SafeDoor", (0.66, 0.01, 0.5), (0, FRONT - 0.003, 0.36), M_BODY, bevel=0.004)
@@ -242,3 +250,4 @@ def shoot(name, location, target):
 
 shoot("atm_front.png", (1.3, -3.2, 1.6), (0, 0, 0.95))
 shoot("atm_close.png", (0.35, -1.2, 1.45), (0, -0.2, 1.05))
+shoot("atm_slot.png", (0.2, -0.75, 0.9), (0, -0.3, 0.74))

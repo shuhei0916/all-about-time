@@ -205,6 +205,7 @@ func _connect_atms() -> void:
 	for atm in atms:
 		atm.account = cycle.life.account
 		atm.clock = cycle.clock
+		atm.spit_target = player
 
 
 ## 今の人生の寿命の増減を HUD の演出につなぐ。人生が変わるたびに繋ぎ直す。

@@ -525,6 +525,15 @@ func test_ATMは今の人生の口座と世界の時計につながる():
 	assert_eq(atm.clock, game.cycle.clock)
 
 
+func test_ATMはプレイヤーへ向けて物を吐き出す():
+	var game: Game = Game.new()
+	game.player = add_child_autofree(Player.create())
+	var atm: Atm = add_child_autofree(Atm.new())
+	game.atms.append(atm)
+	add_child_autofree(game)
+	assert_eq(atm.spit_target, game.player)
+
+
 func test_次の人生ではATMが新しい口座につながる():
 	var game: Game = Game.new()
 	var atm: Atm = add_child_autofree(Atm.new())

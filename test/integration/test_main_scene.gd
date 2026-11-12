@@ -330,3 +330,26 @@ func test_バッグに詰めた札束を取り出して_ATMで入金できる():
 	InputSender.new(player).send_event(press)
 	assert_eq(game.cycle.life.account.balance, Cash.VALUE)
 	assert_eq(bag.contents.size(), 19)
+
+
+func test_札束でない物をATMに入れると_揺れた後に正面へ吐き出される():
+	var game := _load_game(true)
+	var atm := _atm(game)
+	var player := game.player
+	var front := atm.global_transform * Vector3(0, 0, 1.2)
+	player.global_position = Vector3(front.x, atm.global_position.y + 0.05, front.z)
+	player.look_at(Vector3(atm.global_position.x, player.global_position.y, atm.global_position.z), Vector3.UP)
+	player.camera.rotation.x = 0
+	var bag := _duffel_bag(game)
+	player.grab(bag)
+	await wait_physics_frames(5)
+	watch_signals(atm)
+	var press := InputEventKey.new()
+	press.physical_keycode = KEY_E
+	press.pressed = true
+	InputSender.new(player).send_event(press)
+	assert_null(player.held_item)
+	await wait_physics_frames(int((Atm.SUCK_TIME + Atm.SHAKE_TIME) * 60) + 10)
+	assert_signal_emitted_with_parameters(atm, "spat_out", [bag])
+	assert_eq(game.cycle.life.account.balance, 0)
+	assert_gt(atm.to_local(bag.global_position).z, 0.3)
