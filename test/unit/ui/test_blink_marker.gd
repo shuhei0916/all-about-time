@@ -71,7 +71,7 @@ func test_枠の中心にQキーの絵が出る():
 	marker.mark(_make_target(Vector3(0, -1, -8)))
 	await wait_process_frames(2)
 	assert_true(marker.key.visible)
-	assert_eq(marker.key.texture, PromptLabel.KEY_ICONS["Q"])
+	assert_eq(marker.key.texture, KeyIcons.ICONS["Q"])
 	assert_almost_eq(marker.key.get_global_rect().get_center(), marker.frame.get_global_rect().get_center(), Vector2.ONE)
 
 

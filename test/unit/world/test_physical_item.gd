@@ -7,22 +7,8 @@ func _make_item() -> PhysicalItem:
 	return add_child_autofree(item)
 
 
-func test_最初は案内が見えない():
-	assert_false(_make_item().is_prompt_visible())
-
-
 func test_案内には手に持つ操作が出る():
-	var item := _make_item()
-	item.show_prompt()
-	assert_true(item.is_prompt_visible())
-	assert_eq(item.get_prompt_label().get_entries(), [["E", "札束を持つ"]])
-
-
-func test_案内を消せる():
-	var item := _make_item()
-	item.show_prompt()
-	item.hide_prompt()
-	assert_false(item.is_prompt_visible())
+	assert_eq(_make_item().prompt_entries(), [["E", "札束を持つ"]])
 
 
 func test_最初は物理で動く():
@@ -104,18 +90,6 @@ func test_離れた所で眠っている物は_手に持っても起こさない
 	assert_true(far.sleeping)
 
 
-func test_案内は見た目のてっぺんの上に出る():
-	var item := _make_item()
-	var mesh := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(0.8, 0.4, 0.4)
-	mesh.mesh = box
-	mesh.position.y = 0.2
-	item.add_child(mesh)
-	item.show_prompt()
-	assert_almost_eq(item.get_prompt_label().global_position.y, 0.4 + PromptLabel.MARGIN, 0.001)
-
-
 func test_バッグを手に持って見ている時は_バッグに入れる操作が出る():
 	var item := _make_item()
 	var bag: DuffelBag = add_child_autofree(DuffelBag.new())
@@ -125,5 +99,3 @@ func test_バッグを手に持って見ている時は_バッグに入れる操
 func test_バッグでない物を手に持って見ている時は_案内が出ない():
 	var item := _make_item()
 	assert_eq(item.prompt_entries(_make_item()), [])
-	item.show_prompt(_make_item())
-	assert_false(item.is_prompt_visible())

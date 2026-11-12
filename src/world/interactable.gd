@@ -2,7 +2,7 @@ class_name Interactable
 extends StaticBody3D
 ## プレイヤーが正面から E キーで働きかけられる物。
 ## 継承先は interact() を上書きする。
-## 操作案内は画面ではなく、この物の上に浮かぶラベルとして出す。
+## 操作の案内は、見ている間だけ画面の照準の下に出る。中身は prompt_entries() が決める。
 
 ## 働きかけに使うキーの表示。
 const INTERACT_KEY := "E"
@@ -12,35 +12,23 @@ const INTERACT_KEY := "E"
 ## 働きかけた時に鳴らす効果音の名前(Sfx.SOUNDS)。
 @export var interact_sound := &"interact"
 
-var _prompt_label: PromptLabel
+
+## 見ている時に照準の下に出す案内。キーと操作の文言の組 [キー, 文言] の並び。キーが空なら文言だけを出す。
+## held はプレイヤーが手に持っている物(なければ null)。手に持った物を受け取れなければ、案内を出さない。
+func prompt_entries(held: PhysicalItem = null) -> Array:
+	if held:
+		return [[INTERACT_KEY, insert_prompt(held)]] if accepts(held) else []
+	return [[INTERACT_KEY, prompt]] if can_interact() else []
 
 
-## 案内ラベルを返す。初回の呼び出しで作る。
-## _init() で作ると、継承先が _init() を定義して super() を書き忘れただけで
-## ラベルが作られなくなり、実行時まで気づけない。それを避けるため遅延して作る。
-func get_prompt_label() -> PromptLabel:
-	if _prompt_label == null:
-		_prompt_label = PromptLabel.new()
-		add_child(_prompt_label)
-	return _prompt_label
+## 手が空いている時に、E で働きかけられるか。ATM のように、物を手渡されるだけの物は false にする。
+func can_interact() -> bool:
+	return true
 
 
-## 案内を出す。プレイヤーが見ている間だけ呼ばれる。held はプレイヤーが手に持っている物(なければ null)。
-func show_prompt(_held: PhysicalItem = null) -> void:
-	var label := get_prompt_label()
-	label.set_entries([[INTERACT_KEY, prompt]])
-	label.place_above(self)
-	label.show()
-
-
-## 案内を消す。
-func hide_prompt() -> void:
-	get_prompt_label().hide()
-
-
-## 案内が見えているか。
-func is_prompt_visible() -> bool:
-	return get_prompt_label().visible
+## 手に持った item を手渡す操作の文言。
+func insert_prompt(item: PhysicalItem) -> String:
+	return "%sを渡す" % item.item_name
 
 
 ## プレイヤーから働きかけられた時に呼ばれる。

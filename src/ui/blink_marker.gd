@@ -37,7 +37,7 @@ func _init() -> void:
 	frame.size = Vector2.ONE * FRAME_SIZE / FRAME_SCALE
 	add_child(frame)
 	key = TextureRect.new()
-	key.texture = PromptLabel.KEY_ICONS["Q"]
+	key.texture = KeyIcons.ICONS["Q"]
 	key.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	key.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	key.size = Vector2.ONE * KEY_SIZE

@@ -1,8 +1,8 @@
 class_name Hud
 extends CanvasLayer
-## 画面左上に現在の目標、右上に残り寿命、左下に持ち物、右下に口座の残高、下中央に設計図の配置の案内と、手に持った物の置き方の案内を表示する。
+## 画面左上に現在の目標、右上に残り寿命、左下に持ち物、右下に口座の残高、下中央に設計図の配置の案内、
+## 照準のすぐ下に見ている物の操作の案内(キーの絵と文言)を表示する。
 ## 現金は物(札束)として持つので、数字では出さない。
-## 操作案内は画面ではなく対象物の側に出すため、ここでは扱わない。
 ## 死亡時は画面を黒で覆い、次の人生の開始とともに明けていく。
 
 const FADE_DURATION := 1.5
@@ -12,6 +12,13 @@ const DELTA_DURATION := 1.2
 const DELTA_RISE := 40.0
 const DELTA_LOSS_COLOR := Color(1.0, 0.25, 0.25)
 const DELTA_GAIN_COLOR := Color(0.35, 1.0, 0.45)
+## 操作の案内を、画面の中央(照準)からどれだけ下に出すか(ピクセル)。
+const PROMPT_OFFSET := 44.0
+## 操作の案内のキーの絵の大きさと、文字の大きさ(ピクセル)。
+const PROMPT_KEY_SIZE := 34.0
+const PROMPT_FONT_SIZE := 22
+## 操作の組と組の間(ピクセル)。
+const PROMPT_ENTRY_GAP := 24
 
 var fade_overlay: ColorRect
 var objective_label: Label
@@ -19,7 +26,9 @@ var lifespan_label: Label
 var inventory_label: Label
 var placement_label: Label
 var balance_label: Label
-var held_label: Label
+## 照準の下の操作の案内。キーの絵と文言を横に並べる。
+var prompt_row: HBoxContainer
+var _prompt_entries: Array = []
 var _delta_container: VBoxContainer
 
 
@@ -42,11 +51,18 @@ func _init() -> void:
 	placement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placement_label.add_theme_font_size_override("font_size", 24)
 	placement_label.visible = false
-	# 置き方の案内は、配置の案内と同じ下中央の、少し上に出す。
-	held_label = _make_label(Control.PRESET_CENTER_BOTTOM)
-	held_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	held_label.position.y -= 40
-	held_label.visible = false
+
+	prompt_row = HBoxContainer.new()
+	prompt_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prompt_row.add_theme_constant_override("separation", 6)
+	prompt_row.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE)
+	prompt_row.anchor_top = 0.5
+	prompt_row.anchor_bottom = 0.5
+	prompt_row.offset_top = PROMPT_OFFSET
+	prompt_row.offset_bottom = PROMPT_OFFSET
+	prompt_row.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	prompt_row.visible = false
+	add_child(prompt_row)
 
 	# 変化量のラベルは寿命ラベルの真下に、新しいものから順に積む。
 	_delta_container = VBoxContainer.new()
@@ -107,10 +123,55 @@ func show_placement_hint(shown: bool) -> void:
 	placement_label.visible = shown
 
 
-## 手に持った物の置き方の案内を出す。item_name が空なら消す。
-func show_held_hint(item_name: String) -> void:
-	held_label.text = "G: %sを置く" % item_name if item_name else ""
-	held_label.visible = not item_name.is_empty()
+## 照準の下に、操作の案内を出す。entries はキーと文言の組 [キー, 文言] の並び。空なら消す。
+## キーに絵があれば絵で、なければ文字で出す。キーが空の組は文言だけを出す。前と同じなら作り直さない。
+func show_prompt(entries: Array) -> void:
+	prompt_row.visible = not entries.is_empty()
+	if entries == _prompt_entries:
+		return
+	_prompt_entries = entries.duplicate(true)
+	for child in prompt_row.get_children():
+		prompt_row.remove_child(child)
+		child.queue_free()
+	for i in entries.size():
+		var key: String = entries[i][0]
+		if i > 0:
+			var gap := Control.new()
+			gap.custom_minimum_size.x = PROMPT_ENTRY_GAP
+			prompt_row.add_child(gap)
+		if KeyIcons.ICONS.has(key):
+			prompt_row.add_child(_make_key_icon(KeyIcons.ICONS[key]))
+		elif not key.is_empty():
+			prompt_row.add_child(_make_prompt_text("[%s]" % key))
+		prompt_row.add_child(_make_prompt_text(entries[i][1]))
+
+
+func get_prompt_entries() -> Array:
+	return _prompt_entries if prompt_row.visible else []
+
+
+func is_prompt_visible() -> bool:
+	return prompt_row.visible
+
+
+func _make_key_icon(texture: Texture2D) -> TextureRect:
+	var icon := TextureRect.new()
+	icon.texture = texture
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.custom_minimum_size = Vector2.ONE * PROMPT_KEY_SIZE
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return icon
+
+
+func _make_prompt_text(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", PROMPT_FONT_SIZE)
+	label.add_theme_constant_override("outline_size", 6)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	return label
 
 
 ## 寿命の増減を示すラベルを出す。減少は赤、増加は緑で、流れ落ちながら消える。

@@ -330,18 +330,24 @@ func test_配置モードの間はHUDに操作の案内が出る():
 	assert_false(game.hud.placement_label.visible)
 
 
-func test_物を手に持っている間はHUDに置き方の案内が出る():
+## プレイヤーと HUD のある Game を作る。
+func _make_prompting_game() -> Game:
 	var game: Game = add_child_autofree(Game.new())
 	game.player = add_child_autofree(Player.create())
 	game.hud = add_child_autofree(Hud.new())
+	return game
+
+
+func test_物を手に持っている間は照準の下に置き方の案内が出る():
+	var game := _make_prompting_game()
 	var bag := _make_bag_in_front(5.0)
 	game.player.grab(bag)
-	simulate(game, 1, 0.0)
-	assert_true(game.hud.held_label.visible)
-	assert_eq(game.hud.held_label.text, "G: ダッフルバッグを置く")
+	await wait_physics_frames(3)
+	assert_eq(game.hud.get_prompt_entries(), [["G", "ダッフルバッグを置く"]])
 	game.player.release_held()
-	simulate(game, 1, 0.0)
-	assert_false(game.hud.held_label.visible)
+	game.player.rotate_y(PI)
+	await wait_physics_frames(3)
+	assert_false(game.hud.is_prompt_visible())
 
 
 func test_チュートリアルを飛ばすと最初から2世代目以降の開始位置で始まる():
@@ -404,9 +410,8 @@ func test_目立つ物を持っていなければ気にされない():
 	assert_eq(game.crowd.npcs[0].attention.level, 0.0)
 
 
-func test_見ている物理の物に案内が出る():
-	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.create())
+func test_見ている物理の物の案内が照準の下に出る():
+	var game := _make_prompting_game()
 	var item := PhysicalItem.new()
 	var shape := CollisionShape3D.new()
 	shape.shape = BoxShape3D.new()
@@ -415,7 +420,7 @@ func test_見ている物理の物に案内が出る():
 	item.position = Vector3(0, Player.EYE_HEIGHT, -1.5)
 	add_child_autofree(item)
 	await wait_physics_frames(4)
-	assert_true(item.is_prompt_visible())
+	assert_eq(game.hud.get_prompt_entries(), [["E", "物を持つ"]])
 
 
 func _make_bag_in_front(distance: float) -> DuffelBag:
@@ -430,20 +435,18 @@ func _make_bag_in_front(distance: float) -> DuffelBag:
 
 
 func test_見ているバッグに物を入れると案内の文言も変わる():
-	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.create())
+	var game := _make_prompting_game()
 	var bag := _make_bag_in_front(1.5)
 	await wait_physics_frames(4)
 	var cash := PhysicalItem.new()
 	cash.item_name = "札束"
 	bag.store(add_child_autofree(cash))
 	await wait_physics_frames(2)
-	assert_eq(bag.get_prompt_label().get_entries(), [["E", "ダッフルバッグを持つ"], ["F", "札束を取り出す（中身 1）"]])
+	assert_eq(game.hud.get_prompt_entries(), [["E", "ダッフルバッグを持つ"], ["F", "札束を取り出す（中身 1）"]])
 
 
 func test_バッグを手に持って物を見ると_バッグに入れる案内が出る():
-	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.create())
+	var game := _make_prompting_game()
 	var bag := _make_bag_in_front(5.0)
 	var item := PhysicalItem.new()
 	var shape := CollisionShape3D.new()
@@ -454,10 +457,10 @@ func test_バッグを手に持って物を見ると_バッグに入れる案内
 	add_child_autofree(item)
 	game.player.grab(bag)
 	await wait_physics_frames(4)
-	assert_eq(item.get_prompt_label().get_entries(), [["E", "バッグに入れる"]])
+	assert_eq(game.hud.get_prompt_entries(), [["E", "バッグに入れる"]])
 
 
-## 当たり判定を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
+## 当たり判定と見た目を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。
 func _make_thing(z: float) -> Interactable:
 	var thing := Interactable.new()
 	var shape := CollisionShape3D.new()
@@ -465,55 +468,55 @@ func _make_thing(z: float) -> Interactable:
 	box.size = Vector3(1, 1, 1)
 	shape.shape = box
 	thing.add_child(shape)
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = BoxMesh.new()
+	thing.add_child(mesh)
 	thing.position = Vector3(0, Player.EYE_HEIGHT, z)
 	return thing
 
 
-func test_見ている対象に案内が出る():
-	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.create())
+func test_見ている対象の案内が出て_対象が光る():
+	var game := _make_prompting_game()
 	var thing: Interactable = add_child_autofree(_make_thing(-1.5))
 	await wait_physics_frames(4)
-	assert_true(thing.is_prompt_visible())
+	assert_eq(game.hud.get_prompt_entries(), [["E", "調べる"]])
+	assert_true(Highlight.is_applied(thing))
 
 
-func test_見ていない対象には案内が出ない():
-	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.create())
+func test_見ていない対象の案内は出ず_光らない():
+	var game := _make_prompting_game()
 	var behind: Interactable = add_child_autofree(_make_thing(1.5))
 	await wait_physics_frames(4)
-	assert_false(behind.is_prompt_visible())
+	assert_false(game.hud.is_prompt_visible())
+	assert_false(Highlight.is_applied(behind))
 
 
-func test_見るのをやめると案内が消える():
-	var game: Game = add_child_autofree(Game.new())
-	var player: Player = add_child_autofree(Player.create())
-	game.player = player
+func test_見るのをやめると案内が消え_光らなくなる():
+	var game := _make_prompting_game()
 	var thing: Interactable = add_child_autofree(_make_thing(-1.5))
 	await wait_physics_frames(4)
-	player.rotate_y(PI)
+	game.player.rotate_y(PI)
 	await wait_physics_frames(4)
-	assert_false(thing.is_prompt_visible())
+	assert_false(game.hud.is_prompt_visible())
+	assert_false(Highlight.is_applied(thing))
 
 
-func test_別の対象を見ると前の案内が消える():
-	var game: Game = add_child_autofree(Game.new())
-	var player: Player = add_child_autofree(Player.create())
-	game.player = player
+func test_別の対象を見ると前の対象は光らなくなる():
+	var game := _make_prompting_game()
 	var front: Interactable = add_child_autofree(_make_thing(-1.5))
-	add_child_autofree(_make_thing(1.5))
+	var back: Interactable = add_child_autofree(_make_thing(1.5))
 	await wait_physics_frames(4)
-	player.rotate_y(PI)
+	game.player.rotate_y(PI)
 	await wait_physics_frames(4)
-	assert_false(front.is_prompt_visible())
+	assert_false(Highlight.is_applied(front))
+	assert_true(Highlight.is_applied(back))
 
 
 func test_遠すぎる対象には案内が出ない():
-	var game: Game = add_child_autofree(Game.new())
-	game.player = add_child_autofree(Player.create())
-	var far: Interactable = add_child_autofree(_make_thing(-(Player.INTERACT_DISTANCE + 2.0)))
+	var game := _make_prompting_game()
+	add_child_autofree(_make_thing(-(Player.INTERACT_DISTANCE + 2.0)))
 	await wait_physics_frames(4)
-	assert_false(far.is_prompt_visible())
+	assert_false(game.hud.is_prompt_visible())
 
 
 func test_ATMは今の人生の口座と世界の時計につながる():

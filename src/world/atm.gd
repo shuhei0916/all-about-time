@@ -201,13 +201,29 @@ func _shake(delta: float, shaking: bool) -> void:
 	_model.transform = Transform3D(tilt, offset) * _model_rest
 
 
-## 案内には、今週あといくら入金できるかを出す。
-func show_prompt(held: PhysicalItem = null) -> void:
-	prompt = _prompt_text()
-	super(held)
+## 手が空いている時は、E でできることはない。今週あといくら入金できるかだけを出す。
+func can_interact() -> bool:
+	return false
 
 
-func _prompt_text() -> String:
+func prompt_entries(held: PhysicalItem = null) -> Array:
+	if held:
+		return super(held)
+	return [["", _status_text()]]
+
+
+func insert_prompt(item: PhysicalItem) -> String:
+	if not (item is Cash):
+		return "%sをATMに入れる" % item.item_name
+	if account == null or clock == null:
+		return "入金する"
+	var allowance := account.remaining_allowance(clock.week())
+	if allowance < item.value:
+		return "入れる（今週はもう入金できない）"
+	return "入金する（今週あと%s）" % Money.format(allowance)
+
+
+func _status_text() -> String:
 	if account == null or clock == null:
 		return "札束を持って入金する"
 	var allowance := account.remaining_allowance(clock.week())

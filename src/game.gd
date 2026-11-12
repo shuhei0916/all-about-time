@@ -29,8 +29,8 @@ var cycle := LifeCycle.new()
 var buildings: Array[Building] = []
 ## 設計図の配置モード中に、建つ位置を示す影。配置モードでなければ null。
 var ghost: BuildingGhost
-## 今案内を出している物。Interactable か PhysicalItem。
-var _prompted: Node3D
+## 今光らせている物(E で今働きかける相手)。Interactable か PhysicalItem。
+var _focused: Node3D
 var _placing_blueprint: Blueprint
 var _placeable := false
 
@@ -56,8 +56,6 @@ func _process(delta: float) -> void:
 	if hud:
 		hud.update_from(cycle.life)
 		hud.show_placement_hint(is_placing())
-		var held := player.held_item if player else null
-		hud.show_held_hint(held.item_name if held else "")
 
 
 ## 案内は視線のレイと同じ物理フレームで更新する。
@@ -226,21 +224,15 @@ func _show_player_to_crowd(delta: float) -> void:
 	crowd.watch(delta, player.camera.global_position, cycle.life.inventory.conspicuousness(), ignore)
 
 
-## 見ている対象にだけ案内を出す。対象が変わったら前の案内を消す。
+## 照準の下に、見ている物の操作の案内を出す。E で今働きかける相手を光らせ、相手が変わったら前の相手は光らせるのをやめる。
 func _update_prompt() -> void:
-	var target: Node3D = null
-	if player:
-		target = player.looking_at_item()
-		if not target:
-			target = player.looking_at()
-	var held: PhysicalItem = player.held_item if player else null
-	if target == _prompted:
-		# 見たまま中身を出し入れした時のように、同じ物でも文言が変わることがあるので出し直す。
-		if target:
-			target.show_prompt(held)
+	if hud:
+		hud.show_prompt(player.prompt_entries() if player else [])
+	var target: Node3D = player.focus() if player else null
+	if target == _focused:
 		return
-	if is_instance_valid(_prompted):
-		_prompted.hide_prompt()
+	if is_instance_valid(_focused):
+		Highlight.clear(_focused)
 	if target:
-		target.show_prompt(held)
-	_prompted = target
+		Highlight.apply(target)
+	_focused = target

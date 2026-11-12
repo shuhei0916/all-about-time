@@ -14,41 +14,9 @@ var hold_offset := Vector3.ZERO
 var _held := false
 ## 手に持つ前の当たり判定のレイヤー。持っている間は 0 にし、離す時に戻す。
 var _layer_before_hold := 0
-var _prompt_label: PromptLabel
 
 
-## 案内ラベルを返す。初回の呼び出しで作る。
-func get_prompt_label() -> PromptLabel:
-	if _prompt_label == null:
-		_prompt_label = PromptLabel.new()
-		add_child(_prompt_label)
-	return _prompt_label
-
-
-## 案内を出す。プレイヤーが見ている間だけ呼ばれる。held はプレイヤーが手に持っている物(なければ null)。
-## 出す操作がなければ案内を消す。
-func show_prompt(held: PhysicalItem = null) -> void:
-	var label := get_prompt_label()
-	var entries := prompt_entries(held)
-	if entries.is_empty():
-		label.hide()
-		return
-	label.set_entries(entries)
-	label.place_above(self)
-	label.show()
-
-
-## 案内を消す。
-func hide_prompt() -> void:
-	get_prompt_label().hide()
-
-
-## 案内が見えているか。
-func is_prompt_visible() -> bool:
-	return get_prompt_label().visible
-
-
-## 案内に出す、キーと操作の文言の組 [キー, 文言] の並び。継承先で操作を足せる。
+## 見ている時に照準の下に出す案内。キーと操作の文言の組 [キー, 文言] の並び。継承先で操作を足せる。
 ## held はプレイヤーが手に持っている物。バッグを持っていれば E でバッグに入れられる。
 ## それ以外の物を持っていれば、E では何もできないので案内を出さない。
 func prompt_entries(held: PhysicalItem = null) -> Array:

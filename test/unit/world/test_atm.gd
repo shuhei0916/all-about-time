@@ -191,19 +191,40 @@ func test_吐き出してしばらく経てば_また吸い込む():
 	assert_true(atm.is_swallowing(item))
 
 
-func test_案内に今週あといくら入金できるかが出る():
+func test_手が空いている時は働きかけられない():
+	assert_false(_make_atm().can_interact())
+
+
+func test_手が空いている時は_今週あといくら入金できるかだけを出す():
 	var atm := _make_atm()
 	atm.receive(_make_cash())
-	atm.show_prompt()
-	assert_eq(atm.get_prompt_label().get_entries(), [["E", "札束を持って入金する（今週あと90万円）"]])
+	assert_eq(atm.prompt_entries(), [["", "札束を持って入金する（今週あと90万円）"]])
 
 
 func test_上限に達すると案内でそれが分かる():
 	var atm := _make_atm()
 	for i in 10:
 		atm.receive(_make_cash())
-	atm.show_prompt()
-	assert_eq(atm.get_prompt_label().get_entries(), [["E", "今週はもう入金できない"]])
+	assert_eq(atm.prompt_entries(), [["", "今週はもう入金できない"]])
+
+
+func test_札束を持っていれば入金する操作が出る():
+	var atm := _make_atm()
+	assert_eq(atm.prompt_entries(_make_cash()), [["E", "入金する（今週あと100万円）"]])
+
+
+func test_上限に達した週に札束を持っていると_入れても入金できないと分かる():
+	var atm := _make_atm()
+	for i in 10:
+		atm.receive(_make_cash())
+	assert_eq(atm.prompt_entries(_make_cash()), [["E", "入れる（今週はもう入金できない）"]])
+
+
+func test_札束でない物を持っていれば_ATMに入れる操作が出る():
+	var atm := _make_atm()
+	var item := _make_item()
+	item.item_name = "拳銃"
+	assert_eq(atm.prompt_entries(item), [["E", "拳銃をATMに入れる"]])
 
 
 func _model_bounds(root: Node3D) -> AABB:

@@ -127,23 +127,50 @@ func test_配置の案内は画面内に収まる():
 	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
 
 
-func test_手に持った物の置き方の案内を出せる():
+func test_照準の下の案内は最初は出ていない():
 	var hud: Hud = add_child_autofree(Hud.new())
-	hud.show_held_hint("札束")
-	assert_true(hud.held_label.visible)
-	assert_eq(hud.held_label.text, "G: 札束を置く")
+	assert_false(hud.is_prompt_visible())
 
 
-func test_手に持った物の置き方の案内は_何も持っていなければ消える():
+func test_照準の下に案内を出せる():
 	var hud: Hud = add_child_autofree(Hud.new())
-	hud.show_held_hint("札束")
-	hud.show_held_hint("")
-	assert_false(hud.held_label.visible)
+	hud.show_prompt([["E", "札束を持つ"]])
+	assert_true(hud.is_prompt_visible())
+	assert_eq(hud.get_prompt_entries(), [["E", "札束を持つ"]])
 
 
-func test_置き方の案内は最初は出ていない():
+func test_案内が空なら消える():
 	var hud: Hud = add_child_autofree(Hud.new())
-	assert_false(hud.held_label.visible)
+	hud.show_prompt([["E", "札束を持つ"]])
+	hud.show_prompt([])
+	assert_false(hud.is_prompt_visible())
+
+
+func test_案内のキーは絵で出す():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_prompt([["E", "持つ"], ["F", "取り出す"]])
+	var icons := hud.prompt_row.find_children("*", "TextureRect", true, false)
+	assert_eq(icons.map(func(icon: TextureRect) -> Texture2D: return icon.texture),
+			[KeyIcons.ICONS["E"], KeyIcons.ICONS["F"]])
+
+
+func test_キーのない案内は文言だけを出す():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_prompt([["", "今週はもう入金できない"]])
+	assert_eq(hud.prompt_row.find_children("*", "TextureRect", true, false).size(), 0)
+	var labels := hud.prompt_row.find_children("*", "Label", true, false)
+	assert_eq(labels.map(func(label: Label) -> String: return label.text), ["今週はもう入金できない"])
+
+
+func test_案内は照準のすぐ下に出る():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_prompt([["E", "札束を持つ"]])
+	await wait_process_frames(2)
+	var rect := hud.prompt_row.get_global_rect()
+	var screen := hud.prompt_row.get_viewport_rect()
+	assert_almost_eq(rect.get_center().x, screen.get_center().x, 2.0)
+	assert_gt(rect.position.y, screen.get_center().y)
+	assert_lt(rect.position.y, screen.get_center().y + 120)
 
 
 func test_口座の残高が表示される():

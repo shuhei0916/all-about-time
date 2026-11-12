@@ -1106,3 +1106,89 @@ func test_ふつうの物は目の前に持つ():
 	player.grab(item)
 	await wait_physics_frames(2)
 	assert_almost_eq(item.global_position, player.hold_position(), Vector3.ONE * 0.01)
+
+
+## 手が空いている時には E で働きかけられない物(ATM のような物)。
+class NotInteractable extends Interactable:
+	func can_interact() -> bool:
+		return false
+
+
+func _add_thing_in_front(thing: Interactable, distance: float) -> Interactable:
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	thing.add_child(shape)
+	thing.position = Vector3(0, Player.EYE_HEIGHT, -distance)
+	return add_child_autofree(thing)
+
+
+func test_手が空いていれば_見ている物がEの相手になる():
+	var player: Player = add_child_autofree(Player.create())
+	var item := _add_item_in_front(1.5)
+	await wait_physics_frames(3)
+	assert_eq(player.focus(), item)
+
+
+func test_何も見ていなければ_Eの相手はいない():
+	var player: Player = add_child_autofree(Player.create())
+	await wait_physics_frames(3)
+	assert_null(player.focus())
+
+
+func test_物を持って置いてあるバッグを見ると_バッグがEの相手になる():
+	var player: Player = add_child_autofree(Player.create())
+	var bag := _add_bag_in_front(1.5)
+	player.grab(_add_item_in_front(5.0))
+	await wait_physics_frames(3)
+	assert_eq(player.focus(), bag)
+
+
+func test_物を持って受け取らない物を見ても_Eの相手はいない():
+	var player: Player = add_child_autofree(Player.create())
+	_add_thing_in_front(Interactable.new(), 1.5)
+	player.grab(_add_item_in_front(5.0))
+	await wait_physics_frames(3)
+	assert_null(player.focus())
+
+
+func test_手が空いている時に働きかけられない物は_Eの相手にならない():
+	var player: Player = add_child_autofree(Player.create())
+	_add_thing_in_front(NotInteractable.new(), 1.5)
+	await wait_physics_frames(3)
+	assert_null(player.focus())
+
+
+func test_手が空いている時に働きかけられない物でEを押しても_何も起きず音も鳴らない():
+	var player: Player = add_child_autofree(Player.create())
+	_add_thing_in_front(NotInteractable.new(), 1.5)
+	await wait_physics_frames(3)
+	watch_signals(Sfx)
+	_press_e(player)
+	assert_signal_not_emitted(Sfx, "played")
+
+
+func test_働きかけられない物を見ても照準はふだんの見た目():
+	var player: Player = add_child_autofree(Player.create())
+	_add_thing_in_front(NotInteractable.new(), 1.5)
+	await wait_physics_frames(3)
+	assert_eq(player.crosshair.get_look(), Crosshair.Look.NORMAL)
+
+
+func test_照準の下の案内は_見ている物の操作():
+	var player: Player = add_child_autofree(Player.create())
+	_add_item_in_front(1.5)
+	await wait_physics_frames(3)
+	assert_eq(player.prompt_entries(), [["E", "物を持つ"]])
+
+
+func test_何も見ていなければ_照準の下の案内はない():
+	var player: Player = add_child_autofree(Player.create())
+	await wait_physics_frames(3)
+	assert_eq(player.prompt_entries(), [])
+
+
+func test_物を持っていて入れる先がなければ_置き方の案内が出る():
+	var player: Player = add_child_autofree(Player.create())
+	player.grab(_add_item_in_front(1.5))
+	await wait_physics_frames(3)
+	assert_eq(player.prompt_entries(), [["G", "物を置く"]])

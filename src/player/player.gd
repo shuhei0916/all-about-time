@@ -215,9 +215,9 @@ func _update_aim_marks() -> void:
 	crosshair.set_look(_crosshair_look())
 
 
-## 今狙っている物でできることに合う照準の見た目。働きかけられる物を見ていれば、叩くより優先する。
+## 今狙っている物でできることに合う照準の見た目。E で働きかける相手がいれば、叩くより優先する。
 func _crosshair_look() -> Crosshair.Look:
-	if looking_at_item() or looking_at():
+	if focus():
 		return Crosshair.Look.INTERACT
 	if attacks_enabled and _aimed_npc(ATTACK_RANGE, ATTACK_AIM_ANGLE):
 		return Crosshair.Look.ATTACK
@@ -388,9 +388,43 @@ func _try_interact() -> void:
 		grab(item)
 		return
 	var target := looking_at()
-	if target:
+	if target and target.can_interact():
 		Sfx.play(target.interact_sound)
 		target.interact()
+
+
+## E で今働きかける相手。手に持つ物、手に持った物を入れるバッグや手渡す相手、働きかける物。なければ null。
+## 照準の見た目と、狙った物を光らせるのに使う。_try_interact と同じ順で選ぶ。
+func focus() -> Node3D:
+	var seen_item := looking_at_item()
+	var seen := looking_at()
+	if held_item:
+		var held_bag := held_item as DuffelBag
+		if held_bag and held_bag.can_store(seen_item):
+			return seen_item
+		var seen_bag := seen_item as DuffelBag
+		if seen_bag and seen_bag.can_store(held_item):
+			return seen_bag
+		if seen and seen.accepts(held_item):
+			return seen
+		return null
+	if seen_item:
+		return seen_item
+	if seen and seen.can_interact():
+		return seen
+	return null
+
+
+## 照準の下に出す案内。キーと操作の文言の組 [キー, 文言] の並び。
+## 見ている物の案内を出し、物を持っていて入れる先がなければ、置き方を出す。
+func prompt_entries() -> Array:
+	var seen: Node3D = looking_at_item()
+	if seen == null:
+		seen = looking_at()
+	var entries: Array = seen.prompt_entries(held_item) if seen else []
+	if held_item and entries.is_empty():
+		entries = [["G", "%sを置く" % held_item.item_name]]
+	return entries
 
 
 ## 手が空いていれば、見ているバッグから中身を1つ取り出して手に持つ。
