@@ -414,7 +414,6 @@ func grab(item: PhysicalItem) -> void:
 		return
 	held_item = item
 	item.hold()
-	Sfx.play(&"grab")
 	_ray.add_exception(item)
 	_build_ray.add_exception(item)
 	# 手元の物に自分がぶつかって押し出されないようにする。
