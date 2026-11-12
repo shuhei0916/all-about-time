@@ -353,3 +353,19 @@ func test_札束でない物をATMに入れると_揺れた後に正面へ吐き
 	assert_signal_emitted_with_parameters(atm, "spat_out", [bag])
 	assert_eq(game.cycle.life.account.balance, 0)
 	assert_gt(atm.to_local(bag.global_position).z, 0.3)
+
+
+func test_札束をATMの口へ投げ込むと入金される():
+	var game := _load_game(true)
+	var atm := _atm(game)
+	var player := game.player
+	var front := atm.global_transform * Vector3(0, 0, 2.0)
+	player.global_position = Vector3(front.x, atm.global_position.y + 0.05, front.z)
+	player.look_at(Vector3(atm.global_position.x, player.global_position.y, atm.global_position.z), Vector3.UP)
+	player.grab(_cash_bundles(game)[0])
+	await wait_physics_frames(5)
+	player.camera.look_at(atm.to_global(Vector3(0, 0.78, 0.3)))
+	await wait_physics_frames(2)
+	player.throw_held()
+	await wait_physics_frames(60)
+	assert_eq(game.cycle.life.account.balance, Cash.VALUE)

@@ -343,7 +343,7 @@ func test_物を手に持っている間は照準の下に置き方の案内が�
 	var bag := _make_bag_in_front(5.0)
 	game.player.grab(bag)
 	await wait_physics_frames(3)
-	assert_eq(game.hud.get_prompt_entries(), [["E", "ダッフルバッグを置く"]])
+	assert_eq(game.hud.get_prompt_entries(), [["E", "ダッフルバッグを置く"], ["左クリック", "投げる"]])
 	game.player.release_held()
 	game.player.rotate_y(PI)
 	await wait_physics_frames(3)
@@ -457,7 +457,7 @@ func test_バッグを手に持って物を見ると_バッグに入れる案内
 	add_child_autofree(item)
 	game.player.grab(bag)
 	await wait_physics_frames(4)
-	assert_eq(game.hud.get_prompt_entries(), [["E", "バッグに入れる"]])
+	assert_eq(game.hud.get_prompt_entries(), [["E", "バッグに入れる"], ["左クリック", "投げる"]])
 
 
 ## 当たり判定と見た目を持つ最小の対象物を、プレイヤーの目の高さに置いて作る。

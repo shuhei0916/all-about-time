@@ -1184,4 +1184,84 @@ func test_物を持っていて入れる先がなければ_置き方の案内が
 	var player: Player = add_child_autofree(Player.create())
 	player.grab(_add_item_in_front(1.5))
 	await wait_physics_frames(3)
-	assert_eq(player.prompt_entries(), [["E", "物を置く"]])
+	assert_eq(player.prompt_entries(), [["E", "物を置く"], ["左クリック", "投げる"]])
+
+
+func _click_attack(player: Player) -> void:
+	var press := InputEventAction.new()
+	press.action = "attack"
+	press.pressed = true
+	InputSender.new(player).send_event(press)
+
+
+func test_物を持っている時に左クリックすると_見ている方へ投げる():
+	var player: Player = add_child_autofree(Player.create())
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	await wait_physics_frames(3)
+	_click_attack(player)
+	assert_null(player.held_item)
+	assert_false(item.is_held())
+	var forward := -player.camera.global_basis.z
+	assert_almost_eq(item.linear_velocity.dot(forward), Player.THROW_SPEED, 0.5)
+
+
+func test_投げた物はプレイヤーの歩く勢いも受け継ぐ():
+	var player: Player = add_child_autofree(Player.create())
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	await wait_physics_frames(3)
+	player.velocity = Vector3(3, 0, 0)
+	player.throw_held()
+	assert_almost_eq(item.linear_velocity.x, 3.0, 0.5)
+
+
+func test_何も持っていなければ投げられない():
+	var player: Player = add_child_autofree(Player.create())
+	player.throw_held()
+	assert_null(player.held_item)
+
+
+func test_物を持っている時の左クリックでは叩かない():
+	_add_floor()
+	var npc := _add_npc_ahead(1.5)
+	var player := _add_blinker()
+	var item := _add_item_in_front(5.0)
+	player.grab(item)
+	await wait_physics_frames(5)
+	_click_attack(player)
+	assert_eq(npc.health.current, _full_health())
+
+
+func test_物を持っている時は叩けるNPCがいても照準は叩く見た目にならない():
+	_add_floor()
+	_add_npc_ahead(1.5)
+	var player := _add_blinker()
+	player.grab(_add_item_in_front(5.0))
+	await wait_physics_frames(5)
+	assert_ne(player.crosshair.get_look(), Crosshair.Look.ATTACK)
+
+
+func test_投げた物は照準の先へ飛ぶ():
+	# 手に持った物は視線より下にあるので、まっすぐ前ではなく、少し上向きに照準の先へ向けて投げる。
+	_add_floor()
+	var player := _add_blinker()
+	var wall := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(4, 4, 0.2)
+	shape.shape = box
+	wall.add_child(shape)
+	wall.position = Vector3(0, Player.EYE_HEIGHT, -4.0)
+	add_child_autofree(wall)
+	var item := _add_item_in_front(1.5)
+	player.grab(item)
+	await wait_physics_frames(5)
+	var aim_point := Vector3(0, player.camera.global_position.y, -3.9)
+	var start := item.global_position
+	player.throw_held()
+	var time := (aim_point.z - start.z) / item.linear_velocity.z
+	var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
+	var arrival := start + item.linear_velocity * time + Vector3.DOWN * 0.5 * gravity * time * time
+	assert_almost_eq(arrival.y, aim_point.y, 0.05)
+	assert_almost_eq(arrival.x, aim_point.x, 0.05)

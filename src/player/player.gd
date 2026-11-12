@@ -52,6 +52,10 @@ const MAX_PITCH := deg_to_rad(85.0)
 ## 手に持った物を置く、目からの距離と高さ(メートル)。
 const HOLD_DISTANCE := 0.9
 const HOLD_DROP := 0.35
+## 手に持った物を左クリックで投げる速さ(メートル/秒)。見ている方へ、自分の歩く勢いに足す。
+const THROW_SPEED := 8.0
+## 投げる時に照準の先を探す距離(メートル)。この先に何もなければ、この距離の視線の上を狙う。
+const THROW_AIM_RANGE := 30.0
 
 ## 手に持っている物。持っていなければ null。
 var held_item: PhysicalItem
@@ -108,8 +112,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		# マウスが外れている時のクリックは、マウスを捕まえ直すだけにする。
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	elif event.is_action_pressed("attack") and attacks_enabled:
-		attack()
+	elif event.is_action_pressed("attack"):
+		# 物を持っている間の左クリックは、叩く代わりに投げる。
+		if held_item:
+			throw_held()
+		elif attacks_enabled:
+			attack()
 	elif event.is_action_pressed("interact"):
 		_try_interact()
 	elif event.is_action_pressed("take_out"):
@@ -217,7 +225,7 @@ func _update_aim_marks() -> void:
 func _crosshair_look() -> Crosshair.Look:
 	if focus():
 		return Crosshair.Look.INTERACT
-	if attacks_enabled and _aimed_npc(ATTACK_RANGE, ATTACK_AIM_ANGLE):
+	if attacks_enabled and not held_item and _aimed_npc(ATTACK_RANGE, ATTACK_AIM_ANGLE):
 		return Crosshair.Look.ATTACK
 	return Crosshair.Look.NORMAL
 
@@ -424,6 +432,8 @@ func prompt_entries() -> Array:
 	var entries: Array = seen.prompt_entries(held_item) if seen else []
 	if held_item and entries.is_empty():
 		entries = [[Interactable.INTERACT_KEY, "%sを置く" % held_item.item_name]]
+	if held_item:
+		entries = entries + [[KeyIcons.LEFT_CLICK, "投げる"]]
 	return entries
 
 
@@ -462,6 +472,47 @@ func release_held() -> void:
 	var item := _let_go()
 	item.release(velocity)
 	Sfx.play(&"drop")
+
+
+## 手に持っている物を、照準の先へ投げる。物は自分の歩く勢い(横の速さだけ)に、投げる速さを足して飛ぶ。
+## 縦の速さは足さない。立っていても重力で下向きの速さが少し残っていて、狙いより下に飛ぶ。
+## 手に持った物は視線より下にあるので、視線と平行に投げると照準より下に当たる。
+## そこで、照準の先(視線が最初に当たる所)へ、放物線で届く向きに投げる。届かなければ一番遠くまで飛ぶ 45 度で投げる。
+## 照準の先に何もなければ、視線の方へまっすぐ投げる。
+func throw_held() -> void:
+	if not held_item:
+		return
+	var target: Variant = _throw_target()
+	var item := _let_go()
+	var direction := -camera.global_basis.z
+	if target != null:
+		direction = throw_direction(item.global_position, target, THROW_SPEED)
+	item.release(Vector3(velocity.x, 0, velocity.z) + direction * THROW_SPEED)
+
+
+## from から speed で投げて to に届く向き(低い方の放物線)。届かなければ to の方へ 45 度上向き。
+static func throw_direction(from: Vector3, to: Vector3, speed: float) -> Vector3:
+	var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
+	var flat := Vector3(to.x - from.x, 0, to.z - from.z)
+	var distance := flat.length()
+	var height := to.y - from.y
+	if distance < 0.01:
+		return Vector3.UP if height > 0 else Vector3.DOWN
+	var speed2 := speed * speed
+	var root := speed2 * speed2 - gravity * (gravity * distance * distance + 2 * height * speed2)
+	var angle := PI / 4
+	if root >= 0.0:
+		angle = atan((speed2 - sqrt(root)) / (gravity * distance))
+	return (flat / distance * cos(angle) + Vector3.UP * sin(angle)).normalized()
+
+
+## 照準の先。視線が THROW_AIM_RANGE までに最初に当たる所。自分と手に持った物には当たらない。何もなければ null。
+func _throw_target() -> Variant:
+	var from := camera.global_position
+	var query := PhysicsRayQueryParameters3D.create(from, from - camera.global_basis.z * THROW_AIM_RANGE)
+	query.exclude = [get_rid(), held_item.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	return hit.position if hit else null
 
 
 ## 手に持っている物を receiver に手渡す。断られたら持ったままにする(音は鳴らさない)。
