@@ -8,8 +8,8 @@ const SENTENCE_DURATION := 2.0 * Lifespan.SECONDS_PER_YEAR
 ## 出所後に1時間残るよう、初期寿命は刑期に1時間を足したもの。
 const INITIAL_LIFESPAN := SENTENCE_DURATION + Lifespan.SECONDS_PER_HOUR
 const FIRST_LIFE_OBJECTIVES: Array[String] = ["刑期を全うする", "死ぬ"]
-## 2世代目以降の人生の寿命は2時間(仮)。
-const LATER_LIFESPAN := 2.0 * Lifespan.SECONDS_PER_HOUR
+## 2世代目以降の人生の寿命はゲームの時間で1週間(現実の約2.8時間)。
+const LATER_LIFESPAN := float(WorldClock.SECONDS_PER_WEEK)
 
 ## 寿命が尽きて人生が終わった瞬間に発火する。
 signal ended

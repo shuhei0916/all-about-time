@@ -94,9 +94,10 @@ albedo_color = Color(0.08, 0.08, 0.09, 1)
 metallic = 0.6
 roughness = 0.4
 
-[node name="Game" type="Node3D" unique_id=125477149 node_paths=PackedStringArray("bed", "door", "hud", "pause_menu", "player", "crowd", "pickups", "atms")]
+[node name="Game" type="Node3D" unique_id=125477149 node_paths=PackedStringArray("bed", "sleep_bed", "door", "hud", "pause_menu", "player", "crowd", "pickups", "atms")]
 script = ExtResource("1_game")
 bed = NodePath("Prison/Bed")
+sleep_bed = NodePath("PocketRoom/Hall/SleepBed")
 door = NodePath("Prison/Door")
 hud = NodePath("Hud")
 pause_menu = NodePath("PauseMenu")

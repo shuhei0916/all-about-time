@@ -87,3 +87,81 @@ func test_次の人生では口座の残高を失っている():
 	cycle.life.account.deposit(100_000, cycle.clock.week())
 	cycle.tick(Life.LATER_LIFESPAN)
 	assert_eq(cycle.life.account.balance, 0)
+
+
+func _until_night(cycle: LifeCycle) -> void:
+	cycle.tick(12.0 * Lifespan.SECONDS_PER_HOUR)
+
+
+func test_昼は眠れない():
+	var cycle := LifeCycle.new(true)
+	assert_false(cycle.can_sleep())
+
+
+func test_夜は眠れる():
+	var cycle := LifeCycle.new(true)
+	_until_night(cycle)
+	assert_true(cycle.can_sleep())
+
+
+func test_眠ると次の朝9時に目覚める():
+	var cycle := LifeCycle.new(true)
+	_until_night(cycle)
+	cycle.sleep()
+	assert_eq(cycle.clock.day(), 2)
+	assert_eq(cycle.clock.hour(), 9)
+	assert_eq(cycle.clock.minute(), 0)
+
+
+func test_眠った時間のぶん寿命が減る():
+	var cycle := LifeCycle.new(true)
+	_until_night(cycle)
+	var before := cycle.life.lifespan.remaining
+	cycle.sleep()
+	assert_eq(cycle.life.lifespan.remaining, before - 12.0 * Lifespan.SECONDS_PER_HOUR)
+
+
+func test_眠って減った寿命は変化として通知される():
+	var cycle := LifeCycle.new(true)
+	_until_night(cycle)
+	watch_signals(cycle.life.lifespan)
+	cycle.sleep()
+	assert_signal_emitted_with_parameters(
+		cycle.life.lifespan, "changed", [-12.0 * Lifespan.SECONDS_PER_HOUR]
+	)
+
+
+func test_昼に眠ろうとしても何も起きない():
+	var cycle := LifeCycle.new(true)
+	cycle.sleep()
+	assert_eq(cycle.clock.elapsed, 0.0)
+	assert_eq(cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)
+
+
+func test_寿命が朝まで持てば眠っても死なない():
+	var cycle := LifeCycle.new(true)
+	_until_night(cycle)
+	assert_false(cycle.dies_in_sleep())
+
+
+func test_寿命が朝まで持たなければ眠ると死ぬと分かる():
+	var cycle := LifeCycle.new(true)
+	cycle.tick(Life.LATER_LIFESPAN - 3.0 * Lifespan.SECONDS_PER_HOUR)
+	assert_true(cycle.can_sleep())
+	assert_true(cycle.dies_in_sleep())
+
+
+func test_寿命が朝まで持たないまま眠ると眠ったまま死ぬ():
+	var cycle := LifeCycle.new(true)
+	cycle.tick(Life.LATER_LIFESPAN - 3.0 * Lifespan.SECONDS_PER_HOUR)
+	cycle.sleep()
+	assert_eq(cycle.generation, 3)
+
+
+## 次の人生は死んだ時刻から続く。朝9時まで飛ばない。
+func test_眠ったまま死ぬと次の人生は死んだ時刻から始まる():
+	var cycle := LifeCycle.new(true)
+	cycle.tick(Life.LATER_LIFESPAN - 3.0 * Lifespan.SECONDS_PER_HOUR)
+	cycle.sleep()
+	assert_eq(cycle.clock.elapsed, Life.LATER_LIFESPAN)
+	assert_eq(cycle.life.lifespan.remaining, Life.LATER_LIFESPAN)

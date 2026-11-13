@@ -10,12 +10,35 @@ func test_目標ラベルに現在の目標が表示される():
 func test_寿命ラベルに残り時間が表示される():
 	var hud: Hud = add_child_autofree(Hud.new())
 	hud.update_from(Life.first_life())
-	assert_eq(hud.lifespan_label.text, "2年 0日 01:00:00")
+	assert_eq(hud.lifespan_label.text, "残り 2年")
+
+
+func test_時計ラベルに世界の時計の日にちと曜日と時刻が表示される():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_clock(WorldClock.new())
+	assert_eq(hud.clock_label.text, "1日目 (月) 09:00")
+
+
+func test_時計ラベルは寿命ラベルの上に出る():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.update_from(Life.first_life())
+	hud.show_clock(WorldClock.new())
+	await wait_process_frames(2)
+	assert_lte(hud.clock_label.get_global_rect().end.y, hud.lifespan_label.get_global_rect().position.y)
+
+
+func test_時計ラベルは画面内に収まる():
+	var hud: Hud = add_child_autofree(Hud.new())
+	hud.show_clock(WorldClock.new())
+	await wait_process_frames(2)
+	var rect := hud.clock_label.get_global_rect()
+	var screen := hud.clock_label.get_viewport_rect()
+	assert_true(screen.encloses(rect), "%s が画面 %s の内側にあること" % [rect, screen])
 
 
 func test_暗転を始めると画面が黒で覆われる():
 	var hud: Hud = add_child_autofree(Hud.new())
-	hud.start_death_fade()
+	hud.fade_from_black()
 	assert_eq(hud.fade_overlay.color.a, 1.0)
 
 

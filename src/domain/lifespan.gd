@@ -59,24 +59,20 @@ func is_dead() -> bool:
 
 
 ## HUD 表示用の文字列を返す。端数秒は切り捨てる。
-## 1日未満は "HH:MM:SS"、1日以上は "D日 HH:MM:SS"、1年以上は "Y年 D日 HH:MM:SS"。
+## 24時間を切ると "HH:MM:SS" のタイマー、24時間以上は "残り 6日" や "残り 2年" のように一番大きい単位だけを出す。
 func to_clock_string() -> String:
 	var total := int(floorf(remaining))
+	if total >= SECONDS_PER_YEAR:
+		@warning_ignore("integer_division")
+		return "残り %d年" % (total / SECONDS_PER_YEAR)
+	if total >= SECONDS_PER_DAY:
+		@warning_ignore("integer_division")
+		return "残り %d日" % (total / SECONDS_PER_DAY)
 	@warning_ignore("integer_division")
-	var years := total / SECONDS_PER_YEAR
-	@warning_ignore("integer_division")
-	var days := (total % SECONDS_PER_YEAR) / SECONDS_PER_DAY
-	@warning_ignore("integer_division")
-	var hours := (total % SECONDS_PER_DAY) / SECONDS_PER_HOUR
+	var hours := total / SECONDS_PER_HOUR
 	@warning_ignore("integer_division")
 	var minutes := (total % SECONDS_PER_HOUR) / 60
-	var seconds := total % 60
-	var clock := "%02d:%02d:%02d" % [hours, minutes, seconds]
-	if years > 0:
-		return "%d年 %d日 %s" % [years, days, clock]
-	if days > 0:
-		return "%d日 %s" % [days, clock]
-	return clock
+	return "%02d:%02d:%02d" % [hours, minutes, total % 60]
 
 
 ## 演出用に変化量を "-2年" のような最大の単位だけの短い文字列にする。

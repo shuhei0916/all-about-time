@@ -468,3 +468,10 @@ func test_止まった列車はアイドリングの音になり_発車する時
 	game.train.horn.stop()
 	_advance_train_until(game, TrainRun.Phase.DEPARTING)
 	assert_true(game.train.horn.playing)
+
+
+func test_空き区画Lの小屋の地下の広い部屋には眠るベッドがあり_人生の繰り返しにつながる():
+	var game := _load_game(true)
+	assert_not_null(game.sleep_bed, "sleep_bed")
+	assert_true(_pocket_room(game).get_node("Hall").is_ancestor_of(game.sleep_bed))
+	assert_eq(game.sleep_bed.cycle, game.cycle)

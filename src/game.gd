@@ -1,9 +1,11 @@
 class_name Game
 extends Node3D
-## ゲーム全体の進行役。人生の繰り返しを保持し、毎フレーム寿命を進め、
+## ゲーム全体の進行役。人生の繰り返しを保持し、毎フレーム世界の時計と寿命を進め、
 ## ベッド・ドア・HUD・落ちている道具を人生の状態と結びつける。
 
 @export var bed: Bed
+## 眠るためのベッド(空き区画 L の小屋の地下の広間)。夜に使うと次の朝9時まで眠る。
+@export var sleep_bed: SleepBed
 @export var door: Door
 @export var hud: Hud
 ## Esc で開く一時停止メニュー。
@@ -55,16 +57,21 @@ func _ready() -> void:
 	_connect_atms()
 	if bed:
 		bed.interacted.connect(serve_sentence)
+	if sleep_bed:
+		sleep_bed.cycle = cycle
+		sleep_bed.sleep_requested.connect(sleep)
 	for pickup in pickups:
 		pickup.picked_up.connect(_on_item_picked_up)
 	if pause_menu:
 		pause_menu.quit_requested.connect(quit_game)
 
 
+## 現実の時間を WorldClock.TIME_SCALE 倍して、ゲームの時間を進める(ゲームの1時間が現実の1分)。
 func _process(delta: float) -> void:
-	cycle.tick(delta)
+	cycle.tick(delta * WorldClock.TIME_SCALE)
 	if hud:
 		hud.update_from(cycle.life)
+		hud.show_clock(cycle.clock)
 		hud.show_placement_hint(is_placing())
 
 
@@ -235,6 +242,16 @@ func serve_sentence() -> void:
 		door.open()
 
 
+## 眠り、次の朝9時まで時間を飛ばす。眠るベッドから呼ばれる。夜でなければ何もしない。
+## 眠った時間のぶん寿命が減り、朝まで持たなければ眠ったまま死ぬ。
+func sleep() -> void:
+	if not cycle.can_sleep():
+		return
+	cycle.sleep()
+	if hud:
+		hud.fade_from_black()
+
+
 func _on_life_started(_generation: int) -> void:
 	_watch_lifespan()
 	_connect_atms()
@@ -247,7 +264,7 @@ func _on_life_started(_generation: int) -> void:
 	if player:
 		player.respawn_at(later_spawn_position)
 	if hud:
-		hud.start_death_fade()
+		hud.fade_from_black()
 
 
 func _on_item_picked_up(item: Item) -> void:

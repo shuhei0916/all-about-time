@@ -4,13 +4,13 @@ extends GutTest
 func test_フレームが進むと寿命が減る():
 	var game: Game = add_child_autofree(Game.new())
 	simulate(game, 1, 0.5)
-	assert_eq(game.cycle.life.lifespan.remaining, Life.INITIAL_LIFESPAN - 0.5)
+	assert_eq(game.cycle.life.lifespan.remaining, Life.INITIAL_LIFESPAN - 0.5 * WorldClock.TIME_SCALE)
 
 
 func test_フレームが進むと世界の時計も進む():
 	var game: Game = add_child_autofree(Game.new())
 	simulate(game, 1, 0.5)
-	assert_eq(game.cycle.clock.elapsed, 0.5)
+	assert_eq(game.cycle.clock.elapsed, 0.5 * WorldClock.TIME_SCALE)
 
 
 func test_刑期を全うすると目標が死ぬになる():
@@ -37,8 +37,10 @@ func test_次の人生が始まるとドアが閉まる():
 func test_毎フレームHUDが更新される():
 	var game: Game = add_child_autofree(Game.new())
 	game.hud = add_child_autofree(Hud.new())
+	game.serve_sentence()
 	simulate(game, 1, 1.0)
-	assert_eq(game.hud.lifespan_label.text, "2年 0日 00:59:59")
+	assert_eq(game.hud.lifespan_label.text, "00:59:00")
+	assert_eq(game.hud.clock_label.text, "731日目 (水) 09:01")
 
 
 func test_次の人生は2世代目以降の開始位置から始まる():
@@ -546,3 +548,53 @@ func test_次の人生ではATMが新しい口座につながる():
 	simulate(game, 1, Life.INITIAL_LIFESPAN)
 	assert_eq(atm.account, game.cycle.life.account)
 	assert_eq(game.cycle.generation, 2)
+
+
+func _night_game() -> Game:
+	var game := Game.new()
+	game.skip_tutorial = true
+	add_child_autofree(game)
+	game.cycle.tick(12.0 * Lifespan.SECONDS_PER_HOUR)
+	return game
+
+
+func test_眠るベッドは今の人生の繰り返しにつながる():
+	var game := Game.new()
+	game.skip_tutorial = true
+	game.sleep_bed = add_child_autofree(SleepBed.new())
+	add_child_autofree(game)
+	assert_eq(game.sleep_bed.cycle, game.cycle)
+
+
+func test_眠るベッドで眠ると次の朝9時になる():
+	var game := Game.new()
+	game.skip_tutorial = true
+	game.sleep_bed = add_child_autofree(SleepBed.new())
+	add_child_autofree(game)
+	game.cycle.tick(12.0 * Lifespan.SECONDS_PER_HOUR)
+	game.sleep_bed.interact()
+	assert_eq(game.cycle.clock.day(), 2)
+	assert_eq(game.cycle.clock.hour(), 9)
+
+
+func test_眠ると暗転してから明ける():
+	var game := _night_game()
+	game.hud = add_child_autofree(Hud.new())
+	game.sleep()
+	assert_eq(game.hud.fade_overlay.color.a, 1.0)
+
+
+func test_眠ると減った寿命が演出される():
+	var game := _night_game()
+	game.hud = add_child_autofree(Hud.new())
+	game.sleep()
+	assert_eq(game.hud.get_delta_labels().size(), 1)
+
+
+func test_昼に眠ろうとしても暗転しない():
+	var game := Game.new()
+	game.skip_tutorial = true
+	game.hud = add_child_autofree(Hud.new())
+	add_child_autofree(game)
+	game.sleep()
+	assert_eq(game.hud.fade_overlay.color.a, 0.0)

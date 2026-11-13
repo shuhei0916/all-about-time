@@ -69,9 +69,9 @@ func test_出所後に死に至る道具を使うと人生が終わる():
 	assert_signal_emitted(life, "ended")
 
 
-func test_2世代目以降の人生の寿命は2時間():
+func test_2世代目以降の人生の寿命はゲームの時間で1週間():
 	var life := Life.later_life()
-	assert_eq(life.lifespan.remaining, 2.0 * Lifespan.SECONDS_PER_HOUR)
+	assert_eq(life.lifespan.remaining, 7.0 * Lifespan.SECONDS_PER_DAY)
 
 
 func test_2世代目以降の人生には目標がない():
@@ -82,7 +82,7 @@ func test_2世代目以降の人生には目標がない():
 func test_2世代目以降の人生には刑期がなく_寿命は減らない():
 	var life := Life.later_life()
 	life.serve_sentence()
-	assert_eq(life.lifespan.remaining, 2.0 * Lifespan.SECONDS_PER_HOUR)
+	assert_eq(life.lifespan.remaining, Life.LATER_LIFESPAN)
 
 
 func test_2世代目以降の人生も寿命が尽きると終わる():

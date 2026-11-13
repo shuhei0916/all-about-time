@@ -1,9 +1,9 @@
 class_name Hud
 extends CanvasLayer
-## 画面左上に現在の目標、右上に残り寿命、左下に持ち物、右下に口座の残高、下中央に設計図の配置の案内、
+## 画面左上に現在の目標、右上に世界の時計とその下に残り寿命、左下に持ち物、右下に口座の残高、下中央に設計図の配置の案内、
 ## 照準のすぐ下に見ている物の操作の案内(キーの絵と文言)を表示する。
 ## 現金は物(札束)として持つので、数字では出さない。
-## 死亡時は画面を黒で覆い、次の人生の開始とともに明けていく。
+## 死亡時と眠った時は画面を黒で覆い、明けていく。
 
 const FADE_DURATION := 1.5
 ## 寿命の増減を示すラベルが出てから消えるまでの秒数。
@@ -19,9 +19,12 @@ const PROMPT_KEY_SIZE := 34.0
 const PROMPT_FONT_SIZE := 22
 ## 操作の組と組の間(ピクセル)。
 const PROMPT_ENTRY_GAP := 24
+## 右上の時計の下に寿命を出すための、寿命ラベルをずらす量(ピクセル)。
+const LIFESPAN_OFFSET := 40.0
 
 var fade_overlay: ColorRect
 var objective_label: Label
+var clock_label: Label
 var lifespan_label: Label
 var inventory_label: Label
 var placement_label: Label
@@ -40,8 +43,12 @@ func _init() -> void:
 	add_child(fade_overlay)
 
 	objective_label = _make_label(Control.PRESET_TOP_LEFT)
+	clock_label = _make_label(Control.PRESET_TOP_RIGHT)
+	clock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	lifespan_label = _make_label(Control.PRESET_TOP_RIGHT)
 	lifespan_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	lifespan_label.offset_top += LIFESPAN_OFFSET
+	lifespan_label.offset_bottom += LIFESPAN_OFFSET
 	inventory_label = _make_label(Control.PRESET_BOTTOM_LEFT)
 	inventory_label.add_theme_font_size_override("font_size", 22)
 	balance_label = _make_label(Control.PRESET_BOTTOM_RIGHT)
@@ -72,7 +79,7 @@ func _init() -> void:
 		Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 16
 	)
 	_delta_container.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_delta_container.position.y += 56
+	_delta_container.position.y += 56 + LIFESPAN_OFFSET
 	add_child(_delta_container)
 
 
@@ -106,6 +113,11 @@ func update_from(life: Life) -> void:
 	lifespan_label.text = life.lifespan.to_clock_string()
 	_update_inventory(life.inventory)
 	balance_label.text = "口座 %s" % Money.format(life.account.balance)
+
+
+## 世界の時計(日にち、曜日、時刻)を出す。毎フレーム呼ぶ。
+func show_clock(clock: WorldClock) -> void:
+	clock_label.text = clock.to_display_string()
 
 
 func _update_inventory(inventory: Inventory) -> void:
@@ -201,8 +213,8 @@ func get_delta_labels() -> Array[Label]:
 	return labels
 
 
-## 画面を一度黒で覆い、時間をかけて明けさせる。
-func start_death_fade() -> void:
+## 画面を一度黒で覆い、時間をかけて明けさせる。死んだ時と眠った時に使う。
+func fade_from_black() -> void:
 	fade_overlay.color.a = 1.0
 	var tween := create_tween()
 	tween.tween_property(fade_overlay, "color:a", 0.0, FADE_DURATION)

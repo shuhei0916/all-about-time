@@ -66,14 +66,24 @@ func test_端数秒は切り捨てて表示する():
 	assert_eq(lifespan.to_clock_string(), "00:00:59")
 
 
-func test_1日以上あれば日数を前に付けて表示する():
-	var lifespan := Lifespan.new(Lifespan.SECONDS_PER_DAY + 5)
-	assert_eq(lifespan.to_clock_string(), "1日 00:00:05")
+func test_24時間以上あれば残りの日数だけを表示する():
+	var lifespan := Lifespan.new(6 * Lifespan.SECONDS_PER_DAY + 23 * Lifespan.SECONDS_PER_HOUR)
+	assert_eq(lifespan.to_clock_string(), "残り 6日")
 
 
-func test_1年以上あれば年数と日数を前に付けて表示する():
+func test_ちょうど24時間なら残り1日と表示する():
+	var lifespan := Lifespan.new(Lifespan.SECONDS_PER_DAY)
+	assert_eq(lifespan.to_clock_string(), "残り 1日")
+
+
+func test_24時間を切ると時分秒のタイマーになる():
+	var lifespan := Lifespan.new(Lifespan.SECONDS_PER_DAY - 0.5)
+	assert_eq(lifespan.to_clock_string(), "23:59:59")
+
+
+func test_1年以上あれば残りの年数だけを表示する():
 	var lifespan := Lifespan.new(2 * Lifespan.SECONDS_PER_YEAR + 3 * Lifespan.SECONDS_PER_DAY + 3600)
-	assert_eq(lifespan.to_clock_string(), "2年 3日 01:00:00")
+	assert_eq(lifespan.to_clock_string(), "残り 2年")
 
 
 func test_消費すると消費量がシグナルで通知される():

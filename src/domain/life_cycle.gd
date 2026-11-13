@@ -21,10 +21,31 @@ func _init(skip_tutorial := false) -> void:
 		_start_life(Life.first_life())
 
 
-## 時間を進める。世界の時計が進み、今の人生の寿命が減る。
+## 時間を進める(ゲームの秒)。世界の時計が進み、今の人生の寿命が減る。
 func tick(delta: float) -> void:
 	clock.advance(delta)
 	life.tick(delta)
+
+
+## 今眠れるか。眠れるのは夜(21時から翌朝9時まで)だけ。
+func can_sleep() -> bool:
+	return clock.is_night()
+
+
+## 今眠ると、朝9時に目覚める前に寿命が尽きるか。
+func dies_in_sleep() -> bool:
+	return life.lifespan.remaining <= clock.seconds_until_morning()
+
+
+## 眠り、次の朝9時まで時間を飛ばす。飛ばした分だけ寿命が減る。夜でなければ何もしない。
+## 朝まで寿命が持たなければ眠ったまま死に、次の人生は死んだ時刻から始まる。
+func sleep() -> void:
+	if not can_sleep():
+		return
+	var duration := clock.seconds_until_morning()
+	# 死ぬと次の人生が始まるので、時計は寿命を減らす前に、死ぬ時刻までだけ進めておく。
+	clock.advance(minf(duration, life.lifespan.remaining))
+	life.lifespan.spend(duration)
 
 
 func _start_life(new_life: Life) -> void:
