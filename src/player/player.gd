@@ -471,7 +471,6 @@ func release_held() -> void:
 		return
 	var item := _let_go()
 	item.release(velocity)
-	Sfx.play(&"drop")
 
 
 ## 手に持っている物を、照準の先へ投げる。物は自分の歩く勢い(横の速さだけ)に、投げる速さを足して飛ぶ。

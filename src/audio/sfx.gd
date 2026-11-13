@@ -1,5 +1,5 @@
 extends Node
-## 効果音を鳴らす。オートロード(Sfx)として、どこからでも Sfx.play(&"drop") のように呼ぶ。
+## 効果音を鳴らす。オートロード(Sfx)として、どこからでも Sfx.play(&"interact") のように呼ぶ。
 ## 鳴らす場面の名前と音の素材の組は SOUNDS にまとめ、音を替える時はここだけを直す。
 ## 世界の中の位置を持たない、画面の操作の音として鳴らす。
 
@@ -7,8 +7,6 @@ extends Node
 signal played(sound: StringName)
 
 const SOUNDS := {
-	## 持っていた物を離す。
-	&"drop": preload("res://assets/sounds/ui/drop_002.ogg"),
 	## 道具を拾って持ち物に入れる。
 	&"pick_up": preload("res://assets/sounds/ui/confirmation_001.ogg"),
 	## E で物に働きかける(ベッドなど)。

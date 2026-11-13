@@ -113,14 +113,13 @@ func test_手を離すと持っていない状態に戻る():
 	assert_false(item.is_held())
 
 
-func test_物を持っても音は鳴らず_離すと離す音が鳴る():
+func test_物を持っても離しても音は鳴らない():
 	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	watch_signals(Sfx)
 	player.grab(item)
-	assert_signal_not_emitted(Sfx, "played")
 	player.release_held()
-	assert_signal_emitted_with_parameters(Sfx, "played", [&"drop"])
+	assert_signal_not_emitted(Sfx, "played")
 
 
 func test_何も持っていない時に離しても音は鳴らない():
@@ -158,7 +157,7 @@ func test_Eで見ている物を持ち_もう一度Eで置く():
 	assert_false(item.is_held())
 
 
-func test_物を持って入れる先がない時にEを押すと_置く音が鳴る():
+func test_物を持って入れる先がない時にEを押すと_音を鳴らさずに置く():
 	var player: Player = add_child_autofree(Player.create())
 	var item := _add_item_in_front(1.5)
 	player.grab(item)
@@ -166,7 +165,7 @@ func test_物を持って入れる先がない時にEを押すと_置く音が�
 	watch_signals(Sfx)
 	_press_e(player)
 	assert_null(player.held_item)
-	assert_signal_emitted_with_parameters(Sfx, "played", [&"drop"])
+	assert_signal_not_emitted(Sfx, "played")
 
 
 func test_物を持って受け取らない物を見てEを押すと_手渡さずに置く():
