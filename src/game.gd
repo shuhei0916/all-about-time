@@ -15,8 +15,10 @@ extends Node3D
 @export var pickups: Array[ItemPickup] = []
 ## 札束を入金できる ATM。口座は人生ごとのものなので、人生が変わるたびにつなぎ直す。
 @export var atms: Array[Atm] = []
-## T で呼ぶ列車。線路の有無にかかわらず、プレイヤーの向いている先に現れる。
+## T で呼ぶ列車。プレイヤーに一番近い道路に沿って世界の端から来て、プレイヤーの近くで止まる。
 @export var train_scene: PackedScene
+## 列車の走る道路を探す、街の文字の地図。
+@export_file("*.txt") var city_map := ""
 ## 2世代目以降の人生の開始時にプレイヤーを置く位置。1世代目はシーンに置いた位置から始まる。
 @export var later_spawn_position := Vector3.ZERO
 ## チュートリアルを飛ばし、最初から2世代目以降の人生で、その開始位置から始める。
@@ -33,8 +35,12 @@ var buildings: Array[Building] = []
 var ghost: BuildingGhost
 ## 今光らせている物(E で今働きかける相手)。Interactable か PhysicalItem。
 var _focused: Node3D
-## 呼んだ列車。呼ぶまでは null。列車は1編成だけで、呼び直すとプレイヤーの前へ移る。
+## 走っている列車。走っていなければ null。列車は1編成だけで、呼び直すと世界の端から出直す。
 var train: Node3D
+## 走っている列車の道筋と運行。走っていなければ null。
+var train_route: TrainRoute
+var train_run: TrainRun
+var _city_plan: CityPlan
 var _placing_blueprint: Blueprint
 var _placeable := false
 
@@ -68,6 +74,7 @@ func _process(delta: float) -> void:
 ## 配置の影も、狙った地面を視線のレイから取るので同じく物理フレームで更新する。
 ## 人々の視線の判定もレイを使うので、同じく物理フレームで行う。
 func _physics_process(delta: float) -> void:
+	advance_train(delta)
 	_update_prompt()
 	_update_placement()
 	_show_player_to_crowd(delta)
@@ -91,12 +98,37 @@ func _unhandled_input(event: InputEvent) -> void:
 		use_item_at(key.keycode - KEY_1)
 
 
-## プレイヤーの向いている先に列車を呼ぶ。
+## 列車を呼ぶ。プレイヤーに一番近い道路の、プレイヤーの向いている側の世界の端から来る。
+## 走っている列車があれば消して、新しく出直させる(遠くへ一瞬で動かすと、
+## 動く物の当たり判定が途中の物を押しのけてしまうため、動かさずに作り直す)。
 func summon_train() -> void:
-	if train == null:
-		train = train_scene.instantiate()
-		add_child(train)
-	train.global_transform = TrainSummon.place(player.global_position, player.rotation.y)
+	if _city_plan == null:
+		_city_plan = CityPlan.new(FileAccess.get_file_as_string(city_map))
+	_remove_train()
+	train_route = TrainRoute.near(_city_plan, player.global_position, player.rotation.y)
+	train_run = TrainRun.new(train_route.stop_distance, train_route.end_distance)
+	train_run.finished.connect(_remove_train)
+	train = train_scene.instantiate()
+	add_child(train)
+	train.global_transform = train_route.transform_at(train_run.distance())
+
+
+## 走っている列車の時間を進め、道筋の上の今の位置へ動かす。走り終わったら消す。
+func advance_train(delta: float) -> void:
+	if train_run == null:
+		return
+	train_run.advance(delta)
+	if train:
+		train.global_transform = train_route.transform_at(train_run.distance())
+
+
+func _remove_train() -> void:
+	if train:
+		remove_child(train)
+		train.queue_free()
+	train = null
+	train_route = null
+	train_run = null
 
 
 ## 持ち物を番号(0始まり)で指定して使う。その番号の物がなければ何もしない。

@@ -404,24 +404,51 @@ func _press_t(game: Game) -> void:
 	InputSender.new(game).send_event(press)
 
 
-func test_Tを押すと_プレイヤーの向いている先に列車が現れる():
+func _city_plan(game: Game) -> CityPlan:
+	return CityPlan.new(FileAccess.get_file_as_string(game.city_map))
+
+
+func _trains(game: Game) -> Array[Node]:
+	return game.find_children("*", "", true, false).filter(
+		func(n: Node) -> bool: return n.scene_file_path == "res://src/world/train.tscn")
+
+
+## 列車の運行を、段階が phase になるまで(長くても seconds 秒)進める。
+func _advance_train_until(game: Game, phase: TrainRun.Phase, seconds := 120.0) -> void:
+	var left := seconds
+	while left > 0.0 and game.train_run != null and game.train_run.phase != phase:
+		game.advance_train(0.1)
+		left -= 0.1
+
+
+func test_Tを押すと_プレイヤーに一番近い道路の世界の端に列車が現れる():
 	var game := _load_game(true)
 	assert_null(game.train, "呼ぶまでは列車はない")
 	_press_t(game)
 	assert_not_null(game.train)
-	var expected := TrainSummon.place(game.player.global_position, game.player.rotation.y)
-	assert_almost_eq(game.train.global_position, expected.origin, Vector3.ONE * 0.01)
+	var route := TrainRoute.near(_city_plan(game), game.player.global_position, game.player.rotation.y)
+	assert_almost_eq(game.train.global_position, route.start, Vector3.ONE * 0.01)
+	assert_gt(_flat(game.train.global_position).distance_to(_flat(game.player.global_position)), 60.0, "遠くから来る")
 
 
-func test_何度呼んでも列車は1編成で_呼ぶたびにプレイヤーの前へ移る():
+func test_列車はプレイヤーの近くで止まり_10秒後に発車して反対側の端へ消える():
 	var game := _load_game(true)
 	_press_t(game)
-	var first := game.train
+	_advance_train_until(game, TrainRun.Phase.STOPPED)
+	assert_eq(game.train_run.phase, TrainRun.Phase.STOPPED)
+	var wagon := game.train.global_transform * Vector3(0, 0, TrainRoute.FIRST_WAGON_BEHIND_NOSE)
+	assert_lt(_flat(wagon).distance_to(_flat(game.player.global_position)), 30.0, "客車1両目がプレイヤーの近くにある")
+	var train := game.train
+	game.advance_train(TrainRun.DWELL_SECONDS - 0.5)
+	assert_eq(game.train_run.phase, TrainRun.Phase.STOPPED, "10秒は止まっている")
+	_advance_train_until(game, TrainRun.Phase.GONE)
+	assert_null(game.train, "走り去ると消える")
+	assert_true(train.is_queued_for_deletion())
+
+
+func test_何度呼んでも列車は1編成():
+	var game := _load_game(true)
+	_press_t(game)
 	game.player.rotation.y = PI / 2
 	_press_t(game)
-	assert_same(game.train, first)
-	var trains := game.find_children("*", "", true, false).filter(
-		func(n: Node) -> bool: return n.scene_file_path == "res://src/world/train.tscn")
-	assert_eq(trains.size(), 1)
-	var expected := TrainSummon.place(game.player.global_position, PI / 2)
-	assert_almost_eq(game.train.global_position, expected.origin, Vector3.ONE * 0.01)
+	assert_eq(_trains(game).size(), 1)

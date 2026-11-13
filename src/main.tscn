@@ -105,6 +105,7 @@ crowd = NodePath("Crowd")
 pickups = [NodePath("Yard/Cigarette"), NodePath("Yard/Rope"), NodePath("Lot/Blueprint"), NodePath("Lot/Pistol")]
 atms = [NodePath("Lot/Atm")]
 train_scene = ExtResource("18_train")
+city_map = "res://src/world/city/city_map.txt"
 later_spawn_position = Vector3(-24, 0.1, 0)
 skip_tutorial = true
 
