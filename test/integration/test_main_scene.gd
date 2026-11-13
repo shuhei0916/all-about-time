@@ -393,5 +393,5 @@ func test_ATMの近くへ札束を投げると_地面に落ちる前にATMが受
 		lowest = minf(lowest, cash.global_position.y - home.y)
 	assert_eq(game.cycle.life.account.balance, Cash.VALUE)
 	assert_gt(lowest, 0.5, "地面に落ちる前に受け止める")
-	await wait_physics_frames(120)
+	await wait_physics_frames(240)
 	assert_almost_eq(atm.global_position.distance_to(home), 0.0, 0.05)

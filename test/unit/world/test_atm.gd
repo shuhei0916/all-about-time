@@ -305,11 +305,16 @@ func test_背中側へ落ちる札束も_体をすり抜けて口で受け止め
 	assert_eq(atm.account.balance, 100_000)
 
 
-func test_受け止めたら元の場所へ戻る():
+func test_受け止めたら_落ち着いた速さで元の場所へ戻る():
 	var atm := _make_atm()
 	var cash := _throw_cash(Vector3(2, 1.4, 4), Vector3(0.5, 2.5, 0.5))
 	await _watch_catch(atm, cash, 120)
-	await wait_physics_frames(120)
+	# 受け止めた時に残っていた勢いは、すぐに止める。
+	await wait_physics_frames(10)
+	var fastest := await _fastest_while(atm, 30)
+	assert_gt(fastest, Atm.TRUDGE_SPEED + 0.5, "とぼとぼではない")
+	assert_lt(fastest, Atm.RETURN_SPEED + 0.05)
+	await wait_physics_frames(240)
 	assert_almost_eq(atm.global_position.distance_to(Vector3.ZERO), 0.0, 0.02)
 
 
@@ -366,10 +371,10 @@ func test_札束でない物には行かない():
 func test_受け止めに行く途中で札束を掴まれたら元の場所へ戻る():
 	var atm := _make_atm()
 	var cash := _throw_cash(Vector3(3, 1.4, 3), Vector3(0, 4.0, 0))
-	await wait_physics_frames(6)
+	await wait_physics_frames(20)
 	assert_gt(atm.global_position.length(), 0.05)
 	cash.hold()
-	await wait_physics_frames(120)
+	await wait_physics_frames(480)
 	assert_almost_eq(atm.global_position.distance_to(Vector3.ZERO), 0.0, 0.02)
 	assert_eq(atm.account.balance, 0)
 
@@ -395,3 +400,69 @@ func test_上へ投げても_一度上がってから下向きに通る所を予
 
 func test_動く時にプレイヤーや物を押しのける():
 	assert_true(add_child_autofree(load(ATM_SCENE).instantiate()) is AnimatableBody3D)
+
+
+## frames 物理フレームの間の、ATM の一番速い横の速さ(メートル/秒)。
+func _fastest_while(atm: Atm, frames: int) -> float:
+	var fastest := 0.0
+	for i in frames:
+		await wait_physics_frames(1)
+		fastest = maxf(fastest, atm.glide_speed())
+	return fastest
+
+
+func test_放たれてから少しの間は様子を見て_動き出さない():
+	var atm := _make_atm()
+	_throw_cash(Vector3(2, 1.4, 4), Vector3(0.5, 2.5, 0.5))
+	await wait_physics_frames(int(Atm.REACTION_TIME * 60) - 2)
+	assert_almost_eq(atm.global_position.distance_to(Vector3.ZERO), 0.0, 0.001)
+	await wait_physics_frames(10)
+	assert_gt(atm.global_position.distance_to(Vector3.ZERO), 0.01)
+
+
+func test_動き出しはゆっくりで_だんだん速くなる():
+	var atm := _make_atm()
+	_throw_cash(Vector3(2, 1.4, 4), Vector3(0.5, 2.5, 0.5))
+	await wait_physics_frames(int(Atm.REACTION_TIME * 60) + 1)
+	var steps: Array[float] = []
+	var last := atm.global_position
+	for i in 5:
+		await wait_physics_frames(1)
+		steps.append((atm.global_position - last).length())
+		last = atm.global_position
+	for i in range(1, steps.size()):
+		assert_gt(steps[i], steps[i - 1], "%d フレーム目の方が速い: %s" % [i, steps])
+
+
+func test_受け止められずに札束が落ちると_とぼとぼと元の場所へ戻る():
+	var atm := _make_atm()
+	# 3m 先で、口の高さを 0.37 秒ほどで通り過ぎる札束。様子を見ている間に間に合わなくなる。
+	var cash := _throw_cash(Vector3(3, 1.4, 0), Vector3.ZERO)
+	await wait_physics_frames(40)
+	assert_eq(atm.account.balance, 0)
+	assert_false(atm.is_swallowing(cash))
+	assert_gt(atm.global_position.distance_to(Vector3.ZERO), 0.3, "途中まで追いかけた")
+	await wait_physics_frames(30)
+	var fastest := await _fastest_while(atm, 60)
+	assert_lt(fastest, Atm.TRUDGE_SPEED + 0.05)
+	await wait_physics_frames(600)
+	assert_almost_eq(atm.global_position.distance_to(Vector3.ZERO), 0.0, 0.02)
+
+
+func test_口の当たり判定で受け止めた時も_とぼとぼではなく戻る():
+	var atm := _make_atm()
+	var cash := _throw_cash(Vector3(2, 1.4, 4), Vector3(0.5, 2.5, 0.5))
+	await wait_physics_frames(int(Atm.REACTION_TIME * 60) + 10)
+	atm.mouth_touched(cash)
+	await wait_physics_frames(10)
+	var fastest := await _fastest_while(atm, 30)
+	assert_gt(fastest, Atm.TRUDGE_SPEED + 0.5, "とぼとぼではない")
+
+
+func test_元の場所に戻ったら_ぴたりと止まる():
+	var atm := _make_atm()
+	var cash := _throw_cash(Vector3(2, 1.4, 4), Vector3(0.5, 2.5, 0.5))
+	await _watch_catch(atm, cash, 120)
+	await wait_physics_frames(300)
+	assert_eq(atm.glide_speed(), 0.0)
+	assert_eq(atm.global_transform, atm.home)

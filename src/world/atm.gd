@@ -5,7 +5,9 @@ extends Interactable
 ## 入金には週ごとの上限があり(BankAccount)、週は世界の時計で数える。上限を超えた札束も吐き出す。
 ## 入金できるかは吸い込んだ時に決まり、吸い込む・揺れる・吐き出すのは、その後の見た目として時間をかけて行う。
 ## プレイヤーが投げたり落としたりした札束は、軌道を先読みして、口の高さを下向きに通る所へ先回りし、地面に落ちる前に口で受け止める。
-## 動くのは前後左右の平行移動だけで、上下にも動かず、向きも変えない。受け止めたら元の場所へ戻る。
+## 人がボールを捕る時のように、放たれてから少しの間(REACTION_TIME)は様子を見てから動き出し、だんだん速くなる。
+## 動くのは前後左右の平行移動だけで、上下にも動かず、向きも変えない。
+## 受け止めたら落ち着いた速さで、受け止め損ねたらとぼとぼと、元の場所へ戻る。
 ## 落ちる先が近く(SEEK_RADIUS)にない時と、今週もう入金できない時は受け止めに行かない。
 ## 口座は人生ごとのものなので、人生が変わるたびに Game がつなぎ直す。
 
@@ -40,12 +42,20 @@ const SPIT_AIM_HEIGHT := 1.2
 const MOUTH_CENTER := Vector3(0, 0.74, 0.34)
 ## 札束を受け止めに行く範囲(元の場所から、落ちる先までの横の距離、メートル)。
 const SEEK_RADIUS := 6.0
-## 動く速さの上限(メートル/秒)と、速さの変わり方(メートル/秒毎秒)。素早く動いて先回りする。
-## 足元へ叩きつけるように投げた札束(口の高さを 0.1 秒で通り過ぎる)には、これでも間に合わないことがある。
+## 札束が放たれてから動き出すまでの、様子を見る時間(秒)。
+const REACTION_TIME := 0.1
+## 受け止めに行く速さの上限(メートル/秒)と、速くなる勢い・止まる勢い(メートル/秒毎秒)。
+## 速くなるのはゆっくり、止まるのは素早く。止まる勢いで行き先の手前から減速し、行き過ぎない。
+## 様子を見る間と速くなるまでの間があるので、すぐ近くに叩きつけられた札束には間に合わないことがある(それでよい)。
 const GLIDE_SPEED := 20.0
-const GLIDE_ACCELERATION := 200.0
-## 行き先に近づくと、距離にこれを掛けた速さまで落とす(行き過ぎずに止まる)。
-const GLIDE_ARRIVE := 15.0
+const GLIDE_ACCELERATION := 50.0
+const GLIDE_BRAKING := 150.0
+## 受け止めた後に元の場所へ戻る速さ(メートル/秒)と、速さの変わり方(メートル/秒毎秒)。
+const RETURN_SPEED := 3.0
+const RETURN_ACCELERATION := 6.0
+## 受け止め損ねた後に、とぼとぼと元の場所へ戻る速さ(メートル/秒)と、速さの変わり方(メートル/秒毎秒)。
+const TRUDGE_SPEED := 0.8
+const TRUDGE_ACCELERATION := 1.5
 ## 札束の通り道が口の真ん中にこれより近づいたら受け止める(メートル)。
 const CATCH_REACH := 0.2
 ## 軌道を先読みする長さ(秒)と刻み(秒)。刻みは物理の1フレームと同じにする。
@@ -70,6 +80,10 @@ var _chasing: Cash
 ## 受け止めに行っている札束の、前のフレームの位置。1フレームで動いた道のりが口を通ったかを見る。
 var _chasing_last := Vector3.ZERO
 var _glide_velocity := Vector3.ZERO
+## 受け止め損ねて、とぼとぼと戻っているところか。
+var _trudging := false
+## 様子を見ている札束と、見始めてからの時間(秒)。REACTION_TIME を過ぎたら受け止めに行ける。
+var _watching := {}
 
 
 ## 吸い込んでいる途中の物1つ。
@@ -175,42 +189,83 @@ func advance(delta: float) -> void:
 ## 受け止めに行く札束を選び、その札束が口の高さを下向きに通る所へ口が来るように、前後左右に動く。
 ## 受け止めに行く札束がなければ元の場所へ戻る。
 func _glide(delta: float) -> void:
-	_choose_chase()
+	# 受け止めたかを先に見る。口の高さを通り過ぎた札束は、もう受け止めに行く札束ではなくなるので、
+	# 先に選び直すと、受け止めたのに受け止め損ねたことになる。
+	_try_catch()
+	_choose_chase(delta)
 	var goal := home.origin
+	var top_speed := TRUDGE_SPEED if _trudging else RETURN_SPEED
+	var speeding_up := TRUDGE_ACCELERATION if _trudging else RETURN_ACCELERATION
+	var braking := speeding_up
 	if _chasing:
-		var crossing: Variant = _crossing_of(_chasing)
-		if crossing != null:
-			goal = crossing.position - home.basis * MOUTH_CENTER
+		goal = _crossing_of(_chasing).position - home.basis * MOUTH_CENTER
+		top_speed = GLIDE_SPEED
+		speeding_up = GLIDE_ACCELERATION
+		braking = GLIDE_BRAKING
 	var offset := Vector3(goal.x - global_position.x, 0, goal.z - global_position.z)
-	var desired := offset.normalized() * minf(GLIDE_SPEED, offset.length() * GLIDE_ARRIVE)
-	_glide_velocity = _glide_velocity.move_toward(desired, GLIDE_ACCELERATION * delta)
+	# 元の場所に着いたら、ぴたりと止まる(行き過ぎと戻りを細かく繰り返して震えない)。
+	if not _chasing and offset.length() < 0.01 and _glide_velocity.length() < 0.2:
+		_glide_velocity = Vector3.ZERO
+		_trudging = false
+		global_transform = home
+		return
+	# 止まる勢いで行き先にちょうど止まれる速さより速くは動かない。
+	var desired := offset.normalized() * minf(top_speed, sqrt(2.0 * braking * offset.length()))
+	var rate := speeding_up if desired.length() > _glide_velocity.length() else braking
+	# 受け止めに行った勢いが戻る速さより速く残っていれば、受け止めに行く時と同じ強さで止まる(流されていかない)。
+	if _glide_velocity.length() > top_speed:
+		rate = maxf(rate, GLIDE_BRAKING)
+	_glide_velocity = _glide_velocity.move_toward(desired, rate * delta)
 	global_transform = Transform3D(home.basis, Vector3(
 			global_position.x + _glide_velocity.x * delta, home.origin.y, global_position.z + _glide_velocity.z * delta))
-	_try_catch()
 
 
-## 今受け止めに行っている札束がもう受け止められなければ、別の札束を選び直す。
+## 今動いている横の速さ(メートル/秒)。
+func glide_speed() -> float:
+	return _glide_velocity.length()
+
+
+## 今受け止めに行っている札束がもう受け止められなければ、受け止め損ねたので、とぼとぼ戻り始める。
+## 受け止めに行ける札束は、REACTION_TIME だけ様子を見てから、口の高さを一番早く通るものを選ぶ。
 ## 受け止めに行く札束とは当たらないようにして、ATM の体をすり抜けて口まで届くようにする(ATM は向きを変えないので、
 ## 背中側から落ちてくる札束は、そのままでは看板に当たる)。
-func _choose_chase() -> void:
+func _choose_chase(delta: float) -> void:
+	_watch_cash(delta)
 	if _wants(_chasing):
 		return
+	# 口の当たり判定で吸い込んだ時も受け止めたことになる。それ以外で追うのをやめたら、受け止め損ねた。
+	if is_instance_valid(_chasing) and not is_swallowing(_chasing):
+		_trudging = true
 	_stop_chasing()
 	var nearest: Cash = null
 	var nearest_time := INF
-	if is_inside_tree():
-		for node in get_tree().get_nodes_in_group(Cash.GROUP):
-			var cash := node as Cash
-			if not _wants(cash):
-				continue
-			var time: float = _crossing_of(cash).time
-			if time < nearest_time:
-				nearest = cash
-				nearest_time = time
+	for cash: Cash in _watching:
+		if _watching[cash] < REACTION_TIME:
+			continue
+		var time: float = _crossing_of(cash).time
+		if time < nearest_time:
+			nearest = cash
+			nearest_time = time
 	if nearest:
 		_chasing = nearest
 		_chasing_last = nearest.global_position
+		_trudging = false
 		nearest.add_collision_exception_with(self)
+
+
+## 受け止められそうな札束を見つけたら様子を見始め、見ている時間を進める。受け止められなくなった札束は見るのをやめる。
+func _watch_cash(delta: float) -> void:
+	for cash in _watching.keys():
+		if not _wants(cash):
+			_watching.erase(cash)
+		else:
+			_watching[cash] += delta
+	if not is_inside_tree():
+		return
+	for node in get_tree().get_nodes_in_group(Cash.GROUP):
+		var cash := node as Cash
+		if not _watching.has(cash) and _wants(cash):
+			_watching[cash] = 0.0
 
 
 func _stop_chasing() -> void:
