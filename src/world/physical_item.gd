@@ -10,6 +10,8 @@ const WAKE_RADIUS := 0.5
 ## 手に持った時に、ふつうの持つ位置(目の前)からどれだけずらすか。
 ## プレイヤーの向きを基準に、x が右、y が上、z が手前(メートル)。大きな物は視界をふさがない所に持つ。
 var hold_offset := Vector3.ZERO
+## 一度手に持たれて離されたか。置かれたままの物と、プレイヤーが手放した物を見分ける(ATM は手放された札束だけを拾いに行く)。
+var was_released := false
 
 var _held := false
 ## 手に持つ前の当たり判定のレイヤー。持っている間は 0 にし、離す時に戻す。
@@ -46,6 +48,7 @@ func release(hand_velocity: Vector3) -> void:
 	if _held:
 		collision_layer = _layer_before_hold
 	_held = false
+	was_released = true
 	freeze = false
 	linear_velocity = hand_velocity
 

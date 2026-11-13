@@ -99,3 +99,11 @@ func test_バッグを手に持って見ている時は_バッグに入れる操
 func test_バッグでない物を手に持って見ている時は_案内が出ない():
 	var item := _make_item()
 	assert_eq(item.prompt_entries(_make_item()), [])
+
+
+func test_一度手に持って離した物は手放されたと分かる():
+	var item := _make_item()
+	assert_false(item.was_released)
+	item.hold()
+	item.release(Vector3.ZERO)
+	assert_true(item.was_released)

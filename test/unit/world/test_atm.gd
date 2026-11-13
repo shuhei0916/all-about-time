@@ -255,3 +255,130 @@ func test_モデルの大きさは当たり判定とそろっている():
 	assert_lt(bounds.size.z, shape.size.z + 0.2)
 	# 正面(+Z)の方へ張り出す
 	assert_gt(bounds.end.z, shape.size.z / 2)
+
+
+## プレイヤーが一度手に持って離した札束を、position に置く。ATM はこういう札束だけを拾いに行く。
+func _drop_cash_at(position: Vector3) -> Cash:
+	var cash := _make_cash()
+	cash.hold()
+	cash.release(Vector3.ZERO)
+	cash.global_position = position
+	return cash
+
+
+## seconds 秒、ATM を動かす。物理は進めないので、札束はその場から動かない。
+func _glide(atm: Atm, seconds: float) -> void:
+	var elapsed := 0.0
+	while elapsed < seconds:
+		atm.advance(0.05)
+		elapsed += 0.05
+
+
+func test_手放された札束が近くにあると_滑って拾いに行き_入金する():
+	var atm := _make_atm()
+	_drop_cash_at(Vector3(2, 0.025, 2))
+	_glide(atm, 4.0)
+	assert_eq(atm.account.balance, 100_000)
+
+
+func test_拾いに行く間は口を札束へ向けて近づく():
+	var atm := _make_atm()
+	var cash := _drop_cash_at(Vector3(3, 0.025, 0))
+	var before := atm.to_global(Atm.MOUTH_CENTER).distance_to(cash.global_position)
+	_glide(atm, 0.8)
+	assert_lt(atm.to_global(Atm.MOUTH_CENTER).distance_to(cash.global_position), before)
+	assert_gt(atm.global_basis.z.dot(Vector3.RIGHT), 0.5)
+
+
+func test_床の札束には地面へ沈んで口の高さを合わせる():
+	var atm := _make_atm()
+	_drop_cash_at(Vector3(2, 0.025, 2))
+	var lowest := 0.0
+	for i in 60:
+		atm.advance(0.05)
+		lowest = minf(lowest, atm.global_position.y)
+	assert_lt(lowest, -0.5)
+
+
+func test_机の上の札束には浮き上がって口の高さを合わせる():
+	var atm := _make_atm()
+	_drop_cash_at(Vector3(2, 1.2, 2))
+	var highest := 0.0
+	for i in 60:
+		atm.advance(0.05)
+		highest = maxf(highest, atm.global_position.y)
+	assert_gt(highest, 0.3)
+
+
+func test_食べ終わると元の場所と向きに戻る():
+	var atm := _make_atm()
+	_drop_cash_at(Vector3(2, 0.025, 2))
+	_glide(atm, 12.0)
+	assert_eq(atm.account.balance, 100_000)
+	assert_almost_eq(atm.global_position.distance_to(Vector3.ZERO), 0.0, 0.02)
+	assert_almost_eq(atm.global_basis.z.dot(Vector3.BACK), 1.0, 0.01)
+
+
+func test_手放されたことのない札束には行かない():
+	var atm := _make_atm()
+	var cash := _make_cash()
+	cash.global_position = Vector3(2, 0.025, 2)
+	_glide(atm, 2.0)
+	assert_eq(atm.global_position, Vector3.ZERO)
+
+
+func test_遠すぎる札束には行かない():
+	var atm := _make_atm()
+	_drop_cash_at(Vector3(Atm.SEEK_RADIUS + 1.0, 0.025, 0))
+	_glide(atm, 2.0)
+	assert_eq(atm.global_position, Vector3.ZERO)
+
+
+func test_今週もう入金できなければ拾いに行かない():
+	var atm := _make_atm()
+	for i in 10:
+		atm.receive(_make_cash())
+	_glide(atm, 1.0)
+	_drop_cash_at(Vector3(2, 0.025, 2))
+	_glide(atm, 2.0)
+	assert_almost_eq(atm.global_position.distance_to(Vector3.ZERO), 0.0, 0.001)
+
+
+func test_口座がつながっていなければ拾いに行かない():
+	var atm: Atm = add_child_autofree(Atm.new())
+	_drop_cash_at(Vector3(2, 0.025, 2))
+	_glide(atm, 2.0)
+	assert_eq(atm.global_position, Vector3.ZERO)
+
+
+func test_手に持たれている札束には行かない():
+	var atm := _make_atm()
+	var cash := _drop_cash_at(Vector3(2, 0.025, 2))
+	cash.hold()
+	_glide(atm, 2.0)
+	assert_eq(atm.global_position, Vector3.ZERO)
+
+
+func test_札束でない物には行かない():
+	var atm := _make_atm()
+	var item := _make_item()
+	item.hold()
+	item.release(Vector3.ZERO)
+	item.global_position = Vector3(2, 0.025, 2)
+	_glide(atm, 2.0)
+	assert_eq(atm.global_position, Vector3.ZERO)
+
+
+func test_拾いに行く途中で札束を拾われたら元の場所へ戻る():
+	var atm := _make_atm()
+	var cash := _drop_cash_at(Vector3(3, 0.025, 3))
+	_glide(atm, 0.6)
+	assert_gt(atm.global_position.length(), 0.1)
+	cash.hold()
+	_glide(atm, 8.0)
+	assert_almost_eq(atm.global_position.distance_to(Vector3.ZERO), 0.0, 0.02)
+	assert_eq(atm.account.balance, 0)
+
+
+func test_動く時にプレイヤーや物を押しのける():
+	assert_true(add_child_autofree(load(ATM_SCENE).instantiate()) is AnimatableBody3D)

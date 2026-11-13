@@ -9,7 +9,7 @@ size = Vector3(0.8, 1.8, 0.6)
 [sub_resource type="BoxShape3D" id="shape_mouth"]
 size = Vector3(0.36, 0.12, 0.12)
 
-[node name="Atm" type="StaticBody3D"]
+[node name="Atm" type="AnimatableBody3D"]
 script = ExtResource("1_atm")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

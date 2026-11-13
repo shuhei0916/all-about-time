@@ -5,7 +5,14 @@ extends PhysicalItem
 ## 札束1つの額(円)。
 const VALUE := 100_000
 
+## 札束がみな入るグループ。ATM が拾いに行く札束を探すのに使う。
+const GROUP := &"cash"
+
 @export var value := VALUE
+
+
+func _init() -> void:
+	add_to_group(GROUP)
 
 
 func prompt_entries(held: PhysicalItem = null) -> Array:

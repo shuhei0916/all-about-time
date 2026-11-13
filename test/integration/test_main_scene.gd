@@ -369,3 +369,19 @@ func test_札束をATMの口へ投げ込むと入金される():
 	player.throw_held()
 	await wait_physics_frames(60)
 	assert_eq(game.cycle.life.account.balance, Cash.VALUE)
+
+
+func test_ATMの近くに札束を置くと_ATMが滑ってきて食べ_元の場所へ戻る():
+	var game := _load_game(true)
+	var atm := _atm(game)
+	var home := atm.global_position
+	var player := game.player
+	var front := atm.global_transform * Vector3(1.5, 0, 2.5)
+	player.global_position = Vector3(front.x, atm.global_position.y + 0.05, front.z)
+	player.grab(_cash_bundles(game)[0])
+	await wait_physics_frames(5)
+	player.release_held()
+	await wait_physics_frames(int(4.0 * 60))
+	assert_eq(game.cycle.life.account.balance, Cash.VALUE)
+	await wait_physics_frames(int(5.0 * 60))
+	assert_almost_eq(atm.global_position.distance_to(home), 0.0, 0.05)
