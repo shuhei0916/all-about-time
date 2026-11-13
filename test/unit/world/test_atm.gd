@@ -420,24 +420,17 @@ func test_放たれてから少しの間は様子を見て_動き出さない():
 	assert_gt(atm.global_position.distance_to(Vector3.ZERO), 0.01)
 
 
-func test_動き出しはゆっくりで_だんだん速くなる():
+func test_様子を見終わると_すぐに全速で動き出す():
 	var atm := _make_atm()
 	_throw_cash(Vector3(2, 1.4, 4), Vector3(0.5, 2.5, 0.5))
-	await wait_physics_frames(int(Atm.REACTION_TIME * 60) + 1)
-	var steps: Array[float] = []
-	var last := atm.global_position
-	for i in 5:
-		await wait_physics_frames(1)
-		steps.append((atm.global_position - last).length())
-		last = atm.global_position
-	for i in range(1, steps.size()):
-		assert_gt(steps[i], steps[i - 1], "%d フレーム目の方が速い: %s" % [i, steps])
+	await wait_physics_frames(int(Atm.REACTION_TIME * 60) + 2)
+	assert_almost_eq(atm.glide_speed(), Atm.GLIDE_SPEED, 0.01)
 
 
 func test_受け止められずに札束が落ちると_とぼとぼと元の場所へ戻る():
 	var atm := _make_atm()
-	# 3m 先で、口の高さを 0.37 秒ほどで通り過ぎる札束。様子を見ている間に間に合わなくなる。
-	var cash := _throw_cash(Vector3(3, 1.4, 0), Vector3.ZERO)
+	# 3m 先で、口の高さを 0.18 秒ほどで通り過ぎる札束。様子を見ている間に間に合わなくなる。
+	var cash := _throw_cash(Vector3(3, 0.9, 0), Vector3.ZERO)
 	await wait_physics_frames(40)
 	assert_eq(atm.account.balance, 0)
 	assert_false(atm.is_swallowing(cash))

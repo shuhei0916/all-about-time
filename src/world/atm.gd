@@ -5,7 +5,8 @@ extends Interactable
 ## 入金には週ごとの上限があり(BankAccount)、週は世界の時計で数える。上限を超えた札束も吐き出す。
 ## 入金できるかは吸い込んだ時に決まり、吸い込む・揺れる・吐き出すのは、その後の見た目として時間をかけて行う。
 ## プレイヤーが投げたり落としたりした札束は、軌道を先読みして、口の高さを下向きに通る所へ先回りし、地面に落ちる前に口で受け止める。
-## 人がボールを捕る時のように、放たれてから少しの間(REACTION_TIME)は様子を見てから動き出し、だんだん速くなる。
+## 人がボールを捕る時のように、放たれてから少しの間(REACTION_TIME)は様子を見てから動き出す。
+## 動き出しは、GLIDE_ACCELERATES が true ならだんだん速くなり、false ならすぐに全速になる。
 ## 動くのは前後左右の平行移動だけで、上下にも動かず、向きも変えない。
 ## 受け止めたら落ち着いた速さで、受け止め損ねたらとぼとぼと、元の場所へ戻る。
 ## 落ちる先が近く(SEEK_RADIUS)にない時と、今週もう入金できない時は受け止めに行かない。
@@ -48,6 +49,8 @@ const REACTION_TIME := 0.1
 ## 速くなるのはゆっくり、止まるのは素早く。止まる勢いで行き先の手前から減速し、行き過ぎない。
 ## 様子を見る間と速くなるまでの間があるので、すぐ近くに叩きつけられた札束には間に合わないことがある(それでよい)。
 const GLIDE_SPEED := 20.0
+## 受け止めに行く時に、だんだん速くなり、手前から減速するか。false なら、すぐに全速で動き、行き先でぴたりと止まる。
+const GLIDE_ACCELERATES := false
 const GLIDE_ACCELERATION := 50.0
 const GLIDE_BRAKING := 150.0
 ## 受け止めた後に元の場所へ戻る速さ(メートル/秒)と、速さの変わり方(メートル/秒毎秒)。
@@ -203,6 +206,11 @@ func _glide(delta: float) -> void:
 		speeding_up = GLIDE_ACCELERATION
 		braking = GLIDE_BRAKING
 	var offset := Vector3(goal.x - global_position.x, 0, goal.z - global_position.z)
+	if _chasing and not GLIDE_ACCELERATES:
+		# 全速で向かい、行き先までが1フレームで進む道のりより短ければ、ちょうど行き先で止まる。
+		_glide_velocity = offset.normalized() * minf(GLIDE_SPEED, offset.length() / delta)
+		_move_by(delta)
+		return
 	# 元の場所に着いたら、ぴたりと止まる(行き過ぎと戻りを細かく繰り返して震えない)。
 	if not _chasing and offset.length() < 0.01 and _glide_velocity.length() < 0.2:
 		_glide_velocity = Vector3.ZERO
@@ -216,6 +224,11 @@ func _glide(delta: float) -> void:
 	if _glide_velocity.length() > top_speed:
 		rate = maxf(rate, GLIDE_BRAKING)
 	_glide_velocity = _glide_velocity.move_toward(desired, rate * delta)
+	_move_by(delta)
+
+
+## 今の速さで delta 秒ぶん、前後左右に動く。上下にも動かず、向きも変えない。
+func _move_by(delta: float) -> void:
 	global_transform = Transform3D(home.basis, Vector3(
 			global_position.x + _glide_velocity.x * delta, home.origin.y, global_position.z + _glide_velocity.z * delta))
 
