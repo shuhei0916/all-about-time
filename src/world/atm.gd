@@ -4,8 +4,9 @@ extends Interactable
 ## 物は、手に持って E を押して入れても、放り込んで口に触れさせてもよい。
 ## 入金には週ごとの上限があり(BankAccount)、週は世界の時計で数える。上限を超えた札束も吐き出す。
 ## 入金できるかは吸い込んだ時に決まり、吸い込む・揺れる・吐き出すのは、その後の見た目として時間をかけて行う。
-## 近く(SEEK_RADIUS)にプレイヤーが手放した札束があれば、滑るように動いて口を札束へ合わせ、食べてから元の場所へ戻る。
-## 床の札束には地面へ沈み、机の上の札束には浮き上がって、口の高さを合わせる。今週もう入金できなければ拾いに行かない。
+## プレイヤーが投げたり落としたりした札束は、軌道を先読みして、口の高さを下向きに通る所へ先回りし、地面に落ちる前に口で受け止める。
+## 動くのは前後左右の平行移動だけで、上下にも動かず、向きも変えない。受け止めたら元の場所へ戻る。
+## 落ちる先が近く(SEEK_RADIUS)にない時と、今週もう入金できない時は受け止めに行かない。
 ## 口座は人生ごとのものなので、人生が変わるたびに Game がつなぎ直す。
 
 ## 入金した時に、入金した額(円)を添えて発火する。
@@ -35,19 +36,21 @@ const SPIT_SPEED := 8.0
 const SPIT_FORWARD_VELOCITY := Vector3(0, 2.0, 5.0)
 ## 相手の体のどこを狙うか(足元からの高さ、メートル)。
 const SPIT_AIM_HEIGHT := 1.2
-## 口の真ん中(ATM の原点から)。Mouth の当たり判定の中心。拾いに行く時は、ここを札束に合わせる。
+## 口の真ん中(ATM の原点から)。Mouth の当たり判定の中心。受け止める時は、札束の通り道をここに合わせる。
 const MOUTH_CENTER := Vector3(0, 0.74, 0.34)
-## 札束を拾いに行く範囲(元の場所からの横の距離、メートル)。
+## 札束を受け止めに行く範囲(元の場所から、落ちる先までの横の距離、メートル)。
 const SEEK_RADIUS := 6.0
-## 滑る速さの上限(メートル/秒)と、速さの変わり方(メートル/秒毎秒)。急に動き出さず、急に止まらない。
-const GLIDE_SPEED := 2.0
-const GLIDE_ACCELERATION := 4.0
-## 行き先に近づくと、距離にこれを掛けた速さまで落とす(するりと止まる)。
-const GLIDE_ARRIVE := 2.5
-## 向きを変える速さ(1秒あたりに残りの角度を詰める割合)。
-const TURN_RATE := 3.0
-## 口の真ん中が札束にこれより近づいたら食べる(メートル)。
-const EAT_REACH := 0.15
+## 動く速さの上限(メートル/秒)と、速さの変わり方(メートル/秒毎秒)。素早く動いて先回りする。
+## 足元へ叩きつけるように投げた札束(口の高さを 0.1 秒で通り過ぎる)には、これでも間に合わないことがある。
+const GLIDE_SPEED := 20.0
+const GLIDE_ACCELERATION := 200.0
+## 行き先に近づくと、距離にこれを掛けた速さまで落とす(行き過ぎずに止まる)。
+const GLIDE_ARRIVE := 15.0
+## 札束の通り道が口の真ん中にこれより近づいたら受け止める(メートル)。
+const CATCH_REACH := 0.2
+## 軌道を先読みする長さ(秒)と刻み(秒)。刻みは物理の1フレームと同じにする。
+const PREDICT_TIME := 3.0
+const PREDICT_STEP := 1.0 / 60.0
 
 var account: BankAccount
 var clock: WorldClock
@@ -62,8 +65,10 @@ var _model_rest := Transform3D.IDENTITY
 var _shake_time := 0.0
 ## 元の場所と向き。札束を食べ終わったら戻る。
 var home := Transform3D.IDENTITY
-## 拾いに行っている札束。なければ null。
+## 受け止めに行っている札束。なければ null。
 var _chasing: Cash
+## 受け止めに行っている札束の、前のフレームの位置。1フレームで動いた道のりが口を通ったかを見る。
+var _chasing_last := Vector3.ZERO
 var _glide_velocity := Vector3.ZERO
 
 
@@ -167,46 +172,70 @@ func advance(delta: float) -> void:
 	_shake(delta, shaking)
 
 
-## 拾いに行く札束を選び、口をそこへ合わせるように滑る。拾いに行く札束がなければ元の場所へ戻る。
+## 受け止めに行く札束を選び、その札束が口の高さを下向きに通る所へ口が来るように、前後左右に動く。
+## 受け止めに行く札束がなければ元の場所へ戻る。
 func _glide(delta: float) -> void:
-	if not _wants(_chasing):
-		_chasing = _nearest_wanted_cash()
-	var goal := home
+	_choose_chase()
+	var goal := home.origin
 	if _chasing:
-		goal = _mouth_on(_chasing)
-	var offset := goal.origin - global_position
+		var crossing: Variant = _crossing_of(_chasing)
+		if crossing != null:
+			goal = crossing.position - home.basis * MOUTH_CENTER
+	var offset := Vector3(goal.x - global_position.x, 0, goal.z - global_position.z)
 	var desired := offset.normalized() * minf(GLIDE_SPEED, offset.length() * GLIDE_ARRIVE)
 	_glide_velocity = _glide_velocity.move_toward(desired, GLIDE_ACCELERATION * delta)
-	var turned := global_basis.get_rotation_quaternion().slerp(
-			goal.basis.get_rotation_quaternion(), minf(1.0, TURN_RATE * delta))
-	global_transform = Transform3D(Basis(turned), global_position + _glide_velocity * delta)
-	if _chasing and to_global(MOUTH_CENTER).distance_to(_chasing.global_position) < EAT_REACH:
-		swallow(_chasing)
-		_chasing = null
+	global_transform = Transform3D(home.basis, Vector3(
+			global_position.x + _glide_velocity.x * delta, home.origin.y, global_position.z + _glide_velocity.z * delta))
+	_try_catch()
 
 
-## 口の真ん中が cash に重なる時の、ATM の位置と向き。正面は元の場所から cash の方へ向ける。
-func _mouth_on(cash: Cash) -> Transform3D:
-	var facing := Vector3(cash.global_position.x - home.origin.x, 0, cash.global_position.z - home.origin.z)
-	var basis := home.basis.orthonormalized()
-	if facing.length() > 0.01:
-		basis = Basis.looking_at(facing, Vector3.UP, true)
-	return Transform3D(basis, cash.global_position - basis * MOUTH_CENTER)
-
-
-## 拾いに行く札束のうち、一番近いもの。なければ null。
-func _nearest_wanted_cash() -> Cash:
-	if not is_inside_tree():
-		return null
+## 今受け止めに行っている札束がもう受け止められなければ、別の札束を選び直す。
+## 受け止めに行く札束とは当たらないようにして、ATM の体をすり抜けて口まで届くようにする(ATM は向きを変えないので、
+## 背中側から落ちてくる札束は、そのままでは看板に当たる)。
+func _choose_chase() -> void:
+	if _wants(_chasing):
+		return
+	_stop_chasing()
 	var nearest: Cash = null
-	for node in get_tree().get_nodes_in_group(Cash.GROUP):
-		var cash := node as Cash
-		if _wants(cash) and (nearest == null or _flat_distance(cash, global_position) < _flat_distance(nearest, global_position)):
-			nearest = cash
-	return nearest
+	var nearest_time := INF
+	if is_inside_tree():
+		for node in get_tree().get_nodes_in_group(Cash.GROUP):
+			var cash := node as Cash
+			if not _wants(cash):
+				continue
+			var time: float = _crossing_of(cash).time
+			if time < nearest_time:
+				nearest = cash
+				nearest_time = time
+	if nearest:
+		_chasing = nearest
+		_chasing_last = nearest.global_position
+		nearest.add_collision_exception_with(self)
 
 
-## cash を拾いに行くか。プレイヤーが手放して、置いてあり(持たれていない、バッグの中でない)、近くにあって、入金できる札束だけ。
+func _stop_chasing() -> void:
+	if is_instance_valid(_chasing):
+		_chasing.remove_collision_exception_with(self)
+	_chasing = null
+
+
+## 受け止めに行っている札束が、前のフレームから今までに口の真ん中の近くを通ったら、吸い込む。
+## 札束は速く落ちるので、今の位置だけでなく、1フレームで動いた道のりで見る。
+func _try_catch() -> void:
+	if not _chasing:
+		return
+	var now := _chasing.global_position
+	var mouth := to_global(MOUTH_CENTER)
+	var closest := Geometry3D.get_closest_point_to_segment(mouth, _chasing_last, now)
+	_chasing_last = now
+	if closest.distance_to(mouth) < CATCH_REACH:
+		var cash := _chasing
+		_stop_chasing()
+		swallow(cash)
+
+
+## cash を受け止めに行くか。プレイヤーが手放して、飛んでいる(持たれていない、バッグの中でない)札束で、
+## 口の高さを下向きに通る所が近くにあり、入金できるものだけ。
 func _wants(cash: Cash) -> bool:
 	if cash == null or not is_instance_valid(cash) or not cash.is_inside_tree():
 		return false
@@ -214,13 +243,43 @@ func _wants(cash: Cash) -> bool:
 		return false
 	if is_swallowing(cash) or _ignoring.has(cash):
 		return false
-	if _flat_distance(cash, home.origin) > SEEK_RADIUS:
+	if account == null or clock == null or account.remaining_allowance(clock.week()) < cash.value:
 		return false
-	return account != null and clock != null and account.remaining_allowance(clock.week()) >= cash.value
+	var crossing: Variant = _crossing_of(cash)
+	if crossing == null:
+		return false
+	var flat := Vector2(crossing.position.x - home.origin.x, crossing.position.z - home.origin.z)
+	return flat.length() <= SEEK_RADIUS
 
 
-func _flat_distance(cash: Cash, from: Vector3) -> float:
-	return Vector2(cash.global_position.x - from.x, cash.global_position.z - from.z).length()
+## cash が口の高さを下向きに通る所と時間({position, time})。通らなければ null。
+func _crossing_of(cash: Cash) -> Variant:
+	var gravity: Vector3 = ProjectSettings.get_setting("physics/3d/default_gravity_vector") 			* float(ProjectSettings.get_setting("physics/3d/default_gravity")) * cash.gravity_scale
+	var damp := cash.linear_damp
+	if cash.linear_damp_mode == RigidBody3D.DAMP_MODE_COMBINE:
+		damp += float(ProjectSettings.get_setting("physics/3d/default_linear_damp"))
+	return predict_crossing(cash.global_position, cash.linear_velocity, home.origin.y + MOUTH_CENTER.y, gravity, damp)
+
+
+## position から velocity で飛ぶ物が、高さ height を下向きに通る所と時間({position, time})。
+## 物理と同じく、刻みごとに重力で速さを変え、空気の抵抗(damp)で速さを減らしてから進める。
+## もう height より下を下向きに飛んでいるか、PREDICT_TIME 秒のうちに通らなければ null。
+static func predict_crossing(position: Vector3, velocity: Vector3, height: float, gravity: Vector3, damp: float) -> Variant:
+	if position.y < height and velocity.y <= 0.0:
+		return null
+	var at := position
+	var speed := velocity
+	var time := 0.0
+	while time < PREDICT_TIME:
+		speed += gravity * PREDICT_STEP
+		speed *= maxf(0.0, 1.0 - damp * PREDICT_STEP)
+		var next := at + speed * PREDICT_STEP
+		if speed.y < 0.0 and at.y >= height and next.y < height:
+			var weight := (at.y - height) / (at.y - next.y)
+			return {"position": at.lerp(next, weight), "time": time + weight * PREDICT_STEP}
+		at = next
+		time += PREDICT_STEP
+	return null
 
 
 func _try_deposit(item: PhysicalItem) -> bool:
