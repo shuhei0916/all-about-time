@@ -1,7 +1,8 @@
 shader_type spatial;
-// 狙っている物の上に重ねて描き、輪郭に縁取りを付ける。元の見た目は変えない。
-// 見た目を少し膨らませた形の裏側だけを描くので、元の見た目からはみ出した縁だけが見える(反転した殻)。
-render_mode unshaded, cull_front;
+// 狙っている物の輪郭の外側に縁を描く。highlight_mask.gdshader が物の形の所に印(ステンシル)を付けた後に描き、
+// 印のない所にだけ描くので、部品がいくつあっても全体の輪郭だけに縁が付く(テンキーの1つ1つには付かない)。
+render_mode unshaded, depth_draw_never, cull_back;
+stencil_mode read, compare_not_equal, 64;
 
 uniform vec4 color : source_color = vec4(1.0, 0.82, 0.3, 1.0);
 // 縁の太さ。カメラからの距離1メートルあたりの膨らみ(メートル)なので、遠くても近くても画面の上でほぼ同じ太さになる。
@@ -16,4 +17,5 @@ void vertex() {
 
 void fragment() {
 	ALBEDO = color.rgb;
+	ALPHA = 1.0;
 }

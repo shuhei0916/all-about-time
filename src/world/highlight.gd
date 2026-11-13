@@ -1,6 +1,7 @@
 class_name Highlight
 ## 狙っている物(E で今働きかける相手)を、ふちが光るように目立たせる。
-## 見た目の上に光る材質を重ねる(material_overlay)だけで、元の材質は変えない。
+## 見た目の上に材質を重ねる(material_overlay)だけで、元の材質は変えない。重ねる材質は2段で、
+## 物の形の所に印(ステンシル)を付けてから、膨らませた縁を印のない所にだけ描く。部品の多い物でも全体の輪郭だけに縁が付く。
 
 const MATERIAL: ShaderMaterial = preload("res://src/world/highlight.tres")
 
