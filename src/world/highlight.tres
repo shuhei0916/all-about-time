@@ -1,11 +1,13 @@
-[gd_resource type="ShaderMaterial" load_steps=4 format=3]
+[gd_resource type="ShaderMaterial" format=3 uid="uid://b240gkc2manpb"]
 
-[ext_resource type="Shader" path="res://src/world/highlight_mask.gdshader" id="1_mask"]
-[ext_resource type="Shader" path="res://src/world/highlight_outline.gdshader" id="2_outline"]
+[ext_resource type="Shader" uid="uid://d2rp2hydd5kme" path="res://src/world/highlight_mask.gdshader" id="1_mask"]
+[ext_resource type="Shader" uid="uid://dm1yd4l7xj3if" path="res://src/world/highlight_outline.gdshader" id="2_outline"]
 
 [sub_resource type="ShaderMaterial" id="outline"]
 render_priority = 2
 shader = ExtResource("2_outline")
+shader_parameter/color = Color(1, 0.82, 0.3, 1)
+shader_parameter/width_per_meter = 0.008
 
 [resource]
 render_priority = 1
