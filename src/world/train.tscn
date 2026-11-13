@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/train/train_front.glb" id="1_front"]
+[ext_resource type="PackedScene" path="res://assets/models/train/train_wagon.glb" id="2_wagon"]
+
+[sub_resource type="BoxShape3D" id="shape_front"]
+size = Vector3(3, 3.6, 14.4)
+
+[sub_resource type="BoxShape3D" id="shape_wagon"]
+size = Vector3(2.94, 3.5, 14.3)
+
+[node name="Train" type="Node3D"]
+
+[node name="Front" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 7.325)
+
+[node name="Model" parent="Front" instance=ExtResource("1_front")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Front"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.95, -0.05)
+shape = SubResource("shape_front")
+
+[node name="Wagon1" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22.069)
+
+[node name="Model" parent="Wagon1" instance=ExtResource("2_wagon")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Wagon1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 0)
+shape = SubResource("shape_wagon")
+
+[node name="Wagon2" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 36.813)
+
+[node name="Model" parent="Wagon2" instance=ExtResource("2_wagon")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Wagon2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 0)
+shape = SubResource("shape_wagon")

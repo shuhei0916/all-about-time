@@ -395,3 +395,33 @@ func test_ATMの近くへ札束を投げると_地面に落ちる前にATMが受
 	assert_gt(lowest, 0.5, "地面に落ちる前に受け止める")
 	await wait_physics_frames(240)
 	assert_almost_eq(atm.global_position.distance_to(home), 0.0, 0.05)
+
+
+func _press_t(game: Game) -> void:
+	var press := InputEventKey.new()
+	press.physical_keycode = KEY_T
+	press.pressed = true
+	InputSender.new(game).send_event(press)
+
+
+func test_Tを押すと_プレイヤーの向いている先に列車が現れる():
+	var game := _load_game(true)
+	assert_null(game.train, "呼ぶまでは列車はない")
+	_press_t(game)
+	assert_not_null(game.train)
+	var expected := TrainSummon.place(game.player.global_position, game.player.rotation.y)
+	assert_almost_eq(game.train.global_position, expected.origin, Vector3.ONE * 0.01)
+
+
+func test_何度呼んでも列車は1編成で_呼ぶたびにプレイヤーの前へ移る():
+	var game := _load_game(true)
+	_press_t(game)
+	var first := game.train
+	game.player.rotation.y = PI / 2
+	_press_t(game)
+	assert_same(game.train, first)
+	var trains := game.find_children("*", "", true, false).filter(
+		func(n: Node) -> bool: return n.scene_file_path == "res://src/world/train.tscn")
+	assert_eq(trains.size(), 1)
+	var expected := TrainSummon.place(game.player.global_position, PI / 2)
+	assert_almost_eq(game.train.global_position, expected.origin, Vector3.ONE * 0.01)

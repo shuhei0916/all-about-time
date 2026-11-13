@@ -17,6 +17,7 @@
 [ext_resource type="Texture2D" uid="uid://bvkilkx1hm6n0" path="res://assets/sky/skybox-night.png" id="15_night_sky"]
 [ext_resource type="PackedScene" path="res://src/world/pocket_room.tscn" id="16_pocket_room"]
 [ext_resource type="PackedScene" path="res://src/world/atm.tscn" id="17_atm"]
+[ext_resource type="PackedScene" path="res://src/world/train.tscn" id="18_train"]
 
 [sub_resource type="PanoramaSkyMaterial" id="night_sky_material"]
 panorama = ExtResource("15_night_sky")
@@ -103,6 +104,7 @@ player = NodePath("Player")
 crowd = NodePath("Crowd")
 pickups = [NodePath("Yard/Cigarette"), NodePath("Yard/Rope"), NodePath("Lot/Blueprint"), NodePath("Lot/Pistol")]
 atms = [NodePath("Lot/Atm")]
+train_scene = ExtResource("18_train")
 later_spawn_position = Vector3(-24, 0.1, 0)
 skip_tutorial = true
 

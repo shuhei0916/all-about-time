@@ -15,6 +15,8 @@ extends Node3D
 @export var pickups: Array[ItemPickup] = []
 ## 札束を入金できる ATM。口座は人生ごとのものなので、人生が変わるたびにつなぎ直す。
 @export var atms: Array[Atm] = []
+## T で呼ぶ列車。線路の有無にかかわらず、プレイヤーの向いている先に現れる。
+@export var train_scene: PackedScene
 ## 2世代目以降の人生の開始時にプレイヤーを置く位置。1世代目はシーンに置いた位置から始まる。
 @export var later_spawn_position := Vector3.ZERO
 ## チュートリアルを飛ばし、最初から2世代目以降の人生で、その開始位置から始める。
@@ -31,6 +33,8 @@ var buildings: Array[Building] = []
 var ghost: BuildingGhost
 ## 今光らせている物(E で今働きかける相手)。Interactable か PhysicalItem。
 var _focused: Node3D
+## 呼んだ列車。呼ぶまでは null。列車は1編成だけで、呼び直すとプレイヤーの前へ移る。
+var train: Node3D
 var _placing_blueprint: Blueprint
 var _placeable := false
 
@@ -69,9 +73,12 @@ func _physics_process(delta: float) -> void:
 	_show_player_to_crowd(delta)
 
 
-## 数字キーの 1〜9 で、その番号の持ち物を使う。
+## 数字キーの 1〜9 で、その番号の持ち物を使う。T で列車を呼ぶ。
 ## 設計図の配置モード中は、左クリックで建て、右クリックで取りやめる。
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("summon_train"):
+		summon_train()
+		return
 	if is_placing():
 		if event.is_action_pressed("place_confirm"):
 			confirm_placement()
@@ -82,6 +89,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key and key.pressed and not key.echo and key.keycode >= KEY_1 and key.keycode <= KEY_9:
 		use_item_at(key.keycode - KEY_1)
+
+
+## プレイヤーの向いている先に列車を呼ぶ。
+func summon_train() -> void:
+	if train == null:
+		train = train_scene.instantiate()
+		add_child(train)
+	train.global_transform = TrainSummon.place(player.global_position, player.rotation.y)
 
 
 ## 持ち物を番号(0始まり)で指定して使う。その番号の物がなければ何もしない。

@@ -5,3 +5,6 @@
 # Kenney の素材パックの元のフォルダ。使うファイルだけを assets/ の下の別の場所へ写して使う。
 # 元のフォルダには .gdignore を置き、Godot にも取り込ませない。
 /assets/kenney_*/
+
+# 素材パックの zip。展開して使う物だけを assets/ の下へ写す(書き出す)。
+/assets/*.zip
