@@ -37,3 +37,41 @@ func test_列車の車両には当たり判定がある():
 	assert_eq(shapes.size(), 3, "車両ごとに1つ")
 	for shape: CollisionShape3D in shapes:
 		assert_true(shape.get_parent() is CollisionObject3D)
+
+
+func test_列車はエンジンとレールの音を列車の位置から繰り返し鳴らす():
+	var train: Train = _train()
+	for sound: AudioStreamPlayer3D in [train.engine, train.clatter]:
+		assert_true(sound.autoplay, sound.name)
+		var stream := sound.stream as AudioStreamWAV
+		assert_eq(stream.loop_mode, AudioStreamWAV.LOOP_FORWARD, sound.name)
+
+
+func test_全速ではエンジンとレールの音がそのままの高さで鳴る():
+	var train: Train = _train()
+	train.set_speed(TrainRun.CRUISE_SPEED)
+	assert_almost_eq(train.engine.pitch_scale, 1.0, 0.001)
+	assert_almost_eq(train.clatter.pitch_scale, 1.0, 0.001)
+	assert_almost_eq(train.clatter.volume_db, 0.0, 0.001)
+
+
+func test_止まるとエンジンは低いアイドリングになり_レールの音は消える():
+	var train: Train = _train()
+	train.set_speed(0.0)
+	assert_almost_eq(train.engine.pitch_scale, Train.IDLE_PITCH, 0.001)
+	assert_lt(Train.IDLE_PITCH, 1.0)
+	assert_lt(train.clatter.volume_db, -60.0)
+
+
+func test_遅いほどレールの音は小さく_刻みがゆっくりになる():
+	var train: Train = _train()
+	train.set_speed(TrainRun.CRUISE_SPEED * 0.7)
+	assert_between(train.clatter.volume_db, -60.0, -0.1)
+	assert_between(train.clatter.pitch_scale, 0.5, 0.99)
+
+
+func test_警笛を鳴らせる():
+	var train: Train = _train()
+	assert_false(train.horn.playing)
+	train.honk()
+	assert_true(train.horn.playing)

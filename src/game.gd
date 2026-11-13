@@ -36,7 +36,7 @@ var ghost: BuildingGhost
 ## 今光らせている物(E で今働きかける相手)。Interactable か PhysicalItem。
 var _focused: Node3D
 ## 走っている列車。走っていなければ null。列車は1編成だけで、呼び直すと世界の端から出直す。
-var train: Node3D
+var train: Train
 ## 走っている列車の道筋と運行。走っていなければ null。
 var train_route: TrainRoute
 var train_run: TrainRun
@@ -111,15 +111,24 @@ func summon_train() -> void:
 	train = train_scene.instantiate()
 	add_child(train)
 	train.global_transform = train_route.transform_at(train_run.distance())
+	train.set_speed(train_run.speed())
+	# どこから来るか分かるよう、現れた所で警笛を鳴らす
+	train.honk()
 
 
-## 走っている列車の時間を進め、道筋の上の今の位置へ動かす。走り終わったら消す。
+## 走っている列車の時間を進め、道筋の上の今の位置へ動かし、音を速さに合わせる。
+## 発車する時に警笛を鳴らす。走り終わったら消す。
 func advance_train(delta: float) -> void:
 	if train_run == null:
 		return
+	var was := train_run.phase
 	train_run.advance(delta)
-	if train:
-		train.global_transform = train_route.transform_at(train_run.distance())
+	if train == null:
+		return
+	train.global_transform = train_route.transform_at(train_run.distance())
+	train.set_speed(train_run.speed())
+	if was == TrainRun.Phase.STOPPED and train_run.phase == TrainRun.Phase.DEPARTING:
+		train.honk()
 
 
 func _remove_train() -> void:

@@ -452,3 +452,19 @@ func test_何度呼んでも列車は1編成():
 	game.player.rotation.y = PI / 2
 	_press_t(game)
 	assert_eq(_trains(game).size(), 1)
+
+
+func test_呼ぶと列車は世界の端で警笛を鳴らす():
+	var game := _load_game(true)
+	_press_t(game)
+	assert_true(game.train.horn.playing)
+
+
+func test_止まった列車はアイドリングの音になり_発車する時に警笛を鳴らす():
+	var game := _load_game(true)
+	_press_t(game)
+	_advance_train_until(game, TrainRun.Phase.STOPPED)
+	assert_almost_eq(game.train.engine.pitch_scale, Train.IDLE_PITCH, 0.001)
+	game.train.horn.stop()
+	_advance_train_until(game, TrainRun.Phase.DEPARTING)
+	assert_true(game.train.horn.playing)

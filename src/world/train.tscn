@@ -2,6 +2,10 @@
 
 [ext_resource type="PackedScene" path="res://assets/models/train/train_front.glb" id="1_front"]
 [ext_resource type="PackedScene" path="res://assets/models/train/train_wagon.glb" id="2_wagon"]
+[ext_resource type="Script" path="res://src/world/train.gd" id="3_train"]
+[ext_resource type="AudioStream" path="res://assets/sounds/train/train_engine.wav" id="4_engine"]
+[ext_resource type="AudioStream" path="res://assets/sounds/train/train_clatter.wav" id="5_clatter"]
+[ext_resource type="AudioStream" path="res://assets/sounds/train/train_horn.wav" id="6_horn"]
 
 [sub_resource type="BoxShape3D" id="shape_front"]
 size = Vector3(3, 3.6, 14.4)
@@ -11,6 +15,7 @@ size = Vector3(2.94, 3.5, 14.3)
 
 [node name="Train" type="AnimatableBody3D"]
 sync_to_physics = false
+script = ExtResource("3_train")
 
 [node name="Front" parent="." instance=ExtResource("1_front")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 7.325)
@@ -32,3 +37,22 @@ shape = SubResource("shape_wagon")
 [node name="Wagon2Shape" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 36.813)
 shape = SubResource("shape_wagon")
+
+[node name="Engine" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 7)
+stream = ExtResource("4_engine")
+unit_size = 25.0
+max_db = 6.0
+autoplay = true
+
+[node name="Clatter" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 22)
+stream = ExtResource("5_clatter")
+unit_size = 20.0
+autoplay = true
+
+[node name="Horn" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 2)
+stream = ExtResource("6_horn")
+unit_size = 60.0
+max_db = 6.0
