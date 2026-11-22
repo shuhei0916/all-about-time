@@ -18,3 +18,16 @@ godot --headless --import; godot --headless -s addons/gut/gut_cmdln.gd
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/run_hidden.ps1 -Script <スクリプト>
 ```
+
+## スクリーンショット(見た目の確認)
+見た目の確認には `tools/screenshot.sh`(Git Bash)を使う。見えない別のデスクトップで Godot を描画ありで起動する(`tools/run_on_hidden_desktop.ps1`)ので、窓は画面に出ず、フォーカスも奪わない。
+
+```bash
+tools/screenshot.sh "--do=wait:30;shot:C:/path/to/out.png" --depth=1
+```
+
+- 引数は `tools/dump_scene_tree.gd` にそのまま渡る(使い方はファイルの先頭)。`--do` は `;` 区切りの入力シナリオで、`key:` `action:` `move:` `click:` `wait:` `call:` `script:` などを並べ、`shot:<絶対パス.png>` で画面を保存する。
+- 終わるとシーンツリーと `print` の出力がまとめて表示される。
+- 解像度は環境変数 `RESOLUTION`(既定 1280x720)、時間切れは `TIMEOUT`(秒、既定 120)。
+- 描画の要らない動作確認は、同じ引数で `tools/dump_tree.sh`(ヘッドレス)を使う。
+- Godot は `tools/find_godot.sh` が探す(環境変数 `GODOT` → PATH → `C:\Tools\Godot*` など)。
