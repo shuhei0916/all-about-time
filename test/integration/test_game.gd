@@ -598,3 +598,52 @@ func test_昼に眠ろうとしても暗転しない():
 	add_child_autofree(game)
 	game.sleep()
 	assert_eq(game.hud.fade_overlay.color.a, 0.0)
+
+
+## 101 と 204 の電話ボックスをつないだ電話網を持つゲーム。プレイヤーは 101 の箱の中に立つ。
+func _game_with_phones() -> Game:
+	var game: Game = Game.new()
+	var network := PhoneNetwork.new()
+	for number in ["101", "204"]:
+		var booth: PhoneBooth = load("res://src/world/phone_booth.tscn").instantiate()
+		booth.number = number
+		booth.position = Vector3(0, 0, 0) if number == "101" else Vector3(30, 0, 0)
+		network.add_child(booth)
+	var shaft: PhoneShaft = load("res://src/world/phone_shaft.tscn").instantiate()
+	shaft.position = Vector3(0, -500, 0)
+	network.add_child(shaft)
+	network.shaft = shaft
+	game.add_child(network)
+	game.phone_network = network
+	game.player = Player.create()
+	game.add_child(game.player)
+	game.player.position = Vector3(0, 0.03, 0)
+	add_child_autofree(game)
+	network.advance(0.0)
+	return game
+
+
+func _phone_101(game: Game) -> BoothPhone:
+	return game.phone_network.get_child(0).car.phone
+
+
+func test_ダイヤル中の数字キーは_持ち物を使わずに電話の番号を押す():
+	var game := _game_with_phones()
+	game.cycle.life.inventory.add(Item.new("タバコ", 60.0))
+	_phone_101(game).interact()
+	var sender = InputSender.new(game)
+	sender.key_down(KEY_2)
+	sender.key_up(KEY_2)
+	sender.key_down(KEY_0)
+	assert_eq(_phone_101(game).screen_text(), "2 0 _")
+	assert_eq(game.cycle.life.inventory.items().size(), 1, "持ち物は使わない")
+
+
+func test_電話ボックスで運ばれ始めると_代金の寿命を払う():
+	var game := _game_with_phones()
+	var before := game.cycle.life.lifespan.remaining
+	_phone_101(game).interact()
+	for digit in [2, 0, 4]:
+		game.press_phone_digit(digit)
+	assert_true(game.player.is_riding())
+	assert_eq(game.cycle.life.lifespan.remaining, before - BoothPhone.FARE)

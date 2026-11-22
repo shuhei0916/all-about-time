@@ -17,6 +17,8 @@ extends Node3D
 @export var pickups: Array[ItemPickup] = []
 ## 札束を入金できる ATM。口座は人生ごとのものなので、人生が変わるたびにつなぎ直す。
 @export var atms: Array[Atm] = []
+## 街の電話ボックスの電話網。ダイヤルした番号の箱へプレイヤーを運ぶ。
+@export var phone_network: PhoneNetwork
 ## T で呼ぶ列車。プレイヤーに一番近い道路に沿って世界の端から来て、プレイヤーの近くで止まる。
 @export var train_scene: PackedScene
 ## 列車の走る道路を探す、街の文字の地図。
@@ -64,6 +66,9 @@ func _ready() -> void:
 		pickup.picked_up.connect(_on_item_picked_up)
 	if pause_menu:
 		pause_menu.quit_requested.connect(quit_game)
+	if phone_network:
+		phone_network.rider = player
+		phone_network.ride_started.connect(_on_phone_ride_started)
 
 
 ## 現実の時間を WorldClock.TIME_SCALE 倍して、ゲームの時間を進める(ゲームの1時間が現実の1分)。
@@ -87,9 +92,13 @@ func _physics_process(delta: float) -> void:
 	_show_player_to_crowd(delta)
 
 
-## 数字キーの 1〜9 で、その番号の持ち物を使う。T で列車を呼ぶ。
-## 設計図の配置モード中は、左クリックで建て、右クリックで取りやめる。
+## 数字キーの 1〜9 で、その番号の持ち物を使う。電話ボックスでダイヤル中は、数字キーの 0〜9 で番号を押す。
+## T で列車を呼ぶ。設計図の配置モード中は、左クリックで建て、右クリックで取りやめる。
 func _unhandled_input(event: InputEvent) -> void:
+	var digit_key := event as InputEventKey
+	if digit_key and digit_key.pressed and not digit_key.echo and _dialing_phone() 			and digit_key.keycode >= KEY_0 and digit_key.keycode <= KEY_9:
+		press_phone_digit(digit_key.keycode - KEY_0)
+		return
 	if event.is_action_pressed("summon_train"):
 		summon_train()
 		return
@@ -145,6 +154,22 @@ func _remove_train() -> void:
 	train = null
 	train_route = null
 	train_run = null
+
+
+## ダイヤル中の電話で数字 digit を押す。ダイヤル中の電話がなければ何もしない。
+func press_phone_digit(digit: int) -> void:
+	var phone := _dialing_phone()
+	if phone:
+		phone.press(digit)
+
+
+func _dialing_phone() -> BoothPhone:
+	return phone_network.dialing_phone() if phone_network else null
+
+
+## 電話ボックスで運ばれ始めた時に、代金の寿命を払う。
+func _on_phone_ride_started(fare: float) -> void:
+	cycle.life.lifespan.spend(fare)
 
 
 ## 持ち物を番号(0始まり)で指定して使う。その番号の物がなければ何もしない。
