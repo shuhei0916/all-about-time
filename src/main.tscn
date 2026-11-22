@@ -368,7 +368,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27, 0, 40)
 number = "204"
 
 [node name="Booth317" parent="PhoneNetwork" instance=ExtResource("20_phone_booth")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 66, 0, -90)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 69, 0, -87)
 number = "317"
 
 [node name="Shaft" parent="PhoneNetwork" instance=ExtResource("21_phone_shaft")]
