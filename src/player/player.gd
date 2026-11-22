@@ -86,6 +86,8 @@ var _dash_end_pitch := 0.0
 ## 駆け寄っている間は当たり判定を外すので、元に戻すために覚えておく。
 var _dash_saved_layers := Vector2i.ZERO
 var _attack_cooldown := 0.0
+## 電話ボックスで運ばれている間は当たり判定を外すので、元に戻すために覚えておく。運ばれていなければ null。
+var _ride_saved_layers: Variant = null
 ## 背後へ駆け寄り終わってからの秒数。駆け寄った勢いを叩く速さに足すのに使う。
 var _since_dash := INF
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -137,6 +139,10 @@ func _physics_process(delta: float) -> void:
 	_blink_cooldown = maxf(_blink_cooldown - delta, 0.0)
 	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
 	_since_dash += delta
+	if is_riding():
+		# 位置は運ぶ側(PhoneNetwork)が毎フレーム置くので、自分では動かない。
+		_update_aim_marks()
+		return
 	if is_dashing():
 		_advance_dash(delta)
 		_carry_held_item()
@@ -232,7 +238,7 @@ func _crosshair_look() -> Crosshair.Look:
 
 ## 待ち時間が終わっていて、今すぐ背後へ跳べるか。
 func can_blink() -> bool:
-	return _blink_cooldown <= 0.0
+	return _blink_cooldown <= 0.0 and not is_riding()
 
 
 ## 狙っている NPC の背後へ、ものすごい速さでまっすぐ駆け寄り始める。跳べたかを返す。
@@ -362,6 +368,32 @@ func _is_floor_normal(normal: Vector3) -> bool:
 func respawn_at(position_in_world: Vector3) -> void:
 	global_position = position_in_world
 	velocity = Vector3.ZERO
+
+
+## 電話ボックスで運ばれ始める。運ばれている間は当たり判定を外し、歩きも重力もやめて、
+## 運ぶ側が置いた位置にとどまる。見回すことはできる。
+func begin_ride() -> void:
+	if is_riding():
+		return
+	_ride_saved_layers = Vector2i(collision_layer, collision_mask)
+	collision_layer = 0
+	collision_mask = 0
+	velocity = Vector3.ZERO
+
+
+## 運ばれ終わる。当たり判定を戻し、勢いを残さずに立つ。
+func end_ride() -> void:
+	if not is_riding():
+		return
+	collision_layer = _ride_saved_layers.x
+	collision_mask = _ride_saved_layers.y
+	_ride_saved_layers = null
+	velocity = Vector3.ZERO
+
+
+## 電話ボックスで運ばれている間か。
+func is_riding() -> bool:
+	return _ride_saved_layers != null
 
 
 ## マウスを relative だけ動かした分、向きを変える。背後へ駆け寄っている間は、道筋に向きを合わせるので変えない。

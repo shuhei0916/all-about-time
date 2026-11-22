@@ -1264,3 +1264,42 @@ func test_投げた物は照準の先へ飛ぶ():
 	var arrival := start + item.linear_velocity * time + Vector3.DOWN * 0.5 * gravity * time * time
 	assert_almost_eq(arrival.y, aim_point.y, 0.05)
 	assert_almost_eq(arrival.x, aim_point.x, 0.05)
+
+
+func test_電話ボックスで運ばれている間は_当たり判定がなく_歩いても落ちても動かない():
+	_add_floor()
+	var player: Player = add_child_autofree(Player.create())
+	player.global_position = Vector3(0, 5, 0)
+	player.begin_ride()
+	Input.action_press("move_forward")
+	await wait_physics_frames(5)
+	Input.action_release("move_forward")
+	assert_true(player.is_riding())
+	assert_eq(player.collision_layer, 0)
+	assert_eq(player.collision_mask, 0)
+	assert_eq(player.global_position, Vector3(0, 5, 0), "運ぶ側が置いた位置から動かない")
+
+
+func test_運ばれ終わると当たり判定が戻り_また歩ける():
+	_add_floor()
+	var player: Player = add_child_autofree(Player.create())
+	var layers := Vector2i(player.collision_layer, player.collision_mask)
+	player.begin_ride()
+	player.velocity = Vector3(3, 3, 3)
+	player.end_ride()
+	assert_false(player.is_riding())
+	assert_eq(Vector2i(player.collision_layer, player.collision_mask), layers)
+	assert_eq(player.velocity, Vector3.ZERO, "降りた時に勢いが残らない")
+
+
+func test_運ばれている間も見回せる():
+	var player: Player = add_child_autofree(Player.create())
+	player.begin_ride()
+	player.look(Vector2(100, 0))
+	assert_ne(player.rotation.y, 0.0)
+
+
+func test_運ばれている間は背後へ跳べない():
+	var player: Player = add_child_autofree(Player.create())
+	player.begin_ride()
+	assert_false(player.can_blink())
