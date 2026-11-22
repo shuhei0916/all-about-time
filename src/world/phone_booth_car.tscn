@@ -1,27 +1,11 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://src/world/phone_booth_car.gd" id="1_car"]
 [ext_resource type="Script" path="res://src/world/booth_phone.gd" id="2_phone"]
-
-[sub_resource type="StandardMaterial3D" id="mat_floor"]
-albedo_color = Color(0.16, 0.16, 0.17, 1)
-roughness = 0.8
-
-[sub_resource type="BoxMesh" id="mesh_floor"]
-material = SubResource("mat_floor")
-size = Vector3(1, 0.06, 1)
+[ext_resource type="PackedScene" path="res://assets/models/phone_booth/phone_booth_car.glb" id="3_model"]
 
 [sub_resource type="BoxShape3D" id="shape_floor"]
 size = Vector3(1, 0.06, 1)
-
-[sub_resource type="StandardMaterial3D" id="mat_phone"]
-albedo_color = Color(0.1, 0.1, 0.11, 1)
-metallic = 0.5
-roughness = 0.4
-
-[sub_resource type="BoxMesh" id="mesh_phone"]
-material = SubResource("mat_phone")
-size = Vector3(0.26, 0.42, 0.12)
 
 [sub_resource type="BoxShape3D" id="shape_phone"]
 size = Vector3(0.26, 0.42, 0.12)
@@ -29,22 +13,14 @@ size = Vector3(0.26, 0.42, 0.12)
 [sub_resource type="QuadMesh" id="mesh_map"]
 size = Vector2(0.8, 0.8)
 
-[sub_resource type="StandardMaterial3D" id="mat_map_frame"]
-albedo_color = Color(0.2, 0.2, 0.22, 1)
-
-[sub_resource type="BoxMesh" id="mesh_map_frame"]
-material = SubResource("mat_map_frame")
-size = Vector3(0.03, 0.86, 0.86)
-
 [node name="PhoneBoothCar" type="Node3D"]
 script = ExtResource("1_car")
+
+[node name="Model" parent="." instance=ExtResource("3_model")]
 
 [node name="Floor" type="AnimatableBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, 0)
 sync_to_physics = false
-
-[node name="Mesh" type="MeshInstance3D" parent="Floor"]
-mesh = SubResource("mesh_floor")
 
 [node name="Shape" type="CollisionShape3D" parent="Floor"]
 shape = SubResource("shape_floor")
@@ -53,29 +29,22 @@ shape = SubResource("shape_floor")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, -0.42)
 script = ExtResource("2_phone")
 
-[node name="Mesh" type="MeshInstance3D" parent="Phone"]
-mesh = SubResource("mesh_phone")
-
 [node name="Shape" type="CollisionShape3D" parent="Phone"]
 shape = SubResource("shape_phone")
 
 [node name="Screen" type="Label3D" parent="Phone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0.062)
-pixel_size = 0.0012
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0.068)
+pixel_size = 0.0011
 modulate = Color(0.45, 1, 0.55, 1)
 outline_size = 0
 font_size = 48
-
-[node name="MapFrame" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.47, 1.45, 0)
-mesh = SubResource("mesh_map_frame")
 
 [node name="MapBoard" type="MeshInstance3D" parent="."]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.45, 1.45, 0)
 mesh = SubResource("mesh_map")
 
 [node name="Lamp" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
 light_color = Color(1, 0.92, 0.75, 1)
 light_energy = 0.8
 omni_range = 6.0
