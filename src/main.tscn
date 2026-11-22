@@ -18,6 +18,9 @@
 [ext_resource type="PackedScene" path="res://src/world/pocket_room.tscn" id="16_pocket_room"]
 [ext_resource type="PackedScene" path="res://src/world/atm.tscn" id="17_atm"]
 [ext_resource type="PackedScene" path="res://src/world/train.tscn" id="18_train"]
+[ext_resource type="Script" path="res://src/world/phone_network.gd" id="19_phone_network"]
+[ext_resource type="PackedScene" path="res://src/world/phone_booth.tscn" id="20_phone_booth"]
+[ext_resource type="PackedScene" path="res://src/world/phone_shaft.tscn" id="21_phone_shaft"]
 
 [sub_resource type="PanoramaSkyMaterial" id="night_sky_material"]
 panorama = ExtResource("15_night_sky")
@@ -94,7 +97,7 @@ albedo_color = Color(0.08, 0.08, 0.09, 1)
 metallic = 0.6
 roughness = 0.4
 
-[node name="Game" type="Node3D" unique_id=125477149 node_paths=PackedStringArray("bed", "sleep_bed", "door", "hud", "pause_menu", "player", "crowd", "pickups", "atms")]
+[node name="Game" type="Node3D" unique_id=125477149 node_paths=PackedStringArray("bed", "sleep_bed", "door", "hud", "pause_menu", "player", "crowd", "pickups", "atms", "phone_network")]
 script = ExtResource("1_game")
 bed = NodePath("Prison/Bed")
 sleep_bed = NodePath("PocketRoom/Hall/SleepBed")
@@ -105,6 +108,7 @@ player = NodePath("Player")
 crowd = NodePath("Crowd")
 pickups = [NodePath("Yard/Cigarette"), NodePath("Yard/Rope"), NodePath("Lot/Blueprint"), NodePath("Lot/Pistol")]
 atms = [NodePath("Lot/Atm")]
+phone_network = NodePath("PhoneNetwork")
 train_scene = ExtResource("18_train")
 city_map = "res://src/world/city/city_map.txt"
 later_spawn_position = Vector3(-24, 0.1, 0)
@@ -349,3 +353,23 @@ script = ExtResource("5_hud")
 
 [node name="PauseMenu" type="CanvasLayer" parent="." unique_id=1115505176]
 script = ExtResource("8_pause_menu")
+
+[node name="PhoneNetwork" type="Node3D" parent="." node_paths=PackedStringArray("shaft")]
+script = ExtResource("19_phone_network")
+shaft = NodePath("Shaft")
+city_map = "res://src/world/city/city_map.txt"
+
+[node name="Booth101" parent="PhoneNetwork" instance=ExtResource("20_phone_booth")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -14, 0, 8)
+number = "101"
+
+[node name="Booth204" parent="PhoneNetwork" instance=ExtResource("20_phone_booth")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27, 0, 40)
+number = "204"
+
+[node name="Booth317" parent="PhoneNetwork" instance=ExtResource("20_phone_booth")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 66, 0, -90)
+number = "317"
+
+[node name="Shaft" parent="PhoneNetwork" instance=ExtResource("21_phone_shaft")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -600, 0)

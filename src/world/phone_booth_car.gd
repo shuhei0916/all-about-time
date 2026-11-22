@@ -27,7 +27,13 @@ func show_map(texture: Texture2D, markers: Array) -> void:
 	map_board.material_override = material
 	for child in map_board.get_children():
 		child.queue_free()
-	var size: Vector2 = (map_board.mesh as QuadMesh).size
+	# 掲示板の枠に収まるよう、地図の絵の縦横の比を保って大きさを決める。
+	var frame: Vector2 = (map_board.mesh as QuadMesh).size
+	var aspect := float(texture.get_width()) / texture.get_height()
+	var size := Vector2(frame.x, frame.x / aspect) if aspect >= 1.0 else Vector2(frame.y * aspect, frame.y)
+	var quad := QuadMesh.new()
+	quad.size = size
+	map_board.mesh = quad
 	for marker: Dictionary in markers:
 		var label := Label3D.new()
 		label.text = ("● " if marker.here else "") + marker.number
