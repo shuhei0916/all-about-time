@@ -2,8 +2,9 @@ class_name PhoneBoothCar
 extends Node3D
 ## 電話ボックスの内部(床、電話、行先の地図、天井の灯り)。移る時は、これが乗った人ごと沈み、降りてくる。
 ## 箱の外側(壁と屋根)は PhoneBooth に残る。原点は床の上面の中心で、箱の入口が +Z の側。
-## 天井から降りてくる時に天井の上がはみ出して見えないよう、切り取りの高さ(clip_top、世界の高さ)より
-## 上は映さない。見た目は切り取れる材質に差し替え、文字と灯りは高さを越えたら隠す。
+## 箱と縦穴は床と天井の穴(覗き窓)でつながっていて、内部は箱の側と縦穴の側に1つずつある。
+## 穴の向こうへはみ出した所が見えないよう、切り取りの高さ(clip_bottom〜clip_top、世界の高さ)の外は映さない。
+## 見た目は切り取れる材質に差し替え、文字と灯りは外に出たら隠す。
 
 ## 地図の上の、箱の番号の印の文字の大きさ。
 const MARKER_FONT_SIZE := 36
@@ -21,24 +22,36 @@ uniform sampler2D albedo_texture : source_color, filter_nearest, hint_default_wh
 uniform float metallic = 0.0;
 uniform float roughness = 0.5;
 uniform float clip_top = 1.0e9;
+uniform float clip_bottom = -1.0e9;
+uniform float ambient = 1.0;
 varying float world_y;
 void vertex() {
 	world_y = (MODEL_MATRIX * vec4(VERTEX, 1.0)).y;
 }
 void fragment() {
-	if (world_y > clip_top) {
+	if (world_y > clip_top || world_y < clip_bottom) {
 		discard;
 	}
 	ALBEDO = albedo.rgb * texture(albedo_texture, UV).rgb;
 	METALLIC = metallic;
 	ROUGHNESS = roughness;
+	AO = ambient;
 }
 """
 static var _lit_shader: Shader
 static var _unshaded_shader: Shader
 
-## 切り取りの高さ(世界の高さ)。これより上は映さない。
+## 切り取りの高さ(世界の高さ)。clip_top より上と clip_bottom より下は映さない。
 var clip_top := NO_CLIP
+var clip_bottom := -NO_CLIP
+## 地下にあって空の光を受けないか。受けない時は、自分の灯りを切り取りの高さの外でも点けておく。
+var underground := false:
+	set(value):
+		underground = value
+		for material in _clip_materials:
+			material.set_shader_parameter(&"ambient", 0.0 if value else 1.0)
+		if is_node_ready():
+			_update_hidden_parts()
 
 @onready var phone: BoothPhone = $Phone
 @onready var map_board: MeshInstance3D = $MapBoard
@@ -65,19 +78,25 @@ func _process(_delta: float) -> void:
 	_update_hidden_parts()
 
 
-## 切り取りの高さ(世界の高さ)を y にする。
-func set_clip_top(y: float) -> void:
-	clip_top = y
+## 映す高さ(世界の高さ)を bottom から top までにする。
+func set_clip(bottom: float, top: float) -> void:
+	clip_bottom = bottom
+	clip_top = top
 	for material in _clip_materials:
-		material.set_shader_parameter(&"clip_top", y)
+		material.set_shader_parameter(&"clip_bottom", bottom)
+		material.set_shader_parameter(&"clip_top", top)
 	_update_hidden_parts()
 
 
-## 切り取りの高さより上にある文字と灯りを隠し、下にあれば出す。
+## 映す高さの外にある文字と灯りを隠し、中にあれば出す。
 func _update_hidden_parts() -> void:
 	for label: Label3D in find_children("*", "Label3D", true, false):
-		label.visible = label.global_position.y <= clip_top
-	_lamp.visible = _lamp.global_position.y <= clip_top
+		label.visible = _within_clip(label.global_position.y)
+	_lamp.visible = underground or _within_clip(_lamp.global_position.y)
+
+
+func _within_clip(y: float) -> bool:
+	return y >= clip_bottom and y <= clip_top
 
 
 func _clip_material(unshaded: bool) -> ShaderMaterial:
@@ -89,6 +108,8 @@ func _clip_material(unshaded: bool) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = _unshaded_shader if unshaded else _lit_shader
 	material.set_shader_parameter(&"clip_top", clip_top)
+	material.set_shader_parameter(&"clip_bottom", clip_bottom)
+	material.set_shader_parameter(&"ambient", 0.0 if underground else 1.0)
 	_clip_materials.append(material)
 	return material
 

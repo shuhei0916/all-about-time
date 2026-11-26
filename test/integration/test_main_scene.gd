@@ -481,7 +481,6 @@ func test_街には番号の違う電話ボックスが3つ以上あり_電話�
 	var game := _load_game(true)
 	assert_not_null(game.phone_network, "phone_network")
 	assert_eq(game.phone_network.rider, game.player)
-	assert_not_null(game.phone_network.shaft, "shaft")
 	var numbers := {}
 	for child in game.phone_network.get_children():
 		if child is PhoneBooth:
@@ -491,5 +490,7 @@ func test_街には番号の違う電話ボックスが3つ以上あり_電話�
 
 func test_電話ボックスの縦穴は_街の地面と小屋の地下の広間より十分深い():
 	var game := _load_game(true)
-	var shaft_top := game.phone_network.shaft.global_position.y + PhoneShaft.CAP_DISTANCE
-	assert_lt(shaft_top, _pocket_room(game).get_node("Hall").global_position.y - 100.0)
+	for child in game.phone_network.get_children():
+		if child is PhoneBooth:
+			var shaft_top: float = child.shaft.global_position.y + PhoneShaft.TOP_PLANE
+			assert_lt(shaft_top, _pocket_room(game).get_node("Hall").global_position.y - 100.0)

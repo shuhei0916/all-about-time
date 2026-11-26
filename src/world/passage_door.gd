@@ -22,6 +22,14 @@ const VIEW_SHADER := preload("res://src/world/passage_view.gdshader")
 @export var destination: PassageDoor
 ## 戸口の幅と高さ(メートル)。
 @export var size := Passage.DEFAULT_SIZE
+## くぐった物を対になるドアへ移すか。覗くだけの戸口(移すのは別の仕組み)なら false。
+@export var carries := true
+## 開いているか。閉じている間は戸口の向こうを描かない。
+@export var opened := true
+## これより遠くからは戸口の向こうを描かない(メートル)。
+@export var max_view_distance := MAX_VIEW_DISTANCE
+## 覗き窓を戸口の面からどれだけ奥に置くか(メートル)。
+@export var window_depth := WINDOW_DEPTH
 
 ## 戸口の覗き窓。
 var window: MeshInstance3D
@@ -54,7 +62,7 @@ func _ready() -> void:
 	window.mesh = quad
 	window.material_override = material
 	window.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	window.position = Vector3(0, size.y / 2.0, -WINDOW_DEPTH)
+	window.position = Vector3(0, size.y / 2.0, -window_depth)
 	window.visible = false
 	add_child(window)
 
@@ -62,7 +70,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var viewer := get_viewport().get_camera_3d()
 	var passage := _passage()
-	if passage == null or viewer == null or not _can_view_from(viewer, passage):
+	if not opened or passage == null or viewer == null or not _can_view_from(viewer, passage):
 		view_port.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		window.visible = false
 		return
@@ -79,7 +87,7 @@ func _process(_delta: float) -> void:
 
 func _physics_process(_delta: float) -> void:
 	var passage := _passage()
-	if passage == null:
+	if passage == null or not carries:
 		return
 	var positions := {}
 	for node in get_tree().get_nodes_in_group(TRAVELER_GROUP):
@@ -94,7 +102,7 @@ func _physics_process(_delta: float) -> void:
 
 func _can_view_from(viewer: Camera3D, passage: Passage) -> bool:
 	var eye := viewer.global_position
-	return passage.is_seen_from(eye) and eye.distance_to(global_position) <= MAX_VIEW_DISTANCE
+	return passage.is_seen_from(eye) and eye.distance_to(global_position) <= max_view_distance
 
 
 func _passage() -> Passage:

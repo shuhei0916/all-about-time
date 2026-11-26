@@ -63,11 +63,16 @@ func height() -> float:
 			var t := _elapsed / SINK_SECONDS
 			return -SINK_DEPTH * t * t
 		Phase.SHAFT, Phase.CLEARING:
-			return -SINK_DEPTH - shaft_speed() * _shaft_elapsed
+			return shaft_height()
 		Phase.ARRIVING:
 			var t := 1.0 - _elapsed / ARRIVE_SECONDS
 			return ARRIVE_HEIGHT * t * t
 	return 0.0
+
+
+## 縦穴を下った高さ(縦穴の入口から)。縦穴を出た後は、出た時の高さのまま。
+func shaft_height() -> float:
+	return -SINK_DEPTH - shaft_speed() * _shaft_elapsed
 
 
 ## 行先の箱にあった中身の高さ(箱の床から)。沈み始める前は 0、沈んでいる間は出発の時と同じように下がり、

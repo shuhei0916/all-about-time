@@ -20,7 +20,6 @@
 [ext_resource type="PackedScene" path="res://src/world/train.tscn" id="18_train"]
 [ext_resource type="Script" path="res://src/world/phone_network.gd" id="19_phone_network"]
 [ext_resource type="PackedScene" path="res://src/world/phone_booth.tscn" id="20_phone_booth"]
-[ext_resource type="PackedScene" path="res://src/world/phone_shaft.tscn" id="21_phone_shaft"]
 
 [sub_resource type="PanoramaSkyMaterial" id="night_sky_material"]
 panorama = ExtResource("15_night_sky")
@@ -354,9 +353,8 @@ script = ExtResource("5_hud")
 [node name="PauseMenu" type="CanvasLayer" parent="." unique_id=1115505176]
 script = ExtResource("8_pause_menu")
 
-[node name="PhoneNetwork" type="Node3D" parent="." node_paths=PackedStringArray("shaft")]
+[node name="PhoneNetwork" type="Node3D" parent="."]
 script = ExtResource("19_phone_network")
-shaft = NodePath("Shaft")
 city_map = "res://src/world/city/city_map.txt"
 
 [node name="Booth101" parent="PhoneNetwork" instance=ExtResource("20_phone_booth")]
@@ -370,6 +368,3 @@ number = "204"
 [node name="Booth317" parent="PhoneNetwork" instance=ExtResource("20_phone_booth")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 69, 0, -87)
 number = "317"
-
-[node name="Shaft" parent="PhoneNetwork" instance=ExtResource("21_phone_shaft")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -600, 0)

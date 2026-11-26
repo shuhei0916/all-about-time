@@ -133,3 +133,37 @@ func test_遠すぎる時は戸口の向こうを描かない():
 func test_ドアは通り抜ける物が動いた後に通り抜けを調べる():
 	var doors := _add_pair()
 	assert_gt(doors[0].process_physics_priority, 0, "同じ物理フレームのうちに移し、くぐりかけの絵を出さない")
+
+
+func test_運ばないドアは_くぐっても移さない():
+	var doors := _add_pair()
+	doors[0].carries = false
+	var body := _add_traveler(Vector3(0.2, 0, 0.1))
+	await wait_physics_frames(2)
+	body.global_position = Vector3(0.2, 0, -0.1)
+	await wait_physics_frames(2)
+	assert_almost_eq(body.global_position, Vector3(0.2, 0, -0.1), Vector3.ONE * 0.001)
+
+
+func test_閉じたドアは_手前から見ても戸口の向こうを描かない():
+	var doors := _add_pair()
+	doors[0].opened = false
+	_add_viewer(Vector3(0, 1.6, 3))
+	await wait_process_frames(2)
+	assert_eq(doors[0].view_port.render_target_update_mode, SubViewport.UPDATE_DISABLED)
+	assert_false(doors[0].window.visible)
+
+
+func test_戸口の向こうを描く距離はドアごとに決められる():
+	var doors := _add_pair()
+	doors[0].max_view_distance = 2.0
+	_add_viewer(Vector3(0, 1.6, 3))
+	await wait_process_frames(2)
+	assert_false(doors[0].window.visible)
+
+
+func test_覗き窓を戸口の面からどれだけ奥に置くかはドアごとに決められる():
+	var door := PassageDoor.new()
+	door.window_depth = 0.0
+	add_child_autofree(door)
+	assert_eq(door.window.position.z, 0.0)

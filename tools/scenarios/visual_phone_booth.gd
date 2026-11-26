@@ -38,7 +38,6 @@ func run(scene: Node) -> void:
 		scene.add_child(camera)
 		camera.global_position = target.global_transform * Vector3(0, 1.8, 5)
 		camera.look_at(target.global_position + Vector3(0, 1.5, 0))
-		camera.cull_mask &= ~PhoneNetwork.BLIND_LAYER
 		camera.current = true
 	var wait := float(OS.get_environment("PHONE_WAIT")) if OS.has_environment("PHONE_WAIT") else 1.0
 	await scene.get_tree().create_timer(wait).timeout

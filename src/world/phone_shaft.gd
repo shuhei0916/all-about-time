@@ -1,33 +1,54 @@
 class_name PhoneShaft
 extends Node3D
-## 電話ボックスで移る間に下る、地下の縦穴。街から見えない深い所に置く。
-## 内部(PhoneBoothCar)はその場にとどまり、壁が下った深さだけ上へ流れて、下っているように見せる。
-## 壁には地層の帯、配管、落書き、灯りを並べる。模様は PATTERN_LENGTH ごとに繰り返し、
-## 上下に並べた写しでつなぎ目を隠す。模様は決まった種から作るので、いつも同じになる。
+## 電話ボックスの下の、地下の縦穴。箱ごとに1つあり、街から見えない深い所に置く。
+## 上の口(高さ TOP_PLANE)は箱の床の穴に、下の口(高さ bottom_plane())は箱の天井の穴につながっていて、
+## 箱の中の高さ y の所は、床の穴を通すと縦穴の高さ y に、天井の穴を通すと縦穴の高さ y - DROP に写る。
+## 縦穴の内部(car)は箱の内部と対になって動き、穴の向こうに見える。
+## 壁には地層の帯、配管、落書き、灯りを並べる。模様は PATTERN_LENGTH ごとに繰り返し、決まった種から作るので、
+## どの縦穴も同じになる。別の縦穴へ乗り換える時は、壁をずらして模様の位置をそろえる。
 
 ## 壁の模様の1回分の長さ(メートル)。
 const PATTERN_LENGTH := 24.0
-## 内部から上下にこれだけの範囲は、いつも壁で覆う(メートル)。
-const VIEW_RANGE := 20.0
 ## 縦穴の内側の広さの半分と、壁の厚み(メートル)。内部(幅 1m)より少しだけ広い。
 const HALF := 0.85
 const WALL_THICKNESS := 0.1
 ## 模様を作る乱数の種。
 const SEED := 20261122
-## 縦穴の上下の端をふさぐ黒い蓋の、内部からの距離(メートル)。これより先は見えない。
-const CAP_DISTANCE := VIEW_RANGE + 2.0
+## 上の口の高さ。箱の床の穴と同じ高さ。
+const TOP_PLANE := PhoneBooth.FLOOR_PLANE
+## 天井の穴を通した時の、縦穴での下がり方(メートル)。上の口から下の口までの長さの目安。
+const DROP := 72.0
+## 縦穴を下り続けてこれより深くなったら、模様1回分ずつ上へ戻す(メートル)。
+## 戻した後も、上の口と下の口が穴の向こうを描く距離(DOOR_VIEW_DISTANCE)より遠くにあるようにする。
+const WRAP_DEPTH := 44.0
+## 縦穴の口から穴の向こう(箱)を描く距離(メートル)。縦穴の奥から遠くの口の向こうは描かない。
+const DOOR_VIEW_DISTANCE := 16.0
+## 口の外側をふさぐ黒い蓋の、口からの距離(メートル)。覗き窓より外に置く。
+const CAP_OFFSET := 0.15
 
 ## 地下は空の光が届かないので、壁は環境光を受けず、内部の灯りと壁の灯りだけで照らす。
+## 口の外へはみ出した所は、箱の穴から覗いた時に景色を遮らないよう映さない。
 const WALL_SHADER_CODE := """
 shader_type spatial;
 render_mode ambient_light_disabled;
 uniform vec4 albedo : source_color = vec4(1.0);
 uniform float metallic = 0.0;
 uniform float roughness = 0.9;
+uniform vec3 emission : source_color = vec3(0.0);
+uniform float clip_top = 1.0e9;
+uniform float clip_bottom = -1.0e9;
+varying float world_y;
+void vertex() {
+	world_y = (MODEL_MATRIX * vec4(VERTEX, 1.0)).y;
+}
 void fragment() {
+	if (world_y > clip_top || world_y < clip_bottom) {
+		discard;
+	}
 	ALBEDO = albedo.rgb;
 	METALLIC = metallic;
 	ROUGHNESS = roughness;
+	EMISSION = emission;
 }
 """
 
@@ -45,46 +66,126 @@ const GRAFFITI: Array[String] = [
 	"||||  ||||  ||", "09:00", "まだ月曜", "WHO OWNS TIME?", "降りても降りても", "上も下も同じ",
 ]
 
-## 下った深さ(メートル)。壁はこれだけ上へ流れる。
-var depth := 0.0:
-	set(value):
-		depth = value
-		if is_node_ready():
-			walls.position.y = fposmod(depth, PATTERN_LENGTH)
-
 @onready var car: PhoneBoothCar = $Car
 @onready var walls: Node3D = $Walls
 
+## 上の口と下の口。箱の床の穴と天井の穴につなぐ。
+var top_door: PassageDoor
+var bottom_door: PassageDoor
+
 var _rng := RandomNumberGenerator.new()
 var _graffiti_texts: Array[String] = []
+var _graffiti: Array[Label3D] = []
 var _materials := {}
 var _wall_shader: Shader
 
 
+## 下の口の高さ。箱の天井の穴を通した高さ。
+static func bottom_plane() -> float:
+	return PhoneBooth.CEILING_PLANE - DROP
+
+
+## 下った高さ y が深すぎたら、模様1回分ずつ上へ戻す。壁の模様は繰り返すので、戻しても見た目は変わらない。
+static func wrap(y: float) -> float:
+	while y < -WRAP_DEPTH:
+		y += PATTERN_LENGTH
+	return y
+
+
 func _ready() -> void:
+	car.underground = true
 	_rng.seed = SEED
 	var pattern := _build_pattern()
-	for k in [-2, -1, 1, 0]:
+	for k in [-4, -3, -2, -1, 0]:
 		var copy: Node3D = pattern if k == 0 else pattern.duplicate()
 		copy.position.y = k * PATTERN_LENGTH
 		walls.add_child(copy)
-	walls.position.y = fposmod(depth, PATTERN_LENGTH)
+	for label: Label3D in walls.find_children("*", "Label3D", true, false):
+		_graffiti.append(label)
+	var turn := Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO)
+	top_door = _add_door("TopDoor", PhoneBooth.floor_door_transform() * turn)
+	bottom_door = _add_door("BottomDoor", Transform3D(Basis(), Vector3(0, -DROP, 0)) * PhoneBooth.ceiling_door_transform() * turn)
 	_add_caps()
+	_update_clip()
 
 
-## 縦穴の上下の端を黒い蓋でふさぎ、その先(街の下など)が見えないようにする。
+## 箱 booth の床の穴と天井の穴に、上の口と下の口をつなぐ。
+func link(booth: PhoneBooth) -> void:
+	top_door.destination = booth.floor_door
+	bottom_door.destination = booth.ceiling_door
+	_update_clip()
+
+
+func set_car_height(y: float) -> void:
+	car.position.y = y
+
+
+func car_height() -> float:
+	return car.position.y
+
+
+## 壁を offset だけ上へずらす。模様1回分ごとに元に戻る。
+func set_walls_offset(offset: float) -> void:
+	walls.position.y = fposmod(offset, PATTERN_LENGTH)
+	_update_clip()
+
+
+## 縦穴の高さ y の所が、壁の模様1回分のどこに当たるか(0〜PATTERN_LENGTH)。
+func pattern_phase(y: float) -> float:
+	return fposmod(y - walls.position.y, PATTERN_LENGTH)
+
+
+## 壁と内部を映す高さの上端と下端(世界の高さ)。
+func wall_clip_top() -> float:
+	return global_position.y + TOP_PLANE
+
+
+func wall_clip_bottom() -> float:
+	return global_position.y + bottom_plane()
+
+
+## 口の外へはみ出した壁、内部、落書きを映さないようにする。
+func _update_clip() -> void:
+	if not is_inside_tree():
+		return
+	var top := wall_clip_top()
+	var bottom := wall_clip_bottom()
+	car.set_clip(bottom, top)
+	for material: ShaderMaterial in _materials.values():
+		material.set_shader_parameter(&"clip_top", top)
+		material.set_shader_parameter(&"clip_bottom", bottom)
+	for label in _graffiti:
+		var y := label.global_position.y
+		label.visible = y <= top and y >= bottom
+
+
+func _add_door(door_name: String, frame: Transform3D) -> PassageDoor:
+	var door := PassageDoor.new()
+	door.name = door_name
+	door.size = Vector2.ONE * 2.0 * PhoneBooth.INNER_HALF
+	door.carries = false
+	door.max_view_distance = DOOR_VIEW_DISTANCE
+	door.transform = frame
+	add_child(door)
+	return door
+
+
+## 上の口の上と下の口の下を黒い蓋でふさぐ。口の覗き窓が開いていない時(遠い時)に、その先が見えないようにする。
+## 箱の穴から覗くカメラには映さない。
 func _add_caps() -> void:
 	var black := StandardMaterial3D.new()
 	black.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	black.albedo_color = Color.BLACK
-	for y in [CAP_DISTANCE, -CAP_DISTANCE]:
+	for y in [TOP_PLANE + CAP_OFFSET, bottom_plane() - CAP_OFFSET]:
 		var box := BoxMesh.new()
-		box.size = Vector3(2.0 * (HALF + WALL_THICKNESS), 0.2, 2.0 * (HALF + WALL_THICKNESS))
+		box.size = Vector3(2.0 * (HALF + WALL_THICKNESS), 0.1, 2.0 * (HALF + WALL_THICKNESS))
 		box.material = black
 		var cap := MeshInstance3D.new()
 		cap.name = "CapTop" if y > 0.0 else "CapBottom"
 		cap.mesh = box
 		cap.position.y = y
+		cap.layers = 0
+		cap.set_layer_mask_value(PassageDoor.HIDDEN_LAYER, true)
 		add_child(cap)
 
 
@@ -182,11 +283,7 @@ func _pipe(radius: float, length: float, color: Color) -> MeshInstance3D:
 
 ## 壁の灯り。光るだけで周りは照らさず、流れていく目印にする。
 func _add_lamps(pattern: Node3D) -> void:
-	var lamp_material := StandardMaterial3D.new()
-	lamp_material.albedo_color = Color(1.0, 0.8, 0.45)
-	lamp_material.emission_enabled = true
-	lamp_material.emission = Color(1.0, 0.75, 0.4)
-	lamp_material.emission_energy_multiplier = 3.0
+	var lamp_material := _material(Color(1.0, 0.8, 0.45), 0.0, Color(1.0, 0.75, 0.4) * 3.0)
 	var y := 3.0
 	var side := 0
 	while y < PATTERN_LENGTH:
@@ -230,8 +327,8 @@ func _inward_normal(side: int) -> Vector3:
 	return [Vector3.LEFT, Vector3.RIGHT, Vector3.FORWARD, Vector3.BACK][side]
 
 
-func _material(color: Color, metallic := 0.0) -> ShaderMaterial:
-	var key := [color.to_html(), metallic]
+func _material(color: Color, metallic := 0.0, emission := Color.BLACK) -> ShaderMaterial:
+	var key := [color.to_html(), metallic, emission.to_html()]
 	if not _materials.has(key):
 		if _wall_shader == null:
 			_wall_shader = Shader.new()
@@ -241,5 +338,6 @@ func _material(color: Color, metallic := 0.0) -> ShaderMaterial:
 		material.set_shader_parameter(&"albedo", color)
 		material.set_shader_parameter(&"metallic", metallic)
 		material.set_shader_parameter(&"roughness", 0.9 if metallic == 0.0 else 0.4)
+		material.set_shader_parameter(&"emission", Vector3(emission.r, emission.g, emission.b))
 		_materials[key] = material
 	return _materials[key]

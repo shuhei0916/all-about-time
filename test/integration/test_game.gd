@@ -609,10 +609,6 @@ func _game_with_phones() -> Game:
 		booth.number = number
 		booth.position = Vector3(0, 0, 0) if number == "101" else Vector3(30, 0, 0)
 		network.add_child(booth)
-	var shaft: PhoneShaft = load("res://src/world/phone_shaft.tscn").instantiate()
-	shaft.position = Vector3(0, -500, 0)
-	network.add_child(shaft)
-	network.shaft = shaft
 	game.add_child(network)
 	game.phone_network = network
 	game.player = Player.create()
