@@ -20,6 +20,8 @@ var _drop_elapsed := -1.0
 
 func _ready() -> void:
 	_sign.text = number
+	# 内部が天井から降りてくる時に、天井の上へはみ出した所を見せない。
+	car.set_clip_top(global_position.y + INNER_HEIGHT)
 
 
 ## 内部の床の高さ(箱の床から測る)を height にする。
@@ -38,7 +40,7 @@ func contains(point: Vector3) -> bool:
 		and local.y >= -0.5 and local.y <= INNER_HEIGHT
 
 
-## 沈んでいった内部の代わりを、上の空から空のまま降ろして戻す。降ろし方は人を運ぶ時と同じ。
+## 沈んでいった内部の代わりを、天井から空のまま降ろして戻す。降ろし方は人を運ぶ時と同じ。
 func drop_new_car() -> void:
 	_drop_elapsed = 0.0
 	set_car_height(PhoneRide.ARRIVE_HEIGHT)

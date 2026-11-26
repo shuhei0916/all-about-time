@@ -110,19 +110,38 @@ func test_着くと_行先の箱の中の同じ位置に立ち_運ばれ終わ�
 	assert_true(booth_b.car.phone.can_interact(), "着いた箱の電話をまた使える")
 
 
-func test_降りる間は_行先の箱の上から降りてくる():
+func test_縦穴を出る前に_行先の箱の中身が沈んでいく():
+	_dial(booth_a, "204")
+	_advance_until(func(): return network.ride.phase == PhoneRide.Phase.CLEARING)
+	_advance(PhoneRide.SINK_SECONDS / 2.0)
+	assert_lt(booth_b.car_height(), 0.0)
+	assert_almost_eq(rider.global_position, shaft.car.global_transform * STAND, Vector3.ONE * 0.001, "乗った人はまだ縦穴")
+
+
+func test_降りる間は_行先の箱の天井から降りてくる():
 	_dial(booth_a, "204")
 	_advance_until(func(): return network.ride.phase == PhoneRide.Phase.ARRIVING)
 	network.advance(1.0 / 60.0)
-	assert_gt(booth_b.car_height(), PhoneRide.ARRIVE_HEIGHT / 2.0)
-	assert_gt(rider.global_position.y, PhoneRide.ARRIVE_HEIGHT / 2.0)
+	assert_lt(booth_b.car_height(), PhoneBooth.INNER_HEIGHT)
+	assert_gt(booth_b.car_height(), PhoneBooth.INNER_HEIGHT - 0.1)
+	assert_almost_eq(rider.global_position, booth_b.car.global_transform * STAND, Vector3.ONE * 0.001)
+
+
+func test_乗った人の目が天井より上にある間は_目の前が暗い():
+	_dial(booth_a, "204")
+	assert_false(network.is_blinded())
+	_advance_until(func(): return network.ride.phase == PhoneRide.Phase.ARRIVING)
+	network.advance(1.0 / 60.0)
+	assert_true(network.is_blinded())
+	_advance_until(func(): return rider.camera.global_position.y < booth_b.global_position.y + PhoneBooth.INNER_HEIGHT - 0.05)
+	assert_false(network.is_blinded())
 
 
 func test_出発の箱には_新しい内部が上から戻る():
 	_dial(booth_a, "204")
 	_advance_until(func(): return network.ride.phase == PhoneRide.Phase.SHAFT)
 	network.advance(1.0 / 60.0)
-	assert_gt(booth_a.car_height(), PhoneRide.ARRIVE_HEIGHT / 2.0, "沈んだ内部の代わりが上の空にある")
+	assert_gt(booth_a.car_height(), PhoneRide.ARRIVE_HEIGHT / 2.0, "沈んだ内部の代わりが天井から降りてくる")
 	_advance(PhoneRide.ARRIVE_SECONDS + 0.1)
 	assert_eq(booth_a.car_height(), 0.0)
 
@@ -160,4 +179,4 @@ func test_街の地図を渡すと_どの箱の地図にも全部の箱の番号
 		texts.append(label.text)
 	texts.sort()
 	assert_eq(texts, ["204", "● 101"])
-	assert_not_null(a.car.map_board.material_override.albedo_texture)
+	assert_not_null(a.car.map_board.material_override.get_shader_parameter(&"albedo_texture"))

@@ -51,18 +51,45 @@ func test_縦穴では沈み終わった速さのまま下がり続ける():
 		"沈み終わる瞬間の速さと同じ")
 
 
-func test_縦穴でしばらく待つと_行先の箱の上から降り始める():
+func test_縦穴でしばらく待つと_行先の箱の中身が沈み始め_その間も縦穴を下り続ける():
 	var ride := PhoneRide.new()
 	watch_signals(ride)
-	var heights := []
-	ride.left_shaft.connect(func(): heights.append(ride.height()))
 	_advance_to(ride, PhoneRide.Phase.SHAFT)
 	_advance(ride, PhoneRide.SHAFT_SECONDS - 0.2)
 	assert_eq(ride.phase, PhoneRide.Phase.SHAFT)
 	_advance(ride, 0.3)
+	assert_eq(ride.phase, PhoneRide.Phase.CLEARING)
+	assert_signal_emit_count(ride, "destination_clearing", 1)
+	var before := ride.height()
+	_advance(ride, 1.0)
+	assert_almost_eq(before - ride.height(), PhoneRide.shaft_speed(), 0.01, "縦穴を同じ速さで下り続ける")
+	assert_lt(ride.cleared_height(), 0.0, "行先の箱の中身は沈んでいる")
+
+
+func test_行先の箱の中身は_出発の時と同じように沈む():
+	var ride := PhoneRide.new()
+	ride.advance(PhoneRide.SINK_SECONDS + PhoneRide.SHAFT_SECONDS)
+	assert_eq(ride.phase, PhoneRide.Phase.CLEARING)
+	assert_eq(ride.cleared_height(), 0.0)
+	_advance(ride, PhoneRide.SINK_SECONDS / 2.0)
+	assert_almost_eq(ride.cleared_height(), -PhoneRide.SINK_DEPTH / 4.0, 0.01)
+
+
+func test_行先の箱の中身が沈みきると_行先の箱の天井から降り始める():
+	var ride := PhoneRide.new()
+	watch_signals(ride)
+	var heights := []
+	ride.left_shaft.connect(func(): heights.append(ride.height()))
+	_advance_to(ride, PhoneRide.Phase.CLEARING)
+	_advance(ride, PhoneRide.SINK_SECONDS + 0.01)
 	assert_eq(ride.phase, PhoneRide.Phase.ARRIVING)
 	assert_signal_emit_count(ride, "left_shaft", 1)
-	assert_eq(heights, [PhoneRide.ARRIVE_HEIGHT], "行先の箱の上の空から")
+	assert_eq(heights, [PhoneRide.ARRIVE_HEIGHT])
+	assert_eq(PhoneRide.ARRIVE_HEIGHT, PhoneBooth.INNER_HEIGHT, "天井の高さから")
+
+
+func test_天井から降り始める速さは_縦穴を下る速さと同じ():
+	assert_almost_eq(2.0 * PhoneRide.ARRIVE_HEIGHT / PhoneRide.ARRIVE_SECONDS, PhoneRide.shaft_speed(), 0.001)
 
 
 func test_行先の用意ができるまでは縦穴で待ち続ける():
@@ -73,7 +100,7 @@ func test_行先の用意ができるまでは縦穴で待ち続ける():
 	assert_eq(ride.phase, PhoneRide.Phase.SHAFT)
 	ride.destination_ready = true
 	_advance(ride, 0.1)
-	assert_eq(ride.phase, PhoneRide.Phase.ARRIVING)
+	assert_eq(ride.phase, PhoneRide.Phase.CLEARING)
 
 
 func test_降りる間は着く手前で遅くなる():
@@ -104,5 +131,6 @@ func test_大きな時間を一度に進めても_段階を飛ばさず合図を
 	ride.advance(1000.0)
 	assert_eq(ride.phase, PhoneRide.Phase.DONE)
 	assert_signal_emit_count(ride, "entered_shaft", 1)
+	assert_signal_emit_count(ride, "destination_clearing", 1)
 	assert_signal_emit_count(ride, "left_shaft", 1)
 	assert_signal_emit_count(ride, "finished", 1)

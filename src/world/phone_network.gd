@@ -1,9 +1,11 @@
 class_name PhoneNetwork
 extends Node3D
 ## 街の電話ボックスをつなぎ、ダイヤルした人を行先の箱へ運ぶ。電話ボックス(PhoneBooth)はこのノードの子に置く。
-## 運び方: 出発の箱の内部ごと沈み、沈みきったら地下の縦穴(PhoneShaft)の内部へ、縦穴を下ったら
-## 行先の箱の上の空の内部へ、同じ位置関係のまま移る。高さと段階は PhoneRide が決める。
-## 出発の箱には、沈んだ内部の代わりが上の空から空のまま降りてきて戻る。
+## 運び方: 出発の箱の内部ごと沈み、沈みきったら地下の縦穴(PhoneShaft)の内部へ移って下る。
+## その間に行先の箱にあった中身が同じように沈んでいき、沈みきったら、行先の箱の天井にある内部へ
+## 同じ位置関係のまま移って降りてくる。高さと段階は PhoneRide が決める。
+## 出発の箱には、沈んだ内部の代わりが天井から空のまま降りてきて戻る。
+## 天井から降りてくる間、乗った人の目が天井より上にあるうちは、目の前を黒い覆い(BLIND_LAYER にだけ置く)で暗くする。
 
 ## 運び始めた時。代金(寿命の秒)を払わせるのは Game の役目。
 signal ride_started(fare: float)
@@ -17,6 +19,10 @@ signal ride_finished
 
 ## 地図の絵の、1マスの画素数。
 const MAP_PX_PER_CELL := 8
+## 黒い覆いを置く描画の層(20番目)。外から映すカメラは、この層を映さないようにすれば覆いが見えない。
+const BLIND_LAYER := 1 << 19
+## 黒い覆いの、天井から上の高さ(メートル)。目がこの中にある間は何も見えない。
+const BLIND_HEIGHT := 3.0
 
 ## 運ぶ相手(プレイヤー)。Game がつなぐ。
 var rider: Player
@@ -28,6 +34,7 @@ var _from: PhoneBooth
 var _to: PhoneBooth
 ## 乗った人を今載せている内部。
 var _carrier: Node3D
+var _blind: MeshInstance3D
 
 
 func _ready() -> void:
@@ -41,6 +48,26 @@ func _ready() -> void:
 		booth.car.phone.number_dialed.connect(_on_number_dialed.bind(booth))
 	if city_map != "":
 		_show_maps(CityPlan.new(FileAccess.get_file_as_string(city_map)))
+	_blind = _make_blind()
+	add_child(_blind)
+
+
+## 天井の上を、内側からも黒く見える箱で覆う。ふだんは隠しておく。
+func _make_blind() -> MeshInstance3D:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.albedo_color = Color.BLACK
+	var box := BoxMesh.new()
+	box.size = Vector3(2.0 * PhoneBooth.INNER_HALF, BLIND_HEIGHT, 2.0 * PhoneBooth.INNER_HALF)
+	box.material = material
+	var blind := MeshInstance3D.new()
+	blind.name = "Blind"
+	blind.mesh = box
+	blind.layers = BLIND_LAYER
+	blind.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	blind.visible = false
+	return blind
 
 
 ## どの箱の地図(縦穴の内部の地図も)にも、街の絵と全部の箱の番号の印を出す。箱の地図では、その箱に印を付ける。
@@ -80,8 +107,21 @@ func advance(delta: float) -> void:
 	ride.advance(delta)
 	_place_cars()
 	rider.global_transform = _carrier.global_transform * offset
+	_update_blind()
 	if ride.phase == PhoneRide.Phase.DONE:
 		_finish()
+
+
+## 乗った人の目の前を暗くしているか。天井から降りてくる間、目が天井より上にあるうちは暗い。
+func is_blinded() -> bool:
+	return _blind.visible
+
+
+func _update_blind() -> void:
+	var ceiling := _to.global_position.y + PhoneBooth.INNER_HEIGHT
+	_blind.visible = ride.phase == PhoneRide.Phase.ARRIVING and rider.camera.global_position.y > ceiling
+	if _blind.visible:
+		_blind.global_transform = Transform3D(_to.global_basis, _to.global_position + _to.global_basis.y * (PhoneBooth.INNER_HEIGHT + BLIND_HEIGHT / 2.0))
 
 
 ## 運んでいる最中か。
@@ -128,6 +168,9 @@ func _place_cars() -> void:
 			_from.set_car_height(ride.height())
 		PhoneRide.Phase.SHAFT:
 			shaft.depth = -ride.height()
+		PhoneRide.Phase.CLEARING:
+			shaft.depth = -ride.height()
+			_to.set_car_height(ride.cleared_height())
 		PhoneRide.Phase.ARRIVING, PhoneRide.Phase.DONE:
 			_to.set_car_height(ride.height())
 
@@ -143,5 +186,6 @@ func _on_left_shaft() -> void:
 
 func _finish() -> void:
 	ride = null
+	_blind.visible = false
 	rider.end_ride()
 	ride_finished.emit()
