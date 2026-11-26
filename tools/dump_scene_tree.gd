@@ -29,6 +29,8 @@ var _extra_props: PackedStringArray = []
 
 
 func _initialize() -> void:
+	# 見えないデスクトップで撮る時も、作業中のマウスを画面内に閉じ込めないよう、ゲームにマウスを捕まえさせない。
+	Engine.set_meta(Player.NO_MOUSE_CAPTURE, true)
 	_args = _parse_args(OS.get_cmdline_user_args())
 	_extra_props = String(_args.get("props", "")).split(",", false)
 	_run.call_deferred()

@@ -99,12 +99,22 @@ static func create() -> Player:
 	return load("res://src/player/player.tscn").instantiate()
 
 
+## Engine にこの印があれば、マウスを捕まえない。スクショやシーンツリーの取得のためにツールから起動した時に付ける。
+## 見えないデスクトップで起動しても、マウスの捕まえはデスクトップ全体に効き、作業中のマウスまで閉じ込めてしまうため。
+const NO_MOUSE_CAPTURE := &"no_mouse_capture"
+
+
+## マウスを捕まえて視点操作に使ってよいか。display は DisplayServer の名前。
+static func can_capture_mouse(display := DisplayServer.get_name()) -> bool:
+	return display != "headless" and not Engine.has_meta(NO_MOUSE_CAPTURE)
+
+
 func _ready() -> void:
 	# 視線のレイの長さは判断に使う値なので、シーンではなく定数で決める。
 	_ray.target_position = Vector3(0, 0, -INTERACT_DISTANCE)
 	_build_ray.target_position = Vector3(0, 0, -BUILD_DISTANCE)
 	blink_marker.camera = camera
-	if DisplayServer.get_name() != "headless":
+	if can_capture_mouse():
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
@@ -113,7 +123,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		look(event.relative)
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		# マウスが外れている時のクリックは、マウスを捕まえ直すだけにする。
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		if can_capture_mouse():
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed("attack"):
 		# 物を持っている間の左クリックは、叩く代わりに投げる。
 		if held_item:

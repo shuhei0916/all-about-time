@@ -1303,3 +1303,18 @@ func test_運ばれている間は背後へ跳べない():
 	var player: Player = add_child_autofree(Player.create())
 	player.begin_ride()
 	assert_false(player.can_blink())
+
+
+func test_画面のある起動ではマウスを捕まえる():
+	assert_true(Player.can_capture_mouse("windows"))
+
+
+func test_画面のない起動ではマウスを捕まえない():
+	assert_false(Player.can_capture_mouse("headless"))
+
+
+func test_スクショなどのツールから起動した時はマウスを捕まえない():
+	Engine.set_meta(Player.NO_MOUSE_CAPTURE, true)
+	var allowed := Player.can_capture_mouse("windows")
+	Engine.remove_meta(Player.NO_MOUSE_CAPTURE)
+	assert_false(allowed, "見えない画面で起動しても、作業中のマウスを画面内に閉じ込めない")

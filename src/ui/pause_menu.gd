@@ -83,5 +83,5 @@ func is_open() -> bool:
 
 
 func _set_mouse_mode(mode: Input.MouseMode) -> void:
-	if DisplayServer.get_name() != "headless":
+	if Player.can_capture_mouse():
 		Input.mouse_mode = mode
